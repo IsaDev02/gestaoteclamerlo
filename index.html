@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Centro Social Irmã Tecla Merlo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-light">
+
+<div class="container">
+    <div class="row vh-100 align-items-center justify-content-center">
+        <div class="col-10 col-sm-8 col-md-6 col-lg-4">
+            <div class="card shadow border-0">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h3 class="fw-bold text-primary">Gestão CPH</h3>
+                        <p class="text-muted">Acesse sua conta</p>
+                    </div>
+                    
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label class="form-label">E-mail</label>
+                            <input type="email" id="email" class="form-control" placeholder="admin@escola.com" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Senha</label>
+                            <input type="password" id="password" class="form-control" placeholder="********" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Entrar</button>
+                    </form>
+                    
+                    <div id="msg" class="alert alert-danger mt-3 d-none"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    // IMPORTANTE: Substitua pelas suas chaves do Supabase (Settings > API)
+    const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const loginForm = document.getElementById('loginForm');
+    const msgDiv = document.getElementById('msg');
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        msgDiv.classList.add('d-none'); // Esconde erro anterior
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        // Tenta logar no Supabase
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+
+        if (error) {
+            msgDiv.innerText = "Usuário ou senha incorretos.";
+            msgDiv.classList.remove('d-none');
+        } else {
+            // Sucesso! Salva a sessão e vai para o dashboard
+            window.location.href = 'dashboard.html';
+        }
+    });
+</script>
+</body>
+</html>
