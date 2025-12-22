@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista Geral de Alunos | Centro Social</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --bg-body: #f8fafc; --sidebar-bg: #1e293b; --primary: #3b82f6; }
+        body { background-color: var(--bg-body); font-family: 'Inter', sans-serif; color: #1e293b; }
+        
+        .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar-bg); padding: 20px 0; }
+        .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; text-decoration: none; display: block; transition: 0.3s; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+        .main-content { margin-left: 240px; padding: 40px; }
+
+        .table-container { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .img-aluno { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0; background: #f1f5f9; }
+        .badge-id { background: #f1f5f9; color: #475569; font-weight: 600; font-size: 0.8rem; padding: 5px 10px; border-radius: 6px; }
+        .projeto-tag { font-weight: 600; color: var(--primary); font-size: 0.9rem; }
+        
+        .pagination .page-link { cursor: pointer; }
+        .pagination .page-item.disabled .page-link { cursor: not-allowed; opacity: 0.6; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="px-4 mb-5 text-white fw-bold"><h5><i class="fas fa-graduation-cap me-2"></i>Centro Social</h5></div>
+        <nav>
+            <a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
+            <a class="nav-link active" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
+            <a class="nav-link" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
+            <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
+            <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="fw-bold mb-0">Lista Geral de Alunos</h3>
+                <p class="text-muted small">Gerencie todos os alunos cadastrados no sistema</p>
+            </div>
+            <span class="badge bg-primary px-3 py-2" id="total_alunos">Carregando...</span>
+        </div>
+
+        <div class="table-container">
+            <div class="row mb-4">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" id="filtro_nome" class="form-control border-start-0" placeholder="Pesquisar por nome do aluno..." onkeyup="buscarAlunos()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="100">ID</th>
+                            <th width="80">Foto</th>
+                            <th>Nome Completo</th>
+                            <th>Projeto</th>
+                            <th width="120" class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpo_tabela">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="text-muted small" id="info_paginacao">Exibindo ...</div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" id="item_anterior">
+                            <button class="page-link" onclick="mudarPagina(-1)"><i class="fas fa-chevron-left me-1"></i> Anterior</button>
+                        </li>
+                        <li class="page-item" id="item_proximo">
+                            <button class="page-link" onclick="mudarPagina(1)">Próximo <i class="fas fa-chevron-right ms-1"></i></button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const nomesProjetos = { 
+            "1": "Adolescer", "2": "Criança Certeza", "3": "Sempre Criança", 
+            "4": "Valorizando", "5": "Clube de Mães", "6": "Animar" 
+        };
+
+        const FOTO_PADRAO = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        
+        let paginaAtual = 0;
+        const itensPorPagina = 10;
+        let buscaTermo = "";
+
+        async function carregarAlunos() {
+            const corpoTabela = document.getElementById('corpo_tabela');
+            const from = paginaAtual * itensPorPagina;
+            const to = from + itensPorPagina - 1;
+
+            try {
+                corpoTabela.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary spinner-border-sm me-2"></div> Carregando dados...</td></tr>';
+
+                // Query com range (paginação) e order (ID Decrescente)
+                let query = supabaseClient
+                    .from('alunos')
+                    .select('id, foto, nome, projetos', { count: 'exact' })
+                    .order('id', { ascending: false }) 
+                    .range(from, to);
+
+                // Aplica filtro se houver busca
+                if (buscaTermo) {
+                    query = query.ilike('nome', `%${buscaTermo}%`);
+                }
+
+                const { data, error, count } = await query;
+
+                if (error) throw error;
+
+                // Atualiza contadores e botões
+                document.getElementById('total_alunos').innerText = `${count} alunos cadastrados`;
+                document.getElementById('info_paginacao').innerText = `Exibindo ${data.length > 0 ? from + 1 : 0} a ${Math.min(to + 1, count)} de ${count}`;
+                
+                document.getElementById('item_anterior').classList.toggle('disabled', paginaAtual === 0);
+                document.getElementById('item_proximo').classList.toggle('disabled', (to + 1) >= count);
+
+                if (!data || data.length === 0) {
+                    corpoTabela.innerHTML = '<tr><td colspan="5" class="text-center py-4">Nenhum aluno encontrado.</td></tr>';
+                    return;
+                }
+
+                let htmlFinal = '';
+                data.forEach(aluno => {
+                    // Lógica da Foto: se estiver na mesma pasta, o banco deve ter "fotos/nome.jpg"
+                    const urlFoto = (aluno.foto && aluno.foto.trim() !== "") ? aluno.foto.trim() : FOTO_PADRAO;
+                    const nomeProjeto = nomesProjetos[aluno.projetos] || 'Não definido';
+
+                    htmlFinal += `
+                        <tr>
+                            <td><span class="badge-id">#${aluno.id}</span></td>
+                            <td>
+                                <img src="${urlFoto}" 
+                                     class="img-aluno shadow-sm" 
+                                     onerror="this.onerror=null;this.src='${FOTO_PADRAO}';">
+                            </td>
+                            <td class="fw-bold text-dark">${aluno.nome || 'Sem Nome'}</td>
+                            <td><span class="projeto-tag">${nomeProjeto}</span></td>
+                            <td class="text-center">
+                                <a href="editar_aluno.html?id=${aluno.id}" class="btn btn-outline-primary btn-sm border-0" title="Editar Aluno">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                corpoTabela.innerHTML = htmlFinal;
+
+            } catch (err) {
+                console.error("Erro:", err);
+                corpoTabela.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger border-0">Erro ao carregar: ${err.message}</td></tr>`;
+            }
+        }
+
+        function mudarPagina(passo) {
+            paginaAtual += passo;
+            carregarAlunos();
+            window.scrollTo(0, 0); // Volta ao topo da tabela
+        }
+
+        function buscarAlunos() {
+            buscaTermo = document.getElementById('filtro_nome').value;
+            paginaAtual = 0; // Reseta para a primeira página ao buscar
+            carregarAlunos();
+        }
+
+        // Inicia a aplicação
+        window.onload = carregarAlunos;
+    </script>
+</body>
+</html>
