@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Transmissão | Centro Social</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --bg-body: #f1f5f9; --sidebar-bg: #1e293b; --whatsapp: #25d366; }
+        body { background-color: var(--bg-body); font-family: 'Inter', sans-serif; }
+        .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar-bg); padding: 20px 0; }
+        .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; text-decoration: none; display: block; }
+        .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+        .main-content { margin-left: 240px; padding: 40px; }
+        
+        .card-painel { background: #fff; border-radius: 12px; border: none; min-height: 500px; }
+        .lista-busca { max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+        .item-aluno { cursor: pointer; transition: 0.2s; border-bottom: 1px solid #f1f5f9; }
+        .item-aluno:hover { background: #f8fafc; }
+        
+        .tag-selecionado { 
+            background: #e0f2fe; color: #0369a1; padding: 5px 12px; 
+            border-radius: 20px; display: inline-flex; align-items: center; 
+            margin: 4px; font-size: 0.85rem; font-weight: 500;
+        }
+        .btn-remove { cursor: pointer; margin-left: 8px; color: #ef4444; }
+
+        #log_envio { 
+            height: 180px; overflow-y: auto; background: #0f172a; 
+            color: #38bdf8; font-family: monospace; padding: 15px; 
+            border-radius: 8px; font-size: 0.8rem; margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="px-4 mb-5 text-white fw-bold"><h5><i class="fas fa-graduation-cap me-2"></i>Centro Social</h5></div>
+        <nav>
+            <a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
+            <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
+            <a class="nav-link active" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
+            <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="mb-4">
+            <h3 class="fw-bold mb-0">Nova Transmissão</h3>
+            <p class="text-muted">Selecione os alunos manualmente e dispare as mensagens.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-5">
+                <div class="card card-painel p-4 shadow-sm">
+                    <h6 class="fw-bold mb-3"><i class="fas fa-search me-2"></i>1. Buscar Alunos</h6>
+                    <div class="input-group mb-3">
+                        <input type="text" id="busca_aluno" class="form-control" placeholder="Digite o nome..." onkeyup="filtrarAlunos()">
+                    </div>
+                    
+                    <div id="lista_busca" class="lista-busca mb-4">
+                        <div class="p-3 text-center text-muted small">Carregando base de alunos...</div>
+                    </div>
+
+                    <h6 class="fw-bold mb-3"><i class="fas fa-users me-2"></i>Destinatários (<span id="count_sel">0</span>)</h6>
+                    <div id="container_selecionados" class="border p-2 rounded bg-light" style="min-height: 100px;">
+                        <span class="text-muted small p-2 d-block">Nenhum aluno adicionado.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-7">
+                <div class="card card-painel p-4 shadow-sm">
+                    <h6 class="fw-bold mb-3"><i class="fas fa-comment-dots me-2"></i>2. Mensagem</h6>
+                    <textarea id="msg_corpo" class="form-control mb-3" rows="8" placeholder="Olá {nome}, tudo bem?"></textarea>
+                    
+                    <div class="alert alert-info py-2 small">
+                        Use <b>{nome}</b> para personalizar com o primeiro nome do aluno.
+                    </div>
+
+                    <button class="btn btn-success btn-lg w-100 fw-bold mb-3" onclick="iniciarDisparo()">
+                        <i class="fas fa-paper-plane me-2"></i> DISPARAR AGORA
+                    </button>
+
+                    <h6 class="fw-bold mb-2">Monitor de Envio</h6>
+                    <div id="log_envio">> Aguardando comando...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let todosAlunos = [];
+        let selecionados = [];
+
+        // 1. Carrega todos os alunos do Supabase para busca rápida
+        async function carregarBaseAlunos() {
+            const { data, error } = await supabaseClient
+                .from('alunos')
+                .select('nome, whatsapp')
+                .order('nome', { ascending: true });
+
+            if (error) return console.error(error);
+            todosAlunos = data;
+            exibirResultados(todosAlunos);
+        }
+
+        function exibirResultados(lista) {
+            const container = document.getElementById('lista_busca');
+            container.innerHTML = lista.map(aluno => `
+                <div class="p-2 item-aluno small d-flex justify-content-between align-items-center" onclick="adicionarAluno('${aluno.nome}', '${aluno.whatsapp}')">
+                    <span>${aluno.nome}</span>
+                    <i class="fas fa-plus-circle text-primary"></i>
+                </div>
+            `).join('') || '<div class="p-3 text-center text-muted">Nenhum aluno encontrado.</div>';
+        }
+
+        function filtrarAlunos() {
+            const termo = document.getElementById('busca_aluno').value.toLowerCase();
+            const filtrados = todosAlunos.filter(a => a.nome.toLowerCase().includes(termo));
+            exibirResultados(filtrados);
+        }
+
+        function adicionarAluno(nome, whatsapp) {
+            if (!whatsapp || whatsapp === 'null') return alert("Este aluno não possui WhatsApp cadastrado!");
+            if (selecionados.find(s => s.whatsapp === whatsapp)) return; // Evita duplicados
+
+            selecionados.push({ nome, whatsapp });
+            renderizarSelecionados();
+        }
+
+        function removerAluno(whatsapp) {
+            selecionados = selecionados.filter(s => s.whatsapp !== whatsapp);
+            renderizarSelecionados();
+        }
+
+        function renderizarSelecionados() {
+            const container = document.getElementById('container_selecionados');
+            document.getElementById('count_sel').innerText = selecionados.length;
+
+            if (selecionados.length === 0) {
+                container.innerHTML = '<span class="text-muted small p-2 d-block">Nenhum aluno adicionado.</span>';
+                return;
+            }
+
+            container.innerHTML = selecionados.map(s => `
+                <span class="tag-selecionado">
+                    ${s.nome.split(' ')[0]} 
+                    <i class="fas fa-times-circle btn-remove" onclick="removerAluno('${s.whatsapp}')"></i>
+                </span>
+            `).join('');
+        }
+
+        function logger(msg) {
+            const log = document.getElementById('log_envio');
+            log.innerHTML += `<br>> ${msg}`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        async function iniciarDisparo() {
+            const msgOriginal = document.getElementById('msg_corpo').value;
+            if (selecionados.length === 0) return alert("Selecione os alunos primeiro!");
+            if (!msgOriginal) return alert("Escreva a mensagem!");
+
+            logger(`--- INICIANDO ENVIO PARA ${selecionados.length} CONTATOS ---`);
+
+            for (const aluno of selecionados) {
+                const primeiroNome = aluno.nome.split(' ')[0];
+                const mensagemFinal = msgOriginal.replace('{nome}', primeiroNome);
+                
+                logger(`Enviando para ${aluno.nome}...`);
+
+                // AQUI ENTRARÁ O FETCH PARA A EVOLUTION API (PRÓXIMO PASSO)
+                await new Promise(r => setTimeout(r, 1500)); // Simulação
+                
+                logger(`✅ OK: ${aluno.whatsapp}`);
+            }
+
+            logger("--- DISPARO FINALIZADO ---");
+        }
+
+        window.onload = carregarBaseAlunos;
+    </script>
+</body>
+</html>
