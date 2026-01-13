@@ -17,7 +17,7 @@
         
         .card-painel { background: #fff; border-radius: 12px; border: none; min-height: 500px; }
         .lista-busca { max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
-        .item-aluno { cursor: pointer; transition: 0.2s; border-bottom: 1px solid #f1f5f9; }
+        .item-aluno { cursor: pointer; transition: 0.2s; border-bottom: 1px solid #f1f5f9; padding: .5rem; }
         .item-aluno:hover { background: #f8fafc; }
         
         .tag-selecionado { 
@@ -80,7 +80,12 @@
                         Use <b>{nome}</b> para personalizar com o primeiro nome do aluno.
                     </div>
 
-                    <button class="btn btn-success btn-lg w-100 fw-bold mb-3" onclick="iniciarDisparo()">
+                    <div class="d-flex gap-2 mb-3">
+                        <label class="small text-muted mt-2">Delay entre abas (ms):</label>
+                        <input id="delay_input" type="number" class="form-control form-control-sm" value="800" min="200" style="max-width:120px;">
+                    </div>
+
+                    <button id="btn_disparar" class="btn btn-success btn-lg w-100 fw-bold mb-3">
                         <i class="fas fa-paper-plane me-2"></i> DISPARAR AGORA
                     </button>
 
@@ -93,50 +98,125 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // ---------- CONFIGURAÇÃO ----------
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Código de país padrão quando números não vierem em E.164
+        const DEFAULT_COUNTRY_CODE = '55';
+        // Delay padrão entre aberturas de abas (ms) — pode ser alterado pelo input na UI
+        const DEFAULT_DELAY_MS = 800;
+
         let todosAlunos = [];
         let selecionados = [];
 
-        // 1. Carrega todos os alunos do Supabase para busca rápida
-        async function carregarBaseAlunos() {
-            const { data, error } = await supabaseClient
-                .from('alunos')
-                .select('nome, whatsapp')
-                .order('nome', { ascending: true });
+        // ---------- HELPERS ----------
+        function logger(msg) {
+            const log = document.getElementById('log_envio');
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML += `<br>> [${time}] ${msg}`;
+            log.scrollTop = log.scrollHeight;
+        }
 
-            if (error) return console.error(error);
-            todosAlunos = data;
-            exibirResultados(todosAlunos);
+        // Normaliza telefone: remove tudo que não é dígito e adiciona código de país se necessário
+        function normalizePhone(raw) {
+            if (!raw) return '';
+            let digits = String(raw).replace(/\D/g, '');
+            if (!digits) return '';
+            // Se já começa com o country code, assume ok
+            if (DEFAULT_COUNTRY_CODE && !digits.startsWith(DEFAULT_COUNTRY_CODE) && digits.length <= 11) {
+                digits = DEFAULT_COUNTRY_CODE + digits;
+            }
+            return digits;
+        }
+
+        function waMeUrl(phoneDigits, text) {
+            const encoded = encodeURIComponent(text || '');
+            return `https://wa.me/${phoneDigits}${encoded ? '?text=' + encoded : ''}`;
+        }
+
+        // ---------- SUPABASE: carregar e renderizar ----------
+        async function carregarBaseAlunos() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('alunos')
+                    .select('nome, whatsapp')
+                    .order('nome', { ascending: true });
+
+                if (error) {
+                    console.error('Erro Supabase:', error);
+                    document.getElementById('lista_busca').innerHTML = '<div class="p-3 text-center text-danger">Erro ao carregar alunos.</div>';
+                    return;
+                }
+
+                todosAlunos = Array.isArray(data) ? data : [];
+                exibirResultados(todosAlunos);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('lista_busca').innerHTML = '<div class="p-3 text-center text-danger">Erro inesperado.</div>';
+            }
         }
 
         function exibirResultados(lista) {
             const container = document.getElementById('lista_busca');
-            container.innerHTML = lista.map(aluno => `
-                <div class="p-2 item-aluno small d-flex justify-content-between align-items-center" onclick="adicionarAluno('${aluno.nome}', '${aluno.whatsapp}')">
-                    <span>${aluno.nome}</span>
-                    <i class="fas fa-plus-circle text-primary"></i>
-                </div>
-            `).join('') || '<div class="p-3 text-center text-muted">Nenhum aluno encontrado.</div>';
+            container.innerHTML = '';
+
+            if (!lista || lista.length === 0) {
+                container.innerHTML = '<div class="p-3 text-center text-muted">Nenhum aluno encontrado.</div>';
+                return;
+            }
+
+            for (const aluno of lista) {
+                const div = document.createElement('div');
+                div.className = 'item-aluno small d-flex justify-content-between align-items-center';
+                const nomeText = aluno?.nome ?? '—';
+                const whatsappText = aluno?.whatsapp ?? '';
+
+                const spanNome = document.createElement('span');
+                spanNome.textContent = nomeText;
+
+                const ico = document.createElement('i');
+                ico.className = 'fas fa-plus-circle text-primary';
+
+                div.appendChild(spanNome);
+                div.appendChild(ico);
+
+                // armazenar dados no dataset
+                div.dataset.nome = nomeText;
+                div.dataset.whatsapp = whatsappText;
+
+                div.addEventListener('click', () => {
+                    adicionarAluno(div.dataset.nome, div.dataset.whatsapp);
+                });
+
+                container.appendChild(div);
+            }
         }
 
         function filtrarAlunos() {
-            const termo = document.getElementById('busca_aluno').value.toLowerCase();
-            const filtrados = todosAlunos.filter(a => a.nome.toLowerCase().includes(termo));
+            const termo = document.getElementById('busca_aluno').value.trim().toLowerCase();
+            if (!termo) {
+                exibirResultados(todosAlunos);
+                return;
+            }
+            const filtrados = todosAlunos.filter(a => (a?.nome ?? '').toLowerCase().includes(termo));
             exibirResultados(filtrados);
         }
 
+        // ---------- SELEÇÃO DE DESTINATÁRIOS ----------
         function adicionarAluno(nome, whatsapp) {
             if (!whatsapp || whatsapp === 'null') return alert("Este aluno não possui WhatsApp cadastrado!");
-            if (selecionados.find(s => s.whatsapp === whatsapp)) return; // Evita duplicados
-
-            selecionados.push({ nome, whatsapp });
+            const normalized = normalizePhone(whatsapp);
+            if (!normalized) return alert("Telefone inválido para o aluno: " + nome);
+            if (selecionados.find(s => s.whatsapp === normalized)) {
+                return; // evita duplicados
+            }
+            selecionados.push({ nome: nome, whatsapp: normalized });
             renderizarSelecionados();
         }
 
-        function removerAluno(whatsapp) {
+        function removerAlunoByPhone(whatsapp) {
             selecionados = selecionados.filter(s => s.whatsapp !== whatsapp);
             renderizarSelecionados();
         }
@@ -145,48 +225,89 @@
             const container = document.getElementById('container_selecionados');
             document.getElementById('count_sel').innerText = selecionados.length;
 
+            container.innerHTML = '';
             if (selecionados.length === 0) {
                 container.innerHTML = '<span class="text-muted small p-2 d-block">Nenhum aluno adicionado.</span>';
                 return;
             }
 
-            container.innerHTML = selecionados.map(s => `
-                <span class="tag-selecionado">
-                    ${s.nome.split(' ')[0]} 
-                    <i class="fas fa-times-circle btn-remove" onclick="removerAluno('${s.whatsapp}')"></i>
-                </span>
-            `).join('');
+            for (const s of selecionados) {
+                const span = document.createElement('span');
+                span.className = 'tag-selecionado';
+                span.textContent = (s.nome ? s.nome.split(' ')[0] : s.whatsapp);
+
+                const rm = document.createElement('i');
+                rm.className = 'fas fa-times-circle btn-remove';
+                rm.style.marginLeft = '8px';
+                rm.title = 'Remover';
+                rm.addEventListener('click', () => removerAlunoByPhone(s.whatsapp));
+
+                span.appendChild(rm);
+                container.appendChild(span);
+            }
         }
 
-        function logger(msg) {
-            const log = document.getElementById('log_envio');
-            log.innerHTML += `<br>> ${msg}`;
-            log.scrollTop = log.scrollHeight;
-        }
-
+        // ---------- DISPARO via wa.me ----------
+        // Abre links wa.me sequencialmente. Retorna relatório.
         async function iniciarDisparo() {
+            const btn = document.getElementById('btn_disparar');
+            const delayInput = document.getElementById('delay_input');
+            const delay = Math.max(200, parseInt(delayInput.value || DEFAULT_DELAY_MS, 10));
+
             const msgOriginal = document.getElementById('msg_corpo').value;
             if (selecionados.length === 0) return alert("Selecione os alunos primeiro!");
-            if (!msgOriginal) return alert("Escreva a mensagem!");
+            if (!msgOriginal || msgOriginal.trim() === '') return alert("Escreva a mensagem!");
+
+            // desabilita botão durante envio
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Enviando...';
 
             logger(`--- INICIANDO ENVIO PARA ${selecionados.length} CONTATOS ---`);
+            const blocked = [];
+            const opened = [];
 
             for (const aluno of selecionados) {
-                const primeiroNome = aluno.nome.split(' ')[0];
-                const mensagemFinal = msgOriginal.replace('{nome}', primeiroNome);
-                
-                logger(`Enviando para ${aluno.nome}...`);
+                const primeiroNome = (aluno.nome || '').split(' ')[0] || '';
+                const mensagemFinal = msgOriginal.replace(/{nome}/g, primeiroNome);
 
-                // AQUI ENTRARÁ O FETCH PARA A EVOLUTION API (PRÓXIMO PASSO)
-                await new Promise(r => setTimeout(r, 1500)); // Simulação
-                
-                logger(`✅ OK: ${aluno.whatsapp}`);
+                logger(`Abrindo WhatsApp para ${aluno.nome} (${aluno.whatsapp})...`);
+                const url = waMeUrl(aluno.whatsapp, mensagemFinal);
+
+                // Tenta abrir a aba; se retornar null, o popup foi bloqueado
+                const newWin = window.open(url, '_blank');
+                if (newWin) {
+                    opened.push(aluno.whatsapp);
+                } else {
+                    blocked.push(aluno.whatsapp);
+                    logger(`⚠️ Bloqueado: ${aluno.whatsapp}`);
+                }
+
+                // aguarda antes do próximo
+                await new Promise(res => setTimeout(res, delay));
             }
 
-            logger("--- DISPARO FINALIZADO ---");
+            logger(`--- DISPARO FINALIZADO: aberturas ${opened.length}, bloqueios ${blocked.length} ---`);
+            if (blocked.length > 0) {
+                logger('Lista bloqueada: ' + blocked.join(', '));
+                alert(`Algumas abas foram bloqueadas pelo navegador (${blocked.length}). Copiar lista para clipboard?`);
+                try {
+                    await navigator.clipboard.writeText(blocked.join('\n'));
+                    logger('Lista de bloqueados copiada para a área de transferência.');
+                } catch (e) {
+                    console.warn('Não foi possível copiar para clipboard:', e);
+                }
+            }
+
+            // reabilita botão
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> DISPARAR AGORA';
         }
 
-        window.onload = carregarBaseAlunos;
+        // Hook do botão
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btn_disparar').addEventListener('click', iniciarDisparo);
+            carregarBaseAlunos();
+        });
     </script>
 </body>
 </html>
