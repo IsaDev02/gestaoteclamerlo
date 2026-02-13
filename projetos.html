@@ -52,7 +52,7 @@
             border-radius: 8px; z-index: 1000; max-height: 250px; overflow-y: auto; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
             margin-top: 5px;
         }
-        .search-result-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+        .search-result-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; transition: 0.2s; }
         .search-result-item:hover { background: #3b82f6; color: white; }
     </style>
 </head>
@@ -73,7 +73,7 @@
     <main class="main-content">
         <header class="mb-5">
             <h3 class="fw-bold mb-1">Gerenciamento de Projetos</h3>
-            <p class="text-muted small">Vincule alunos aos projetos sociais consultando toda a base de dados.</p>
+            <p class="text-muted small">Vincule ou remova alunos dos projetos sociais.</p>
         </header>
 
         <div class="row g-3" id="gradeProjetos"></div>
@@ -88,7 +88,7 @@
             </div>
 
             <div class="p-3 bg-light border-bottom">
-                <label class="form-label small fw-bold text-muted">ADICIONAR NOVO ALUNO AO PROJETO:</label>
+                <label class="form-label small fw-bold text-muted text-uppercase">Adicionar Aluno ao Projeto:</label>
                 <div class="search-wrapper">
                     <i class="fas fa-user-plus"></i>
                     <input type="text" id="inputInserirAluno" class="search-input" placeholder="Pesquisar em todo o banco (Nome ou ID)..." onkeyup="buscarGlobal(this.value)">
@@ -99,7 +99,7 @@
             <div class="search-box">
                 <div class="search-wrapper">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="filtroNome" class="search-input" placeholder="Filtrar alunos já vinculados..." onkeyup="filtrarAlunosJaListados()">
+                    <input type="text" id="filtroNome" class="search-input" placeholder="Filtrar alunos já listados abaixo..." onkeyup="filtrarAlunosJaListados()">
                 </div>
             </div>
 
@@ -125,6 +125,7 @@
         let projetoAtivoId = null;
         let alunosNoProjetoAtual = [];
 
+        // 1. CARREGA AS CONTAGENS DOS CARDS INICIAIS
         async function carregarContagens() {
             const { data, error } = await supabaseClient.from('alunos').select('projetos');
             if (data) {
@@ -132,27 +133,38 @@
             }
         }
 
-        function renderizarCards(dados) {
+        function renderizarCards(dadosAlunos) {
             const grade = document.getElementById('gradeProjetos');
             grade.innerHTML = '';
+            
             Object.keys(nomesDosProjetos).forEach(id => {
-                const total = dados.filter(a => String(a.projetos || "").split(/[,;]/).map(i=>i.trim()).includes(id)).length;
+                // Conta quantos alunos têm esse ID na string de projetos
+                const total = dadosAlunos.filter(a => {
+                    const lista = String(a.projetos || "").split(/[,;]/).map(i => i.trim());
+                    return lista.includes(String(id));
+                }).length;
+
                 grade.innerHTML += `
                     <div class="col-md-4">
                         <div class="project-card shadow-sm" onclick="abrirProjeto('${id}', '${nomesDosProjetos[id]}')">
-                            <div><h6 class="fw-bold mb-0">${nomesDosProjetos[id]}</h6><small class="text-muted small">ID: ${id}</small></div>
+                            <div>
+                                <h6 class="fw-bold mb-0">${nomesDosProjetos[id]}</h6>
+                                <small class="text-muted small">Projeto #${id}</small>
+                            </div>
                             <div class="count-circle">${total}</div>
                         </div>
                     </div>`;
             });
         }
 
+        // 2. ABRE A LISTA DE UM PROJETO ESPECÍFICO
         async function abrirProjeto(idProjeto, nomeProjeto) {
             projetoAtivoId = idProjeto;
             document.getElementById('containerAlunos').style.display = 'block';
             document.getElementById('tituloProjetoSelecionado').innerText = nomeProjeto.toUpperCase();
-            document.getElementById('subtituloIdProjeto').innerText = `Projeto #${idProjeto}`;
+            document.getElementById('subtituloIdProjeto').innerText = `ID Interno: ${idProjeto}`;
             document.getElementById('inputInserirAluno').value = '';
+            document.getElementById('filtroNome').value = '';
             
             await carregarAlunosDoProjeto();
             window.scrollTo({ top: document.getElementById('containerAlunos').offsetTop - 20, behavior: 'smooth' });
@@ -168,9 +180,9 @@
                 .ilike('projetos', `%${projetoAtivoId}%`);
 
             if (data) {
-                // Filtro rigoroso para garantir que o ID do projeto está lá (evita confusão entre ID 1 e 10)
+                // Filtro para garantir que o ID é exato (evita que aluno do projeto 10 apareça no 1)
                 alunosNoProjetoAtual = data.filter(a => 
-                    String(a.projetos || "").split(/[,;]/).map(i => i.trim()).includes(projetoAtivoId)
+                    String(a.projetos || "").split(/[,;]/).map(i => i.trim()).includes(String(projetoAtivoId))
                 ).sort((a, b) => a.nome.localeCompare(b.nome));
 
                 renderizarLista(alunosNoProjetoAtual);
@@ -179,15 +191,15 @@
 
         function renderizarLista(lista) {
             const listaDiv = document.getElementById('listaAlunos');
-            listaDiv.innerHTML = lista.length ? '' : '<div class="p-5 text-center text-muted small">Nenhum aluno neste projeto.</div>';
+            listaDiv.innerHTML = lista.length ? '' : '<div class="p-5 text-center text-muted small">Nenhum aluno vinculado a este projeto.</div>';
             
             lista.forEach(aluno => {
                 const item = document.createElement('div');
                 item.className = 'student-item';
                 item.innerHTML = `
-                    <span class="fw-medium">${aluno.nome} <small class="text-muted ms-2">ID: ${aluno.id}</small></span>
+                    <span class="fw-medium">${aluno.nome} <small class="text-muted ms-2">(ID: ${aluno.id})</small></span>
                     <button class="btn btn-outline-danger btn-sm border-0" onclick="event.stopPropagation(); remover('${aluno.id}')">
-                        <i class="fas fa-times"></i>
+                        <i class="fas fa-user-minus"></i>
                     </button>
                 `;
                 item.onclick = () => window.location.href = `editar_aluno.html?id=${aluno.id}`;
@@ -195,12 +207,11 @@
             });
         }
 
-        // BUSCA EM TODO O BANCO DE DADOS (SEM LIMITES)
+        // 3. BUSCA GLOBAL (VARRE TODO O BANCO)
         async function buscarGlobal(termo) {
             const resDiv = document.getElementById('resultadoBuscaInserir');
             if (termo.length < 2) { resDiv.style.display = 'none'; return; }
 
-            // Busca por ID exato ou Nome parcial em todo o banco
             const { data, error } = await supabaseClient
                 .from('alunos')
                 .select('id, nome, projetos')
@@ -209,24 +220,28 @@
 
             if (data && data.length > 0) {
                 resDiv.innerHTML = data.map(a => {
-                    const jaEsta = String(a.projetos || "").split(/[,;]/).map(i=>i.trim()).includes(projetoAtivoId);
+                    const jaVinculado = String(a.projetos || "").split(/[,;]/).map(i=>i.trim()).includes(String(projetoAtivoId));
                     return `
-                        <div class="search-result-item d-flex justify-content-between" onclick="${jaEsta ? '' : `inserir('${a.id}', '${a.nome}', '${a.projetos || ''}')`}">
-                            <span>${a.nome} <small>(ID: ${a.id})</small></span>
-                            ${jaEsta ? '<span class="badge bg-light text-dark">Já vinculado</span>' : '<span class="badge bg-success">Adicionar</span>'}
+                        <div class="search-result-item d-flex justify-content-between align-items-center" 
+                             onclick="${jaVinculado ? '' : `inserir('${a.id}', '${a.nome}', '${a.projetos || ''}')`}">
+                            <span><strong>${a.nome}</strong> <br><small class="text-muted">ID: ${a.id}</small></span>
+                            ${jaVinculado ? '<span class="badge bg-light text-dark">Já está aqui</span>' : '<span class="badge bg-primary">Vincular</span>'}
                         </div>
                     `;
                 }).join('');
                 resDiv.style.display = 'block';
             } else {
-                resDiv.innerHTML = '<div class="p-3 small text-muted">Nenhum aluno encontrado no banco.</div>';
+                resDiv.innerHTML = '<div class="p-3 small text-muted">Nenhum resultado encontrado.</div>';
                 resDiv.style.display = 'block';
             }
         }
 
+        // 4. INSERIR E REMOVER (UPDATE NO BANCO)
         async function inserir(alunoId, nome, projetosAtuais) {
             let lista = projetosAtuais ? projetosAtuais.split(/[,;]/).map(i => i.trim()).filter(i => i !== "") : [];
-            if (!lista.includes(projetoAtivoId)) lista.push(projetoAtivoId);
+            if (!lista.includes(String(projetoAtivoId))) {
+                lista.push(String(projetoAtivoId));
+            }
 
             const { error } = await supabaseClient
                 .from('alunos')
@@ -245,19 +260,22 @@
             if (!confirm("Remover este aluno do projeto?")) return;
 
             const { data } = await supabaseClient.from('alunos').select('projetos').eq('id', alunoId).single();
-            let lista = data.projetos.split(/[,;]/).map(i => i.trim()).filter(i => i !== projetoAtivoId && i !== "");
+            if (data) {
+                let lista = data.projetos.split(/[,;]/).map(i => i.trim()).filter(i => i !== String(projetoAtivoId) && i !== "");
 
-            const { error } = await supabaseClient
-                .from('alunos')
-                .update({ projetos: lista.join(',') })
-                .eq('id', alunoId);
+                const { error } = await supabaseClient
+                    .from('alunos')
+                    .update({ projetos: lista.join(',') })
+                    .eq('id', alunoId);
 
-            if (!error) {
-                await carregarAlunosDoProjeto();
-                carregarContagens();
+                if (!error) {
+                    await carregarAlunosDoProjeto();
+                    carregarContagens();
+                }
             }
         }
 
+        // FILTRO DA LISTA JÁ CARREGADA
         function filtrarAlunosJaListados() {
             const termo = document.getElementById('filtroNome').value.toLowerCase();
             const filtrados = alunosNoProjetoAtual.filter(a => a.nome.toLowerCase().includes(termo));
@@ -266,6 +284,7 @@
 
         function fecharLista() { document.getElementById('containerAlunos').style.display = 'none'; }
         
+        // INICIALIZAÇÃO
         carregarContagens();
     </script>
 </body>
