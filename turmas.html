@@ -33,6 +33,9 @@
             background: #eff6ff; color: var(--primary); padding: 5px 12px; 
             border-radius: 6px; font-size: 0.85rem; font-weight: 600; border: 1px solid #dbeafe; margin-right: 5px;
         }
+        .bulk-insert-area {
+            background: #f1f5f9; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -46,10 +49,6 @@
             <a class="nav-link active" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
             <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
             <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
-            
-            <div class="mt-5 px-4">
-                <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
-            </div>
         </nav>
     </aside>
 
@@ -69,6 +68,16 @@
                 <h4 class="fw-bold" id="tituloArea">Turmas</h4>
                 <div id="botoesAcao"></div>
             </div>
+
+            <div id="inputMassaArea" class="bulk-insert-area d-none">
+                <label class="form-label fw-bold small">Matricular Alunos (Cole os IDs separados por vírgula):</label>
+                <div class="input-group">
+                    <input type="text" id="ids_massa" class="form-control" placeholder="Ex: 101, 102, 105, 210">
+                    <button class="btn btn-success" id="btnConfirmarMassa">Confirmar Matrícula</button>
+                </div>
+                <small class="text-muted">Dica: Você pode copiar a coluna de IDs de uma planilha e colar aqui.</small>
+            </div>
+
             <div id="listaDinamica"></div>
         </div>
     </main>
@@ -78,30 +87,30 @@
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title fw-bold">Nova Turma</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
                     <form id="formNovaTurma">
                         <div class="mb-3">
                             <label class="form-label fw-bold small">Nome da Turma</label>
-                            <input type="text" id="add_nome_turma" class="form-control" placeholder="Ex: Info e Artes" required>
+                            <input type="text" id="add_nome_turma" class="form-control" placeholder="Ex: Informática Manhã" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold small">Dias da Semana</label>
-                            <input type="text" id="add_dias" class="form-control" placeholder="Ex: Ter e Qui" required>
+                            <input type="text" id="add_dias" class="form-control" placeholder="Ex: Seg, Qua e Sex" required>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold small">Horário Bloco 1</label>
-                                <input type="text" id="add_h1" class="form-control" placeholder="08:10 as 09:30" required>
+                                <label class="form-label fw-bold small">Horário Início</label>
+                                <input type="text" id="add_h1" class="form-control" placeholder="08:00">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold small">Horário Bloco 2</label>
-                                <input type="text" id="add_h2" class="form-control" placeholder="09:30 as 10:30">
+                                <label class="form-label fw-bold small">Horário Fim</label>
+                                <input type="text" id="add_h2" class="form-control" placeholder="10:00">
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">Projeto</label>
+                            <label class="form-label fw-bold small">Projeto Correspondente</label>
                             <select id="add_projeto_id" class="form-select" required>
                                 <option value="">Selecione...</option>
                                 <option value="1">Projeto Adolescer</option>
@@ -114,9 +123,8 @@
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary px-4" onclick="salvarNovaTurma()">Salvar Turma</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary w-100" onclick="salvarNovaTurma()">Criar Turma</button>
                 </div>
             </div>
         </div>
@@ -138,7 +146,7 @@
         function init() {
             const grid = document.getElementById('gridProjetos');
             grid.innerHTML = projetosNominais.map(p => `
-                <div class="col-md-2">
+                <div class="col-md-2 col-6">
                     <div class="project-card shadow-sm" id="card-p-${p.id}" onclick="carregarTurmas('${p.id}', '${p.nome}')">
                         <div class="fw-bold small">${p.nome}</div>
                     </div>
@@ -154,21 +162,16 @@
                 horario_fim: document.getElementById('add_h2').value,
                 projeto_id: document.getElementById('add_projeto_id').value
             };
-
-            if (!dados.nome_turma || !dados.projeto_id) return alert("Preencha os campos obrigatórios.");
-
             const { error } = await supabaseClient.from('turmas').insert([dados]);
-            if (error) alert("Erro: " + error.message);
-            else {
-                alert("Turma cadastrada!");
-                location.reload();
-            }
+            if (error) alert("Erro ao salvar: " + error.message);
+            else location.reload();
         }
 
         async function carregarTurmas(idProjeto, nomeProjeto) {
             document.querySelectorAll('.project-card').forEach(c => c.classList.remove('active'));
             document.getElementById(`card-p-${idProjeto}`).classList.add('active');
             document.getElementById('areaConteudo').classList.remove('d-none');
+            document.getElementById('inputMassaArea').classList.add('d-none');
             document.getElementById('tituloArea').innerText = `Turmas: ${nomeProjeto}`;
             document.getElementById('botoesAcao').innerHTML = '';
 
@@ -176,7 +179,7 @@
             const container = document.getElementById('listaDinamica');
             
             if (!turmas || turmas.length === 0) {
-                container.innerHTML = '<div class="alert alert-light border">Nenhuma turma encontrada.</div>';
+                container.innerHTML = '<div class="alert alert-light border">Nenhuma turma cadastrada neste projeto.</div>';
             } else {
                 container.innerHTML = turmas.map(t => `
                     <div class="turma-item">
@@ -185,9 +188,8 @@
                             <span class="text-muted small"><i class="far fa-calendar-alt me-1"></i> ${t.dias_semana}</span>
                         </div>
                         <div class="d-flex align-items-center">
-                            <span class="time-badge">${t.horario_inicio}</span>
-                            <span class="time-badge">${t.horario_fim}</span>
-                            <button class="btn btn-primary btn-sm ms-3" onclick="verAlunos(${t.id}, '${t.nome_turma}')">Alunos</button>
+                            <span class="time-badge">${t.horario_inicio} - ${t.horario_fim}</span>
+                            <button class="btn btn-primary btn-sm ms-3" onclick="verAlunos(${t.id}, '${t.nome_turma}')">Ver Alunos</button>
                         </div>
                     </div>
                 `).join('');
@@ -195,47 +197,80 @@
         }
 
         async function verAlunos(turmaId, nomeTurma) {
-            document.getElementById('tituloArea').innerText = `Alunos: ${nomeTurma}`;
-            document.getElementById('botoesAcao').innerHTML = `<button class="btn btn-success btn-sm fw-bold" onclick="matricularNovo(${turmaId})">+ Matricular Aluno</button>`;
+            document.getElementById('tituloArea').innerText = `Alunos | ${nomeTurma}`;
+            document.getElementById('inputMassaArea').classList.remove('d-none');
+            document.getElementById('botoesAcao').innerHTML = `<button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">Voltar</button>`;
+            
+            // Configura o botão de inserção em massa
+            document.getElementById('btnConfirmarMassa').onclick = () => matricularEmMassa(turmaId, nomeTurma);
 
-            const { data: matriculas } = await supabaseClient.from('matriculas').select('id, alunos(id, nome, cpf)').eq('turma_id', turmaId);
+            carregarListaMatriculados(turmaId, nomeTurma);
+        }
+
+        async function carregarListaMatriculados(turmaId, nomeTurma) {
             const container = document.getElementById('listaDinamica');
+            container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary"></div></div>';
+
+            const { data: matriculas } = await supabaseClient
+                .from('matriculas')
+                .select('id, alunos(id, nome, cpf)')
+                .eq('turma_id', turmaId);
 
             if (!matriculas || matriculas.length === 0) {
-                container.innerHTML = '<div class="alert alert-info">Nenhum aluno nesta turma.</div>';
+                container.innerHTML = '<div class="alert alert-info">Nenhum aluno matriculado nesta turma ainda.</div>';
             } else {
-                let html = '<table class="table table-hover bg-white rounded shadow-sm"><thead><tr><th>Nome</th><th>CPF</th><th class="text-end">Ações</th></tr></thead><tbody>';
+                let html = '<table class="table table-hover bg-white rounded shadow-sm"><thead><tr><th>ID</th><th>Nome</th><th>CPF</th><th class="text-end">Ação</th></tr></thead><tbody>';
                 matriculas.forEach(m => {
-                    html += `<tr><td>${m.alunos.nome}</td><td>${m.alunos.cpf || '---'}</td><td class="text-end"><button class="btn btn-outline-danger btn-sm border-0" onclick="removerMatricula(${m.id}, ${turmaId}, '${nomeTurma}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                    html += `<tr>
+                        <td class="small text-muted">${m.alunos?.id || '---'}</td>
+                        <td>${m.alunos?.nome || 'Não encontrado'}</td>
+                        <td>${m.alunos?.cpf || '---'}</td>
+                        <td class="text-end">
+                            <button class="btn btn-link text-danger p-0" onclick="removerMatricula(${m.id}, ${turmaId}, '${nomeTurma}')">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>`;
                 });
                 container.innerHTML = html + '</tbody></table>';
             }
         }
 
-        async function matricularNovo(turmaId) {
-            const nome = prompt("Digite o nome do aluno:");
-            if (!nome) return;
+        async function matricularEmMassa(turmaId, nomeTurma) {
+            const input = document.getElementById('ids_massa');
+            const valor = input.value;
+            if (!valor) return alert("Cole os IDs antes de confirmar.");
 
-            const { data: aluno } = await supabaseClient.from('alunos').select('id, nome').ilike('nome', `%${nome}%`).limit(1).single();
+            // Transforma a string "1, 2, 3" em um array de números [1, 2, 3]
+            const ids = valor.split(',').map(id => id.trim()).filter(id => id !== "");
+            
+            if (ids.length === 0) return alert("Nenhum ID válido encontrado.");
 
-            if (!aluno) return alert("Aluno não encontrado.");
+            const objetosMatricula = ids.map(id => ({
+                aluno_id: parseInt(id),
+                turma_id: turmaId
+            }));
 
-            if (confirm(`Matricular ${aluno.nome}?`)) {
-                await supabaseClient.from('matriculas').insert([{ aluno_id: aluno.id, turma_id: turmaId }]);
-                alert("Sucesso!");
-                location.reload();
+            const { error } = await supabaseClient.from('matriculas').insert(objetosMatricula);
+
+            if (error) {
+                alert("Erro ao matricular: Alguns IDs podem estar incorretos ou já matriculados.");
+                console.error(error);
+            } else {
+                alert(`${ids.length} alunos matriculados com sucesso!`);
+                input.value = '';
+                carregarListaMatriculados(turmaId, nomeTurma);
             }
         }
 
         async function removerMatricula(id, tId, tNome) {
-            if (confirm("Remover aluno?")) {
-                await supabaseClient.from('matriculas').delete().eq('id', id);
-                verAlunos(tId, tNome);
+            if (confirm("Deseja remover este aluno da turma?")) {
+                const { error } = await supabaseClient.from('matriculas').delete().eq('id', id);
+                if (!error) carregarListaMatriculados(tId, tNome);
             }
         }
 
         init();
     </script>
 </body>
-
 </html>
