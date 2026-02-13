@@ -52,7 +52,7 @@
             border-radius: 8px; z-index: 1000; max-height: 250px; overflow-y: auto; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
             margin-top: 5px;
         }
-        .search-result-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; transition: 0.2s; }
+        .search-result-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
         .search-result-item:hover { background: #3b82f6; color: white; }
     </style>
 </head>
@@ -73,25 +73,27 @@
     <main class="main-content">
         <header class="mb-5">
             <h3 class="fw-bold mb-1">Gerenciamento de Projetos</h3>
-            <p class="text-muted small">Vincule ou remova alunos dos projetos sociais.</p>
+            <p class="text-muted small">Controle total de vínculos entre alunos e projetos sociais.</p>
         </header>
 
-        <div class="row g-3" id="gradeProjetos"></div>
+        <div class="row g-3" id="gradeProjetos">
+            <div class="text-center p-5"><div class="spinner-border text-primary"></div></div>
+        </div>
 
         <div class="student-list-container shadow-sm" id="containerAlunos">
             <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-white">
                 <div>
-                    <h5 class="fw-bold mb-0" id="tituloProjetoSelecionado">---</h5>
+                    <h5 class="fw-bold mb-0 text-uppercase" id="tituloProjetoSelecionado">---</h5>
                     <small class="text-primary fw-bold" id="subtituloIdProjeto"></small>
                 </div>
                 <button class="btn btn-close btn-sm" onclick="fecharLista()"></button>
             </div>
 
             <div class="p-3 bg-light border-bottom">
-                <label class="form-label small fw-bold text-muted text-uppercase">Adicionar Aluno ao Projeto:</label>
+                <label class="form-label small fw-bold text-muted">ADICIONAR ALUNO A ESTE PROJETO:</label>
                 <div class="search-wrapper">
                     <i class="fas fa-user-plus"></i>
-                    <input type="text" id="inputInserirAluno" class="search-input" placeholder="Pesquisar em todo o banco (Nome ou ID)..." onkeyup="buscarGlobal(this.value)">
+                    <input type="text" id="inputInserirAluno" class="search-input" placeholder="Pesquisar por Nome ou ID em todo o banco..." onkeyup="buscarGlobal(this.value)">
                     <div id="resultadoBuscaInserir" style="display: none;"></div>
                 </div>
             </div>
@@ -99,7 +101,7 @@
             <div class="search-box">
                 <div class="search-wrapper">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="filtroNome" class="search-input" placeholder="Filtrar alunos já listados abaixo..." onkeyup="filtrarAlunosJaListados()">
+                    <input type="text" id="filtroNome" class="search-input" placeholder="Filtrar alunos já vinculados abaixo..." onkeyup="filtrarAlunosJaListados()">
                 </div>
             </div>
 
@@ -125,46 +127,46 @@
         let projetoAtivoId = null;
         let alunosNoProjetoAtual = [];
 
-        // 1. CARREGA AS CONTAGENS DOS CARDS INICIAIS
+        // --- FUNÇÃO PARA CARREGAR CONTAGENS REAIS ---
         async function carregarContagens() {
-            const { data, error } = await supabaseClient.from('alunos').select('projetos');
-            if (data) {
-                renderizarCards(data);
-            }
+            // Criamos uma lista de consultas para o banco de dados
+            const promessas = Object.keys(nomesDosProjetos).map(async (id) => {
+                const { count, error } = await supabaseClient
+                    .from('alunos')
+                    .select('*', { count: 'exact', head: true })
+                    .ilike('projetos', `%${id}%`);
+
+                return { id, total: count || 0 };
+            });
+
+            const resultados = await Promise.all(promessas);
+            renderizarCards(resultados);
         }
 
-        function renderizarCards(dadosAlunos) {
+        function renderizarCards(resultados) {
             const grade = document.getElementById('gradeProjetos');
             grade.innerHTML = '';
             
-            Object.keys(nomesDosProjetos).forEach(id => {
-                // Conta quantos alunos têm esse ID na string de projetos
-                const total = dadosAlunos.filter(a => {
-                    const lista = String(a.projetos || "").split(/[,;]/).map(i => i.trim());
-                    return lista.includes(String(id));
-                }).length;
-
+            resultados.forEach(res => {
                 grade.innerHTML += `
                     <div class="col-md-4">
-                        <div class="project-card shadow-sm" onclick="abrirProjeto('${id}', '${nomesDosProjetos[id]}')">
+                        <div class="project-card shadow-sm" onclick="abrirProjeto('${res.id}', '${nomesDosProjetos[res.id]}')">
                             <div>
-                                <h6 class="fw-bold mb-0">${nomesDosProjetos[id]}</h6>
-                                <small class="text-muted small">Projeto #${id}</small>
+                                <h6 class="fw-bold mb-0">${nomesDosProjetos[res.id]}</h6>
+                                <small class="text-muted small">ID: ${res.id}</small>
                             </div>
-                            <div class="count-circle">${total}</div>
+                            <div class="count-circle">${res.total}</div>
                         </div>
                     </div>`;
             });
         }
 
-        // 2. ABRE A LISTA DE UM PROJETO ESPECÍFICO
+        // --- LISTAR ALUNOS DO PROJETO ---
         async function abrirProjeto(idProjeto, nomeProjeto) {
             projetoAtivoId = idProjeto;
             document.getElementById('containerAlunos').style.display = 'block';
-            document.getElementById('tituloProjetoSelecionado').innerText = nomeProjeto.toUpperCase();
-            document.getElementById('subtituloIdProjeto').innerText = `ID Interno: ${idProjeto}`;
-            document.getElementById('inputInserirAluno').value = '';
-            document.getElementById('filtroNome').value = '';
+            document.getElementById('tituloProjetoSelecionado').innerText = nomeProjeto;
+            document.getElementById('subtituloIdProjeto').innerText = `Projeto Selecionado: #${idProjeto}`;
             
             await carregarAlunosDoProjeto();
             window.scrollTo({ top: document.getElementById('containerAlunos').offsetTop - 20, behavior: 'smooth' });
@@ -180,7 +182,7 @@
                 .ilike('projetos', `%${projetoAtivoId}%`);
 
             if (data) {
-                // Filtro para garantir que o ID é exato (evita que aluno do projeto 10 apareça no 1)
+                // Filtro para garantir que o ID é o correto (evita que aluno do 10 apareça no 1)
                 alunosNoProjetoAtual = data.filter(a => 
                     String(a.projetos || "").split(/[,;]/).map(i => i.trim()).includes(String(projetoAtivoId))
                 ).sort((a, b) => a.nome.localeCompare(b.nome));
@@ -191,7 +193,7 @@
 
         function renderizarLista(lista) {
             const listaDiv = document.getElementById('listaAlunos');
-            listaDiv.innerHTML = lista.length ? '' : '<div class="p-5 text-center text-muted small">Nenhum aluno vinculado a este projeto.</div>';
+            listaDiv.innerHTML = lista.length ? '' : '<div class="p-5 text-center text-muted small">Nenhum aluno neste projeto.</div>';
             
             lista.forEach(aluno => {
                 const item = document.createElement('div');
@@ -207,7 +209,7 @@
             });
         }
 
-        // 3. BUSCA GLOBAL (VARRE TODO O BANCO)
+        // --- BUSCA GLOBAL EM TODO O BANCO ---
         async function buscarGlobal(termo) {
             const resDiv = document.getElementById('resultadoBuscaInserir');
             if (termo.length < 2) { resDiv.style.display = 'none'; return; }
@@ -220,28 +222,26 @@
 
             if (data && data.length > 0) {
                 resDiv.innerHTML = data.map(a => {
-                    const jaVinculado = String(a.projetos || "").split(/[,;]/).map(i=>i.trim()).includes(String(projetoAtivoId));
+                    const jaEsta = String(a.projetos || "").split(/[,;]/).map(i=>i.trim()).includes(String(projetoAtivoId));
                     return `
                         <div class="search-result-item d-flex justify-content-between align-items-center" 
-                             onclick="${jaVinculado ? '' : `inserir('${a.id}', '${a.nome}', '${a.projetos || ''}')`}">
+                             onclick="${jaEsta ? '' : `vincular('${a.id}', '${a.nome}', '${a.projetos || ''}')`}">
                             <span><strong>${a.nome}</strong> <br><small class="text-muted">ID: ${a.id}</small></span>
-                            ${jaVinculado ? '<span class="badge bg-light text-dark">Já está aqui</span>' : '<span class="badge bg-primary">Vincular</span>'}
+                            ${jaEsta ? '<span class="badge bg-light text-dark">Já vinculado</span>' : '<span class="badge bg-primary">Vincular</span>'}
                         </div>
                     `;
                 }).join('');
                 resDiv.style.display = 'block';
             } else {
-                resDiv.innerHTML = '<div class="p-3 small text-muted">Nenhum resultado encontrado.</div>';
+                resDiv.innerHTML = '<div class="p-3 small text-muted">Nenhum aluno encontrado.</div>';
                 resDiv.style.display = 'block';
             }
         }
 
-        // 4. INSERIR E REMOVER (UPDATE NO BANCO)
-        async function inserir(alunoId, nome, projetosAtuais) {
+        // --- VINCULAR E REMOVER ---
+        async function vincular(alunoId, nome, projetosAtuais) {
             let lista = projetosAtuais ? projetosAtuais.split(/[,;]/).map(i => i.trim()).filter(i => i !== "") : [];
-            if (!lista.includes(String(projetoAtivoId))) {
-                lista.push(String(projetoAtivoId));
-            }
+            if (!lista.includes(String(projetoAtivoId))) lista.push(String(projetoAtivoId));
 
             const { error } = await supabaseClient
                 .from('alunos')
@@ -252,30 +252,23 @@
                 document.getElementById('resultadoBuscaInserir').style.display = 'none';
                 document.getElementById('inputInserirAluno').value = '';
                 await carregarAlunosDoProjeto();
-                carregarContagens();
+                await carregarContagens();
             }
         }
 
         async function remover(alunoId) {
-            if (!confirm("Remover este aluno do projeto?")) return;
-
+            if (!confirm("Remover aluno do projeto?")) return;
             const { data } = await supabaseClient.from('alunos').select('projetos').eq('id', alunoId).single();
             if (data) {
                 let lista = data.projetos.split(/[,;]/).map(i => i.trim()).filter(i => i !== String(projetoAtivoId) && i !== "");
-
-                const { error } = await supabaseClient
-                    .from('alunos')
-                    .update({ projetos: lista.join(',') })
-                    .eq('id', alunoId);
-
+                const { error } = await supabaseClient.from('alunos').update({ projetos: lista.join(',') }).eq('id', alunoId);
                 if (!error) {
                     await carregarAlunosDoProjeto();
-                    carregarContagens();
+                    await carregarContagens();
                 }
             }
         }
 
-        // FILTRO DA LISTA JÁ CARREGADA
         function filtrarAlunosJaListados() {
             const termo = document.getElementById('filtroNome').value.toLowerCase();
             const filtrados = alunosNoProjetoAtual.filter(a => a.nome.toLowerCase().includes(termo));
@@ -283,8 +276,8 @@
         }
 
         function fecharLista() { document.getElementById('containerAlunos').style.display = 'none'; }
-        
-        // INICIALIZAÇÃO
+
+        // Início
         carregarContagens();
     </script>
 </body>
