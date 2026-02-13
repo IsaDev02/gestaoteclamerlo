@@ -11,7 +11,7 @@
         :root { --bg-body: #f8fafc; --sidebar-bg: #1e293b; --primary: #3b82f6; }
         body { background-color: var(--bg-body); font-family: 'Inter', sans-serif; color: #1e293b; }
         
-        .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar-bg); padding: 20px 0; }
+        .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar-bg); padding: 20px 0; z-index: 100;}
         .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; font-size: 0.9rem; text-decoration: none; display: block; }
         .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.05); }
         .main-content { margin-left: 240px; padding: 40px; }
@@ -37,24 +37,25 @@
             margin-top: 30px; display: none; overflow: hidden;
         }
         
-        /* Campo de Filtro */
-        .search-box {
-            background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 20px 25px;
-        }
-        .search-input {
-            border-radius: 8px; border: 1px solid #cbd5e1; padding: 10px 15px 10px 40px;
-            font-size: 0.9rem; width: 100%; max-width: 400px;
-        }
-        .search-wrapper { position: relative; }
+        .search-box { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 20px 25px; }
+        .search-input { border-radius: 8px; border: 1px solid #cbd5e1; padding: 10px 15px 10px 40px; font-size: 0.9rem; width: 100%; }
+        .search-wrapper { position: relative; flex-grow: 1; }
         .search-wrapper i { position: absolute; left: 15px; top: 13px; color: #94a3b8; }
 
         .student-item {
-            padding: 15px 25px; border-bottom: 1px solid #f1f5f9;
+            padding: 12px 25px; border-bottom: 1px solid #f1f5f9;
             display: flex; justify-content: space-between; align-items: center;
             cursor: pointer; transition: 0.2s;
         }
         .student-item:hover { background: #f0f7ff; }
-        .student-item:last-child { border-bottom: none; }
+
+        /* Estilo da Busca de Inserção */
+        #resultadoBuscaInserir {
+            position: absolute; width: 100%; background: white; border: 1px solid #e2e8f0;
+            border-radius: 8px; z-index: 10; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .search-result-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
+        .search-result-item:hover { background: #eef2ff; color: var(--primary); }
     </style>
 </head>
 <body>
@@ -68,7 +69,6 @@
             <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
             <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
             <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
-            
             <div class="mt-5 px-4">
                 <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
             </div>
@@ -78,27 +78,39 @@
     <main class="main-content">
         <header class="mb-5">
             <h3 class="fw-bold mb-1">Projetos Sociais</h3>
-            <p class="text-muted small">Selecione um projeto para listar e filtrar alunos ativos.</p>
+            <p class="text-muted small">Gerencie os alunos vinculados a cada projeto social.</p>
         </header>
 
-        <div class="row g-3" id="gradeProjetos">
-            </div>
+        <div class="row g-3" id="gradeProjetos"></div>
 
         <div class="student-list-container shadow-sm" id="containerAlunos">
             <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-white">
-                <h5 class="fw-bold mb-0" id="tituloProjetoSelecionado">Alunos</h5>
+                <div>
+                    <h5 class="fw-bold mb-0" id="tituloProjetoSelecionado text-uppercase">---</h5>
+                    <small class="text-primary fw-bold" id="subtituloIdProjeto"></small>
+                </div>
                 <button class="btn btn-close btn-sm" onclick="fecharLista()"></button>
+            </div>
+
+            <div class="p-3 bg-light border-bottom">
+                <div class="d-flex gap-2 align-items-center">
+                    <div class="search-wrapper">
+                        <i class="fas fa-user-plus"></i>
+                        <input type="text" id="inputInserirAluno" class="search-input" placeholder="Digitar nome ou ID para ADICIONAR..." onkeyup="buscarParaInserir(this.value)">
+                        <div id="resultadoBuscaInserir" style="display: none;"></div>
+                    </div>
+                    <button class="btn btn-primary btn-sm px-3" style="height: 42px;">Inserir</button>
+                </div>
             </div>
 
             <div class="search-box">
                 <div class="search-wrapper">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="filtroNome" class="search-input" placeholder="Buscar aluno pelo nome..." onkeyup="filtrarAlunos()">
+                    <input type="text" id="filtroNome" class="search-input" placeholder="Filtrar alunos já listados..." onkeyup="filtrarAlunos()">
                 </div>
             </div>
 
-            <div id="listaAlunos">
-                </div>
+            <div id="listaAlunos"></div>
         </div>
     </main>
 
@@ -117,34 +129,26 @@
             "6": "Animar e Celebrar"
         };
 
-        let todosAlunosAtivos = [];
-        let alunosExibidosAtualmente = [];
+        let todosAlunos = []; 
+        let projetoAtivoId = null;
 
         async function carregarDados() {
-            let inicio = 0;
-            const tamanhoPagina = 1000;
-            let buscaConcluida = false;
-
-            while (!buscaConcluida) {
-                const { data, error } = await supabaseClient.from('alunos').select('id, nome, projetos, ativo').range(inicio, inicio + tamanhoPagina - 1);
-                if (data && data.length > 0) {
-                    const ativos = data.filter(a => ['sim', 'true', 'ativo', '1', 's'].includes(String(a.ativo || "").trim().toLowerCase()));
-                    todosAlunosAtivos = [...todosAlunosAtivos, ...ativos];
-                    inicio += tamanhoPagina;
-                } else { buscaConcluida = true; }
+            const { data, error } = await supabaseClient.from('alunos').select('id, nome, projetos, ativo');
+            if (data) {
+                todosAlunos = data;
+                renderizarCards();
             }
-            renderizarCards();
         }
 
         function renderizarCards() {
             const grade = document.getElementById('gradeProjetos');
             grade.innerHTML = '';
             Object.keys(nomesDosProjetos).forEach(id => {
-                const total = todosAlunosAtivos.filter(a => String(a.projetos).split(/[,;]/).map(i=>i.trim()).includes(id)).length;
+                const total = todosAlunos.filter(a => String(a.projetos).split(/[,;]/).map(i=>i.trim()).includes(id)).length;
                 grade.innerHTML += `
                     <div class="col-md-4">
                         <div class="project-card shadow-sm" onclick="verAlunos('${id}', '${nomesDosProjetos[id]}')">
-                            <div><h6 class="fw-bold mb-0">${nomesDosProjetos[id]}</h6><small class="text-muted small">Ativos</small></div>
+                            <div><h6 class="fw-bold mb-0">${nomesDosProjetos[id]}</h6><small class="text-muted small">Vínculos</small></div>
                             <div class="count-circle">${total}</div>
                         </div>
                     </div>`;
@@ -152,57 +156,125 @@
         }
 
         function verAlunos(idProjeto, nomeProjeto) {
-            const container = document.getElementById('containerAlunos');
-            const titulo = document.getElementById('tituloProjetoSelecionado');
-            document.getElementById('filtroNome').value = ''; // Limpa busca anterior
-
-            titulo.innerText = nomeProjeto.toUpperCase();
-            container.style.display = 'block';
-
-            // Armazena os alunos deste projeto para o filtro funcionar
-            alunosExibidosAtualmente = todosAlunosAtivos.filter(a => {
-                const ids = String(a.projetos || "").split(/[,;]/).map(i => i.trim());
-                return ids.includes(idProjeto);
-            }).sort((a, b) => a.nome.localeCompare(b.nome));
-
-            renderizarLista(alunosExibidosAtualmente);
-            window.scrollTo({ top: container.offsetTop - 20, behavior: 'smooth' });
+            projetoAtivoId = idProjeto;
+            document.getElementById('containerAlunos').style.display = 'block';
+            document.getElementById('tituloProjetoSelecionado').innerText = nomeProjeto.toUpperCase();
+            document.getElementById('subtituloIdProjeto').innerText = `ID do Projeto: ${idProjeto}`;
+            document.getElementById('inputInserirAluno').value = '';
+            document.getElementById('filtroNome').value = '';
+            
+            atualizarListaLocal();
+            window.scrollTo({ top: document.getElementById('containerAlunos').offsetTop - 20, behavior: 'smooth' });
         }
 
-        function renderizarLista(listaParaExibir) {
+        function atualizarListaLocal() {
+            const filtrados = todosAlunos.filter(a => {
+                const ids = String(a.projetos || "").split(/[,;]/).map(i => i.trim());
+                return ids.includes(projetoAtivoId);
+            }).sort((a, b) => a.nome.localeCompare(b.nome));
+
+            renderizarLista(filtrados);
+        }
+
+        function renderizarLista(lista) {
             const listaDiv = document.getElementById('listaAlunos');
-            listaDiv.innerHTML = '';
-
-            if (listaParaExibir.length === 0) {
-                listaDiv.innerHTML = '<div class="p-5 text-center text-muted small">Nenhum aluno encontrado.</div>';
-                return;
-            }
-
-            listaParaExibir.forEach(aluno => {
+            listaDiv.innerHTML = lista.length ? '' : '<div class="p-5 text-center text-muted small">Nenhum aluno vinculado.</div>';
+            
+            lista.forEach(aluno => {
                 const item = document.createElement('div');
                 item.className = 'student-item';
-                item.onclick = () => window.location.href = `editar_aluno.html?id=${aluno.id}`;
                 item.innerHTML = `
-                    <span class="fw-medium text-secondary">${aluno.nome}</span>
-                    <i class="fas fa-chevron-right text-muted" style="font-size: 0.7rem;"></i>
+                    <span class="fw-medium text-secondary">${aluno.nome} <small class="text-muted">(ID: ${aluno.id})</small></span>
+                    <button class="btn btn-link text-danger btn-sm" onclick="event.stopPropagation(); removerDoProjeto('${aluno.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 `;
+                item.onclick = () => window.location.href = `editar_aluno.html?id=${aluno.id}`;
                 listaDiv.appendChild(item);
             });
         }
 
-        // FUNÇÃO DE FILTRO REAL-TIME
+        // --- LÓGICA DE INSERÇÃO ---
+
+        function buscarParaInserir(termo) {
+            const resDiv = document.getElementById('resultadoBuscaInserir');
+            if (termo.length < 2) { resDiv.style.display = 'none'; return; }
+
+            const sugeridos = todosAlunos.filter(a => 
+                (a.nome.toLowerCase().includes(termo.toLowerCase()) || String(a.id) === termo) &&
+                !String(a.projetos || "").split(/[,;]/).map(i=>i.trim()).includes(projetoAtivoId)
+            ).slice(0, 5);
+
+            if (sugeridos.length > 0) {
+                resDiv.innerHTML = sugeridos.map(a => `
+                    <div class="search-result-item" onclick="confirmarInsercao('${a.id}', '${a.nome}')">
+                        <strong>${a.nome}</strong> <small class="text-muted">ID: ${a.id}</small>
+                    </div>
+                `).join('');
+                resDiv.style.display = 'block';
+            } else {
+                resDiv.style.display = 'none';
+            }
+        }
+
+        async function confirmarInsercao(alunoId, alunoNome) {
+            if (!confirm(`Deseja adicionar ${alunoNome} ao projeto ${nomesDosProjetos[projetoAtivoId]}?`)) return;
+
+            const aluno = todosAlunos.find(a => String(a.id) === String(alunoId));
+            let projetosAtuais = String(aluno.projetos || "").split(/[,;]/).map(i => i.trim()).filter(i => i !== "");
+            
+            if (!projetosAtuais.includes(projetoAtivoId)) {
+                projetosAtuais.push(projetoAtivoId);
+            }
+
+            const novoValorProjetos = projetosAtuais.join(',');
+
+            const { error } = await supabaseClient
+                .from('alunos')
+                .update({ projetos: novoValorProjetos })
+                .eq('id', alunoId);
+
+            if (error) {
+                alert("Erro ao inserir: " + error.message);
+            } else {
+                aluno.projetos = novoValorProjetos; // Atualiza localmente
+                document.getElementById('resultadoBuscaInserir').style.display = 'none';
+                document.getElementById('inputInserirAluno').value = '';
+                atualizarListaLocal();
+                renderizarCards();
+            }
+        }
+
+        async function removerDoProjeto(alunoId) {
+            if (!confirm("Remover aluno deste projeto?")) return;
+
+            const aluno = todosAlunos.find(a => String(a.id) === String(alunoId));
+            let projetosAtuais = String(aluno.projetos || "").split(/[,;]/).map(i => i.trim()).filter(i => i !== projetoAtivoId && i !== "");
+
+            const { error } = await supabaseClient
+                .from('alunos')
+                .update({ projetos: projetosAtuais.join(',') })
+                .eq('id', alunoId);
+
+            if (!error) {
+                aluno.projetos = projetosAtuais.join(',');
+                atualizarListaLocal();
+                renderizarCards();
+            }
+        }
+
         function filtrarAlunos() {
             const termo = document.getElementById('filtroNome').value.toLowerCase();
-            const filtrados = alunosExibidosAtualmente.filter(aluno => 
-                aluno.nome.toLowerCase().includes(termo)
+            const filtrados = todosAlunos.filter(a => 
+                String(a.projetos).split(/[,;]/).map(i=>i.trim()).includes(projetoAtivoId) &&
+                a.nome.toLowerCase().includes(termo)
             );
             renderizarLista(filtrados);
         }
 
         function fecharLista() { document.getElementById('containerAlunos').style.display = 'none'; }
-
+        
         carregarDados();
     </script>
 </body>
-
 </html>
