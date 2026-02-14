@@ -73,7 +73,7 @@
     <main class="main-content">
         <header class="mb-5">
             <h3 class="fw-bold mb-1">Gerenciamento de Projetos</h3>
-            <p class="text-muted small">Controle de vínculos e transições de alunos entre projetos.</p>
+            <p class="text-muted small">Controle de vínculos através da tabela de matrículas.</p>
         </header>
 
         <div class="row g-3" id="gradeProjetos">
@@ -93,7 +93,7 @@
                 <label class="form-label small fw-bold text-muted">VINCULAR NOVO ALUNO:</label>
                 <div class="search-wrapper">
                     <i class="fas fa-user-plus"></i>
-                    <input type="text" id="inputInserirAluno" class="search-input" placeholder="Pesquisar por Nome ou ID..." onkeyup="buscarGlobal(this.value)">
+                    <input type="text" id="inputInserirAluno" class="search-input" placeholder="Pesquisar por Nome para matricular neste projeto..." onkeyup="buscarGlobal(this.value)">
                     <div id="resultadoBuscaInserir" style="display: none;"></div>
                 </div>
             </div>
@@ -127,13 +127,13 @@
         let projetoAtivoId = null;
         let alunosNoProjetoAtual = [];
 
-        // --- CONTAGEM REAL NOS CARDS ---
+        // 1. CARREGAR CONTAGENS (Buscando na tabela matriculas)
         async function carregarContagens() {
             const promessas = Object.keys(nomesDosProjetos).map(async (id) => {
                 const { count } = await supabaseClient
-                    .from('alunos')
+                    .from('matriculas')
                     .select('*', { count: 'exact', head: true })
-                    .ilike('projetos', `%${id}%`);
+                    .eq('projeto_id', id);
                 return { id, total: count || 0 };
             });
 
@@ -150,7 +150,7 @@
                         <div class="project-card shadow-sm" onclick="abrirProjeto('${res.id}', '${nomesDosProjetos[res.id]}')">
                             <div>
                                 <h6 class="fw-bold mb-0">${nomesDosProjetos[res.id]}</h6>
-                                <small class="text-muted small">Projeto #${res.id}</small>
+                                <small class="text-muted small">ID Projeto #${res.id}</small>
                             </div>
                             <div class="count-circle">${res.total}</div>
                         </div>
@@ -162,93 +162,98 @@
             projetoAtivoId = idProjeto;
             document.getElementById('containerAlunos').style.display = 'block';
             document.getElementById('tituloProjetoSelecionado').innerText = nomeProjeto;
-            document.getElementById('subtituloIdProjeto').innerText = `Editando Projeto #${idProjeto}`;
+            document.getElementById('subtituloIdProjeto').innerText = `Matrículas Ativas no Projeto #${idProjeto}`;
             await carregarAlunosDoProjeto();
             window.scrollTo({ top: document.getElementById('containerAlunos').offsetTop - 20, behavior: 'smooth' });
         }
 
+        // 2. LISTAR ALUNOS (JOIN entre matriculas e alunos)
         async function carregarAlunosDoProjeto() {
             const listaDiv = document.getElementById('listaAlunos');
             listaDiv.innerHTML = '<div class="p-4 text-center"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
 
-            const { data } = await supabaseClient
-                .from('alunos')
-                .select('id, nome, projetos')
-                .ilike('projetos', `%${projetoAtivoId}%`);
+            const { data, error } = await supabaseClient
+                .from('matriculas')
+                .select(`
+                    aluno_id,
+                    alunos ( id, nome )
+                `)
+                .eq('projeto_id', projetoAtivoId);
 
-            if (data) {
-                alunosNoProjetoAtual = data.filter(a => 
-                    String(a.projetos || "").split(/[,;]/).map(i => i.trim()).includes(String(projetoAtivoId))
-                ).sort((a, b) => a.nome.localeCompare(b.nome));
-                renderizarLista(alunosNoProjetoAtual);
+            if (error) {
+                console.error(error);
+                listaDiv.innerHTML = '<div class="p-3 text-danger">Erro ao carregar dados.</div>';
+                return;
             }
+
+            alunosNoProjetoAtual = data
+                .filter(item => item.alunos !== null)
+                .map(item => ({
+                    id: item.alunos.id,
+                    nome: item.alunos.nome
+                })).sort((a, b) => a.nome.localeCompare(b.nome));
+
+            renderizarLista(alunosNoProjetoAtual);
         }
 
         function renderizarLista(lista) {
             const listaDiv = document.getElementById('listaAlunos');
-            listaDiv.innerHTML = lista.length ? '' : '<div class="p-5 text-center text-muted small">Nenhum aluno vinculado.</div>';
+            listaDiv.innerHTML = lista.length ? '' : '<div class="p-5 text-center text-muted small">Nenhum aluno matriculado neste projeto.</div>';
             lista.forEach(aluno => {
                 const item = document.createElement('div');
                 item.className = 'student-item';
                 item.innerHTML = `
                     <span>${aluno.nome} <small class="text-muted ms-2">(ID: ${aluno.id})</small></span>
                     <button class="btn btn-outline-danger btn-sm border-0" onclick="event.stopPropagation(); remover('${aluno.id}')">
-                        <i class="fas fa-user-minus"></i>
+                        <i class="fas fa-trash-can"></i>
                     </button>`;
                 item.onclick = () => window.location.href = `editar_aluno.html?id=${aluno.id}`;
                 listaDiv.appendChild(item);
             });
         }
 
+        // 3. BUSCAR GLOBAL (Apenas para encontrar o aluno e matricular)
         async function buscarGlobal(termo) {
             const resDiv = document.getElementById('resultadoBuscaInserir');
             if (termo.length < 2) { resDiv.style.display = 'none'; return; }
 
             const { data } = await supabaseClient
                 .from('alunos')
-                .select('id, nome, projetos')
-                .or(`nome.ilike.%${termo}%,id.eq.${isNaN(termo) ? -1 : termo}`)
-                .limit(10);
+                .select('id, nome')
+                .ilike('nome', `%${termo}%`)
+                .limit(5);
 
             if (data && data.length > 0) {
-                resDiv.innerHTML = data.map(a => {
-                    const jaEsta = String(a.projetos || "").split(/[,;]/).map(i=>i.trim()).includes(String(projetoAtivoId));
-                    return `
-                        <div class="search-result-item d-flex justify-content-between align-items-center" 
-                             onclick="${jaEsta ? '' : `vincular('${a.id}', '${a.nome}', '${a.projetos || ''}')`}">
-                            <span><strong>${a.nome}</strong> <br><small class="text-muted">ID: ${a.id}</small></span>
-                            ${jaEsta ? '<span class="badge bg-light text-dark">Já vinculado</span>' : '<span class="badge bg-primary">Vincular</span>'}
-                        </div>`;
-                }).join('');
+                resDiv.innerHTML = data.map(a => `
+                    <div class="search-result-item d-flex justify-content-between align-items-center" onclick="vincular('${a.id}')">
+                        <span><strong>${a.nome}</strong></span>
+                        <span class="badge bg-primary">Matricular</span>
+                    </div>`).join('');
                 resDiv.style.display = 'block';
             }
         }
 
-        // --- LÓGICA DE TRANSIÇÃO INTELIGENTE ---
-        async function vincular(alunoId, nome, projetosAtuais) {
-            let lista = projetosAtuais ? projetosAtuais.split(/[,;]/).map(i => i.trim()).filter(i => i !== "") : [];
-            
-            // Se já tiver outros projetos
-            if (lista.length > 0 && !lista.includes(String(projetoAtivoId))) {
-                const nomesAntigos = lista.map(id => nomesDosProjetos[id] || `ID ${id}`).join(", ");
-                
-                const mensagem = `${nome} já está no(s) projeto(s): ${nomesAntigos}.\n\n` +
-                                 `Deseja REMOVER dos antigos e deixar APENAS no novo (${nomesDosProjetos[projetoAtivoId]})?\n\n` +
-                                 `OK = Substituir\nCANCELAR = Manter em ambos`;
+        // 4. VINCULAR (Criar linha na tabela matriculas)
+        async function vincular(alunoId) {
+            // Checar duplicidade
+            const { data } = await supabaseClient
+                .from('matriculas')
+                .select('id')
+                .eq('aluno_id', alunoId)
+                .eq('projeto_id', projetoAtivoId);
 
-                if (confirm(mensagem)) {
-                    lista = [String(projetoAtivoId)]; // Substitui tudo pelo novo
-                } else {
-                    lista.push(String(projetoAtivoId)); // Acumula
-                }
-            } else if (!lista.includes(String(projetoAtivoId))) {
-                lista.push(String(projetoAtivoId));
+            if (data && data.length > 0) {
+                alert("Este aluno já está matriculado neste projeto!");
+                return;
             }
 
             const { error } = await supabaseClient
-                .from('alunos')
-                .update({ projetos: lista.join(',') })
-                .eq('id', alunoId);
+                .from('matriculas')
+                .insert([{ 
+                    aluno_id: alunoId, 
+                    projeto_id: projetoAtivoId,
+                    data_matricula: new Date().toISOString().split('T')[0]
+                }]);
 
             if (!error) {
                 document.getElementById('resultadoBuscaInserir').style.display = 'none';
@@ -258,12 +263,17 @@
             }
         }
 
+        // 5. REMOVER (Deletar linha da tabela matriculas)
         async function remover(alunoId) {
             if (!confirm("Remover aluno deste projeto?")) return;
-            const { data } = await supabaseClient.from('alunos').select('projetos').eq('id', alunoId).single();
-            if (data) {
-                let lista = data.projetos.split(/[,;]/).map(i => i.trim()).filter(i => i !== String(projetoAtivoId) && i !== "");
-                await supabaseClient.from('alunos').update({ projetos: lista.join(',') }).eq('id', alunoId);
+            
+            const { error } = await supabaseClient
+                .from('matriculas')
+                .delete()
+                .eq('aluno_id', alunoId)
+                .eq('projeto_id', projetoAtivoId);
+
+            if (!error) {
                 await carregarAlunosDoProjeto();
                 await carregarContagens();
             }
