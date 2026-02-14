@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro Completo | Centro Social</title>
+    <title>Cadastro Centro Social | Sistema de Matrículas</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -35,8 +35,13 @@
 
     <main class="main-content">
         <header class="mb-4 d-flex justify-content-between align-items-center">
-            <h3 class="fw-bold">Ficha de Inscrição Completa</h3>
-            <button type="button" class="btn btn-primary px-5 fw-bold" onclick="salvarAluno()" id="btnSalvar">FINALIZAR E MATRICULAR</button>
+            <div>
+                <h3 class="fw-bold">Ficha de Inscrição Completa</h3>
+                <p class="text-muted">Preencha todos os campos para realizar o cadastro e a matrícula.</p>
+            </div>
+            <button type="button" class="btn btn-primary px-5 fw-bold" onclick="salvarAluno()" id="btnSalvar">
+                <i class="fas fa-save me-2"></i>FINALIZAR E MATRICULAR
+            </button>
         </header>
 
         <form id="formCadastro">
@@ -72,54 +77,47 @@
                     <div class="col-md-2"><label class="form-label">Salário (R$)</label><input type="text" id="salario_mae" class="form-control"></div>
                     <div class="col-md-2"><label class="form-label">CPF Mãe</label><input type="text" id="cpf_mae" class="form-control mascara-cpf"></div>
                 </div>
-                <div class="row g-3 mb-3 border-bottom pb-3">
+                <div class="row g-3">
                     <div class="col-md-4"><label class="form-label">Nome do Pai</label><input type="text" id="nome_pai" class="form-control"></div>
                     <div class="col-md-2"><label class="form-label">Situação</label><select id="situacao_pai" class="form-select"><option>PRESENTE</option><option>AUSENTE</option><option>FALECIDO</option></select></div>
                     <div class="col-md-2"><label class="form-label">Profissão</label><input type="text" id="profissao_pai" class="form-control"></div>
                     <div class="col-md-2"><label class="form-label">Salário (R$)</label><input type="text" id="salario_pai" class="form-control"></div>
                     <div class="col-md-2"><label class="form-label">CPF Pai</label><input type="text" id="cpf_pai" class="form-control mascara-cpf"></div>
                 </div>
-                <div class="row g-3">
-                    <div class="col-md-4"><label class="form-label">Outro Responsável</label><input type="text" id="nome_outro" class="form-control"></div>
-                    <div class="col-md-2"><label class="form-label">Parentesco</label><input type="text" id="parentesco_outro" class="form-control"></div>
-                    <div class="col-md-3"><label class="form-label">Profissão</label><input type="text" id="profissao_outro" class="form-control"></div>
-                    <div class="col-md-3"><label class="form-label">Contato</label><input type="text" id="tel_outro" class="form-control mascara-fone"></div>
-                </div>
             </div>
 
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-hand-holding-heart me-2"></i> Benefícios Sociais</div>
-                <div id="containerBeneficios">
-                    </div>
+                <div id="containerBeneficios"></div>
                 <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="adicionarLinhaBeneficio()">+ Adicionar Benefício</button>
             </div>
 
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-school me-2"></i> Vida Escolar</div>
                 <div class="row g-3">
-                    <div class="col-md-6"><label class="form-label">Escola onde estuda</label><input type="text" id="escola" class="form-control"></div>
+                    <div class="col-md-6"><label class="form-label">Escola</label><input type="text" id="escola" class="form-control"></div>
                     <div class="col-md-3"><label class="form-label">Série</label><input type="text" id="serie" class="form-control"></div>
                     <div class="col-md-3"><label class="form-label">Período Escolar</label><select id="periodo_escolar" class="form-select"><option>MANHÃ</option><option>TARDE</option><option>INTEGRAL</option><option>NOITE</option></select></div>
                 </div>
             </div>
 
             <div class="form-card" style="border: 2px solid var(--primary);">
-                <div class="section-title text-primary"><i class="fas fa-check-circle me-2"></i> Alocação no Projeto</div>
+                <div class="section-title text-primary"><i class="fas fa-check-circle me-2"></i> Alocação em Projeto e Turma</div>
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">Selecionar Projeto</label>
+                        <label class="form-label">Projeto</label>
                         <select id="select_projeto" class="form-select" onchange="carregarTurmas(this.value)">
-                            <option value="">Escolha um projeto...</option>
+                            <option value="">Escolha o Projeto...</option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Turma Disponível</label>
+                        <label class="form-label">Turma</label>
                         <select id="select_turma" class="form-select">
-                            <option value="">Aguardando projeto...</option>
+                            <option value="">Selecione o Projeto primeiro...</option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Data da Matrícula</label>
+                        <label class="form-label">Data de Entrada</label>
                         <input type="date" id="data_matricula" class="form-control">
                     </div>
                 </div>
@@ -135,54 +133,56 @@
 
         window.onload = () => {
             carregarProjetos();
-            adicionarLinhaBeneficio(); // Já começa com uma linha de benefício
+            adicionarLinhaBeneficio();
             document.getElementById('data_matricula').value = new Date().toISOString().split('T')[0];
         };
 
-        // --- LÓGICA DE PROJETOS E TURMAS ---
+        // --- BUSCA DE DADOS RELACIONAIS ---
         async function carregarProjetos() {
-            const { data, error } = await supabaseClient.from('projetos').select('id, nome');
-            if (!error) data.forEach(p => document.getElementById('select_projeto').add(new Option(p.nome, p.id)));
+            const { data, error } = await supabaseClient.from('projetos').select('id, nome').order('nome');
+            if (!error) {
+                const select = document.getElementById('select_projeto');
+                data.forEach(p => select.add(new Option(p.nome, p.id)));
+            }
         }
 
         async function carregarTurmas(projetoId) {
             const selectTurma = document.getElementById('select_turma');
             selectTurma.innerHTML = '<option value="">Carregando...</option>';
             if (!projetoId) return;
-            const { data, error } = await supabaseClient.from('turmas').select('id, nome_turma').eq('projeto_id', projetoId);
-            selectTurma.innerHTML = '<option value="">Selecione a turma...</option>';
+
+            const { data, error } = await supabaseClient
+                .from('turmas')
+                .select('id, nome_turma')
+                .eq('projeto_id', projetoId)
+                .order('nome_turma');
+
+            selectTurma.innerHTML = '<option value="">Selecione a Turma...</option>';
             if (!error) data.forEach(t => selectTurma.add(new Option(t.nome_turma, t.id)));
         }
 
-        // --- BENEFÍCIOS DINÂMICOS ---
+        // --- AUXILIARES INTERFACE ---
         function adicionarLinhaBeneficio() {
             const div = document.createElement('div');
             div.className = 'benefit-row row g-2';
             div.innerHTML = `
-                <div class="col-7"><input type="text" class="form-control ben-nome" placeholder="Ex: Bolsa Família"></div>
-                <div class="col-4"><input type="text" class="form-control ben-valor" placeholder="Valor R$"></div>
+                <div class="col-7"><input type="text" class="form-control ben-nome" placeholder="Nome do Benefício"></div>
+                <div class="col-4"><input type="text" class="form-control ben-valor" placeholder="Valor"></div>
                 <div class="col-1"><button type="button" class="btn btn-danger btn-sm w-100" onclick="this.parentElement.parentElement.remove()">×</button></div>
             `;
             document.getElementById('containerBeneficios').appendChild(div);
         }
 
-        // --- MÁSCARAS E AUXILIARES ---
-        document.addEventListener('input', (e) => {
-            const el = e.target;
-            if (el.classList.contains('mascara-cpf')) el.value = el.value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2').replace(/(-\d{2})\d+?$/, '$1');
-            if (el.classList.contains('mascara-fone')) el.value = el.value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').replace(/(-\d{4})\d+?$/, '$1');
-            if (el.classList.contains('mascara-cep')) el.value = el.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').replace(/(-\d{3})\d+?$/, '$1');
-        });
-
         async function buscarCEP(valor) {
             const cep = valor.replace(/\D/g, '');
-            if (cep.length !== 8) return;
-            const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-            const d = await res.json();
-            if (!d.erro) {
-                document.getElementById('rua').value = d.logradouro;
-                document.getElementById('bairro').value = d.bairro;
-                document.getElementById('cidade').value = d.localidade;
+            if (cep.length === 8) {
+                const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const d = await res.json();
+                if (!d.erro) {
+                    document.getElementById('rua').value = d.logradouro;
+                    document.getElementById('bairro').value = d.bairro;
+                    document.getElementById('cidade').value = d.localidade;
+                }
             }
         }
 
@@ -195,18 +195,26 @@
             document.getElementById('idade').value = idade;
         }
 
-        // --- FUNÇÃO SALVAR MESTRE ---
+        // --- MÁSCARAS ---
+        document.addEventListener('input', (e) => {
+            const el = e.target;
+            if (el.classList.contains('mascara-cpf')) el.value = el.value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2').replace(/(-\d{2})\d+?$/, '$1');
+            if (el.classList.contains('mascara-fone')) el.value = el.value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').replace(/(-\d{4})\d+?$/, '$1');
+            if (el.classList.contains('mascara-cep')) el.value = el.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').replace(/(-\d{3})\d+?$/, '$1');
+        });
+
+        // --- FUNÇÃO DE SALVAMENTO ---
         async function salvarAluno() {
             const btn = document.getElementById('btnSalvar');
             btn.disabled = true;
-            btn.innerText = "Salvando Aluno...";
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> SALVANDO...';
 
-            // Captura Benefícios
+            // Coleta benefícios
             const nomesB = Array.from(document.querySelectorAll('.ben-nome')).map(i => i.value);
             const valoresB = Array.from(document.querySelectorAll('.ben-valor')).map(i => i.value);
             const listaBeneficios = nomesB.map((nome, i) => `${nome}: R$ ${valoresB[i]}`).filter(x => x.length > 5).join(' | ');
 
-            const dados = {
+            const dadosAluno = {
                 nome: document.getElementById('nome').value,
                 rg: document.getElementById('rg').value,
                 cpf: document.getElementById('cpf').value,
@@ -228,46 +236,49 @@
                 cpf_pai: document.getElementById('cpf_pai').value,
                 profissao_pai: document.getElementById('profissao_pai').value,
                 salario_pai: document.getElementById('salario_pai').value,
-                nome_outro: document.getElementById('nome_outro').value,
-                parentesco_outro: document.getElementById('parentesco_outro').value,
-                profissao_outro: document.getElementById('profissao_outro').value,
-                tel_outro: document.getElementById('tel_outro').value,
                 beneficios_detalhados: listaBeneficios,
                 escola: document.getElementById('escola').value,
                 serie: document.getElementById('serie').value,
                 periodo_escolar: document.getElementById('periodo_escolar').value
             };
 
-            // 1. Criar o Aluno
-            const { data: alunoCriado, error: erroAluno } = await supabaseClient
-                .from('alunos')
-                .insert([dados])
-                .select()
-                .single();
+            try {
+                // 1. Inserir Aluno
+                const { data: alunoCriado, error: erroAluno } = await supabaseClient
+                    .from('alunos')
+                    .insert([dadosAluno])
+                    .select()
+                    .single();
 
-            if (erroAluno) {
-                alert("Erro ao salvar aluno: " + erroAluno.message);
+                if (erroAluno) throw erroAluno;
+
+                // 2. Tentar Matrícula (apenas se turma for selecionada)
+                const turmaId = document.getElementById('select_turma').value;
+                if (turmaId && alunoCriado) {
+                    const { error: erroMatricula } = await supabaseClient
+                        .from('matriculas') // Nome da tabela em minúsculo conforme confirmado
+                        .insert([{
+                            aluno_id: alunoCriado.id,
+                            turma_id: turmaId,
+                            data_matricula: document.getElementById('data_matricula').value
+                        }]);
+
+                    if (erroMatricula) {
+                        console.error("Erro na matricula:", erroMatricula);
+                        alert("Aluno salvo, mas houve erro no vínculo da turma: " + erroMatricula.message);
+                    }
+                }
+
+                alert("Cadastro realizado com sucesso!");
+                window.location.href = 'lista_geral.html';
+
+            } catch (err) {
+                console.error("Erro Geral:", err);
+                alert("Falha no cadastro: " + err.message);
+            } finally {
                 btn.disabled = false;
-                btn.innerText = "FINALIZAR E MATRICULAR";
-                return;
+                btn.innerHTML = '<i class="fas fa-save me-2"></i>FINALIZAR E MATRICULAR';
             }
-
-            // 2. Criar Matrícula na tabela MATRICULAS
-            const turmaId = document.getElementById('select_turma').value;
-            if (turmaId) {
-                const { error: erroMatricula } = await supabaseClient
-                    .from('MATRICULAS')
-                    .insert([{
-                        aluno_id: alunoCriado.id,
-                        turma_id: turmaId,
-                        data_matricula: document.getElementById('data_matricula').value
-                    }]);
-
-                if (erroMatricula) alert("Aluno salvo, mas houve erro na matrícula.");
-            }
-
-            alert("Cadastro e Matrícula realizados com sucesso!");
-            window.location.href = 'lista_geral.html';
         }
     </script>
 </body>
