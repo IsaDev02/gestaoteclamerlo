@@ -29,6 +29,7 @@
         <nav>
             <a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
             <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
+            <a class="nav-link" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
             <a class="nav-link active" href="#"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
         </nav>
     </aside>
@@ -195,10 +196,13 @@
             }
         }
 
+        // SALVAMENTO COM LOGS PARA DEPURAÇÃO
         async function salvarAluno() {
             const btn = document.getElementById('btnSalvar');
             const projId = document.getElementById('select_projeto').value;
             const turmaId = document.getElementById('select_turma').value;
+
+            if (!projId) { alert("Escolha o projeto para o aluno aparecer na tela de Projetos!"); return; }
 
             btn.disabled = true;
             btn.innerHTML = 'SALVANDO...';
@@ -242,23 +246,26 @@
             };
 
             try {
+                // ETAPA 1: SALVAR ALUNO
                 const { data: alunoCriado, error: erroAluno } = await supabaseClient.from('alunos').insert([dadosAluno]).select().single();
-                if (erroAluno) throw erroAluno;
+                if (erroAluno) throw new Error("Erro Aluno: " + erroAluno.message);
 
-                if (turmaId) {
-                    const { error: erroMatricula } = await supabaseClient.from('matriculas').insert([{
-                        aluno_id: alunoCriado.id,
-                        turma_id: turmaId,
-                        projeto_id: projId, // Importante para a tela projetos.html
-                        data_matricula: document.getElementById('data_matricula').value
-                    }]);
-                    if (erroMatricula) throw erroMatricula;
-                }
+                // ETAPA 2: CRIAR MATRÍCULA (O QUE VINCULA AO PROJETO)
+                const { error: erroMatricula } = await supabaseClient.from('matriculas').insert([{
+                    aluno_id: alunoCriado.id,
+                    turma_id: turmaId ? parseInt(turmaId) : null,
+                    projeto_id: parseInt(projId), // GARANTE QUE É NÚMERO
+                    data_matricula: document.getElementById('data_matricula').value
+                }]);
+                
+                if (erroMatricula) throw new Error("Erro Matrícula: " + erroMatricula.message);
 
-                alert("Sucesso! Cadastro e Matrícula realizados.");
-                window.location.href = 'lista_geral.html';
+                alert("Sucesso! Aluno cadastrado e vinculado ao projeto.");
+                window.location.href = 'projetos.html'; // Vai direto para ver o resultado
+
             } catch (err) {
-                alert("Erro ao salvar: " + err.message);
+                alert(err.message);
+                console.error(err);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = 'FINALIZAR E MATRICULAR';
