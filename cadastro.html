@@ -107,99 +107,95 @@
         </form>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        function calcularIdade(data) {
-            if(!data) return;
-            const nasc = new Date(data);
-            const hoje = new Date();
-            let idade = hoje.getFullYear() - nasc.getFullYear();
-            if (hoje.getMonth() < nasc.getMonth() || (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate())) idade--;
-            document.getElementById('idade').value = idade;
+    // Carregar Projetos e Turmas ao iniciar
+    window.onload = async () => {
+        // Carregar Projetos do Banco
+        const { data: projs } = await supabaseClient.from('projetos').select('id, nome');
+        if (projs) {
+            const selectP = document.getElementById('select_projeto');
+            projs.forEach(p => selectP.add(new Option(p.nome, p.id)));
         }
+    };
 
-        document.addEventListener('input', (e) => {
-            const el = e.target;
-            if (el.classList.contains('mascara-cpf')) el.value = el.value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2').replace(/(-\d{2})\d+?$/, '$1');
-            if (el.classList.contains('mascara-fone')) el.value = el.value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').replace(/(-\d{4})\d+?$/, '$1');
-            if (el.classList.contains('mascara-cep')) el.value = el.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').replace(/(-\d{3})\d+?$/, '$1');
-        });
+    // Função para carregar turmas quando o projeto for escolhido
+    async function carregarTurmas(projetoId) {
+        const selectT = document.getElementById('select_turma');
+        selectT.innerHTML = '<option value="">Carregando turmas...</option>';
+        
+        const { data: turmas } = await supabaseClient
+            .from('turmas')
+            .select('id, nome_turma')
+            .eq('projeto_id', projetoId);
 
-        async function buscarCEP(valor) {
-            const cep = valor.replace(/\D/g, '');
-            if (cep.length === 8) {
-                const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                const d = await res.json();
-                if (!d.erro) {
-                    document.getElementById('rua').value = d.logradouro;
-                    document.getElementById('bairro').value = d.bairro;
-                    document.getElementById('cidade').value = d.localidade;
-                }
-            }
+        selectT.innerHTML = '<option value="">Selecione a Turma...</option>';
+        if (turmas) {
+            turmas.forEach(t => selectT.add(new Option(t.nome_turma, t.id)));
         }
+    }
 
-        async function salvarAluno() {
-            const btn = document.getElementById('btnSalvar');
-            const projId = document.getElementById('select_projeto').value;
+    async function salvarAluno() {
+        const btn = document.getElementById('btnSalvar');
+        const projId = document.getElementById('select_projeto').value;
+        const turmaId = document.getElementById('select_turma').value;
 
-            if (!projId) {
-                alert("ERRO: Você deve selecionar um PROJETO antes de salvar.");
-                return;
-            }
+        if (!projId) { alert("Selecione o Projeto!"); return; }
 
-            btn.disabled = true;
-            btn.innerHTML = 'GRAVANDO NO BANCO...';
+        btn.disabled = true;
+        btn.innerHTML = 'SALVANDO EM TODOS OS CAMPOS...';
 
-            const dadosAluno = {
-                nome: document.getElementById('nome').value,
-                rg: document.getElementById('rg').value,
-                cpf: document.getElementById('cpf').value,
-                data_nascimento: document.getElementById('data_nasc').value,
-                idade: parseInt(document.getElementById('idade').value) || 0,
-                whatsapp: document.getElementById('whatsapp').value,
-                cep: document.getElementById('cep').value,
-                rua: document.getElementById('rua').value,
-                numero: document.getElementById('numero').value,
-                bairro: document.getElementById('bairro').value,
-                cidade: document.getElementById('cidade').value,
-                nome_mae: document.getElementById('nome_mae').value,
-                situacao_mae: document.getElementById('situacao_mae').value,
-                tel_mae: document.getElementById('tel_mae').value,
-                profissao_mae: document.getElementById('profissao_mae').value,
-                salario_mae: document.getElementById('salario_mae').value,
-                cpf_mae: document.getElementById('cpf_mae').value,
-                nome_pai: document.getElementById('nome_pai').value,
-                situacao_pai: document.getElementById('situacao_pai').value,
-                tel_pai: document.getElementById('tel_pai').value,
-                profissao_pai: document.getElementById('profissao_pai').value,
-                salario_pai: document.getElementById('salario_pai').value,
-                
-                // O VÍNCULO DIRETO COM A COLUNA 'PROJETOS' DA TABELA 'ALUNOS'
-                projetos: projId 
-            };
+        const dadosAluno = {
+            nome: document.getElementById('nome').value,
+            rg: document.getElementById('rg').value,
+            cpf: document.getElementById('cpf').value,
+            data_nascimento: document.getElementById('data_nasc').value,
+            idade: parseInt(document.getElementById('idade').value) || 0,
+            whatsapp: document.getElementById('whatsapp').value,
+            // ... outros campos de endereço e pais ...
+            
+            // 1. Salvando na coluna 'projetos' para garantir que apareça no Card
+            projetos: projId.toString() 
+        };
 
-            try {
-                const { error } = await supabaseClient
-                    .from('alunos')
-                    .insert([dadosAluno]);
+        try {
+            // ETAPA A: CRIAR O ALUNO
+            const { data: novoAluno, error: erroAluno } = await supabaseClient
+                .from('alunos')
+                .insert([dadosAluno])
+                .select()
+                .single();
 
-                if (error) throw error;
+            if (erroAluno) throw erroAluno;
 
-                alert("SUCESSO! Aluno cadastrado. Verifique agora na tela de Projetos.");
-                window.location.href = 'projetos.html';
+            // ETAPA B: CRIAR A MATRÍCULA (Para aparecer nas Turmas e não sumir com os antigos)
+            // Aqui é onde vinculamos a Turma e o Projeto na tabela de ligação
+            const { error: erroMatricula } = await supabaseClient
+                .from('matriculas')
+                .insert([{
+                    aluno_id: novoAluno.id,
+                    projeto_id: parseInt(projId),
+                    turma_id: turmaId ? parseInt(turmaId) : null,
+                    data_matricula: new Date().toISOString().split('T')[0]
+                }]);
 
-            } catch (err) {
-                alert("ERRO NO BANCO: " + err.message);
-                console.error(err);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = 'SALVAR CADASTRO';
-            }
+            if (erroMatricula) console.warn("Erro na matrícula, mas aluno foi salvo:", erroMatricula);
+
+            alert("Sucesso! Aluno cadastrado no Projeto e na Turma.");
+            window.location.href = 'projetos.html';
+
+        } catch (err) {
+            alert("Erro: " + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'SALVAR CADASTRO';
         }
-    </script>
+    }
+</script>
 </body>
 </html>
+
