@@ -143,8 +143,8 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // CONFIGURAÇÕES DA API NO SEU WINDOWS
-        const API_URL = "http://localhost:8080"; 
-        const API_KEY = "minha_chave_secreta";
+        const API_URL = "https://contents-integrate-cave-mba.trycloudflare.com"; 
+        const API_KEY = "minha_chave_secreta"; // Deve ser a mesma que você usou no comando Docker (AUTH_ID)
         const INSTANCE = "CentroSocial";
 
         let listaDestinatarios = [];
@@ -268,4 +268,5 @@
     </script>
 </body>
 </html>
+
 
