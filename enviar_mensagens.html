@@ -3,326 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp | Centro Social</title>
+    <title>Transmissão WhatsApp | Centro Social</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --bg-body: #f1f5f9; --sidebar-bg: #1e293b; --whatsapp: #25d366; }
-        body { background-color: var(--bg-body); font-family: 'Inter', sans-serif; }
-        .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar-bg); padding: 20px 0; }
-        .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; text-decoration: none; display: block; }
-        .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
-        .main-content { margin-left: 240px; padding: 40px; }
+        :root { --wa-bg: #f0f2f5; --wa-green: #00a884; --sidebar-bg: #1e293b; }
+        body { background-color: var(--wa-bg); font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
         
-        .card-painel { background: #fff; border-radius: 12px; border: none; min-height: 500px; }
-        .lista-busca { max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
-        .item-aluno { cursor: pointer; transition: 0.2s; border-bottom: 1px solid #f1f5f9; padding: .5rem; }
-        .item-aluno:hover { background: #f8fafc; }
+        .main-wrapper { display: flex; height: 100vh; }
         
-        .tag-selecionado { 
-            background: #e0f2fe; color: #0369a1; padding: 5px 12px; 
-            border-radius: 20px; display: inline-flex; align-items: center; 
-            margin: 4px; font-size: 0.85rem; font-weight: 500;
-        }
-        .btn-remove { cursor: pointer; margin-left: 8px; color: #ef4444; }
+        /* Menu Lateral Sistema */
+        .sidebar { width: 80px; background: var(--sidebar-bg); display: flex; flex-direction: column; align-items: center; padding: 20px 0; }
+        .sidebar .nav-link { color: #94a3b8; font-size: 1.5rem; margin-bottom: 25px; transition: 0.3s; }
+        .sidebar .nav-link.active { color: #fff; }
 
-        #log_envio { 
-            height: 180px; overflow-y: auto; background: #0f172a; 
-            color: #38bdf8; font-family: monospace; padding: 15px; 
-            border-radius: 8px; font-size: 0.8rem; margin-top: 15px;
-        }
+        /* Painel de Filtros */
+        .filter-panel { width: 350px; background: #fff; border-right: 1px solid #d1d7db; display: flex; flex-direction: column; }
+        .filter-header { padding: 20px; background: #f0f2f5; border-bottom: 1px solid #d1d7db; }
+        .filter-body { padding: 20px; overflow-y: auto; flex-grow: 1; }
+
+        /* Área do Chat */
+        .chat-area { flex-grow: 1; display: flex; flex-direction: column; background: #efeae2; position: relative; }
+        .chat-area::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.06; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); pointer-events: none; }
+
+        .chat-header { padding: 15px 25px; background: #f0f2f5; border-bottom: 1px solid #d1d7db; z-index: 10; display: flex; align-items: center; }
+        .chat-footer { padding: 20px 60px; background: #f0f2f5; z-index: 10; }
+        
+        .message-box { background: #fff; border-radius: 15px; padding: 20px; box-shadow: 0 1px 0.5px rgba(11,20,26,.13); position: relative; z-index: 10; width: 80%; margin: 20px auto; }
+        .textarea-wa { width: 100%; border: none; outline: none; resize: none; min-height: 100px; font-size: 1rem; }
+
+        .btn-send { background: var(--wa-green); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: 0.3s; }
+        .btn-send:hover { transform: scale(1.1); background: #019475; }
+
+        .destinatarios-badge { background: #e7fce3; color: #1fa855; border-radius: 20px; padding: 5px 15px; font-weight: 600; font-size: 0.8rem; margin-top: 10px; display: inline-block; }
     </style>
 </head>
 <body>
 
-    <aside class="sidebar">
-        <div class="px-4 mb-5 text-white fw-bold"><h5><i class="fas fa-graduation-cap me-2"></i>Centro Social</h5></div>
-        <nav>
-            <a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
-            <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
-            <a class="nav-link" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
-            <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
-            <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
-            <a class="nav-link active" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
+    <div class="main-wrapper">
+        <nav class="sidebar">
+            <a href="dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i></a>
+            <a href="projetos.html" class="nav-link"><i class="fas fa-folder"></i></a>
+            <a href="enviar_mensagens.html" class="nav-link active"><i class="fab fa-whatsapp"></i></a>
+        </nav>
+
+        <aside class="filter-panel">
+            <div class="filter-header">
+                <h5 class="fw-bold mb-0">Nova Transmissão</h5>
+                <p class="text-muted small mb-0">Selecione quem receberá a mensagem</p>
+            </div>
             
-            <div class="mt-5 px-4">
-                <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
+            <div class="filter-body">
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted">1. TIPO DE ENVIO</label>
+                    <select class="form-select" id="tipoEnvio" onchange="alternarFiltros(this.value)">
+                        <option value="aluno">Individual (Por Aluno)</option>
+                        <option value="turma">Por Turma</option>
+                        <option value="projeto">Por Projeto</option>
+                    </select>
+                </div>
+
+                <div id="campoProjeto" class="mb-4" style="display:none;">
+                    <label class="form-label small fw-bold text-muted">2. SELECIONE O PROJETO</label>
+                    <select class="form-select" id="selectProjeto" onchange="atualizarContagem()">
+                        <option value="">Escolha o Projeto...</option>
+                        <option value="1">Adolescer para Crescer</option>
+                        <option value="2">Criança Certeza</option>
+                        <option value="3">Sempre Criança</option>
+                        <option value="4">Valorizando a Infância</option>
+                        <option value="5">Clube de Mães</option>
+                        <option value="6">Animar e Celebrar</option>
+                    </select>
+                </div>
+
+                <div id="campoTurma" class="mb-4" style="display:none;">
+                    <label class="form-label small fw-bold text-muted">2. SELECIONE A TURMA</label>
+                    <select class="form-select" id="selectTurma" onchange="atualizarContagem()">
+                        <option value="">Aguardando Projeto...</option>
+                    </select>
+                </div>
+
+                <div id="campoAluno" class="mb-4">
+                    <label class="form-label small fw-bold text-muted">2. PESQUISAR ALUNO</label>
+                    <input type="text" class="form-control" placeholder="Digite o nome..." onkeyup="buscarAluno(this.value)">
+                    <div id="listaAlunosBusca" class="list-group mt-2 shadow-sm"></div>
+                </div>
+
+                <div class="mt-5 p-3 bg-light rounded border">
+                    <h6 class="fw-bold small mb-1">Resumo do Público:</h6>
+                    <div id="contagemDestinatarios" class="destinatarios-badge">0 destinatários selecionados</div>
+                </div>
             </div>
-        </nav>    
-    </aside>
+        </aside>
 
-    <main class="main-content">
-
-            <h1> PAGINA EM DESENVOLVIMENTO...AINDA NÃO DISPONÍVEL PARA USO.</h1>
-
-        
-        <div class="mb-4">
-            <h3 class="fw-bold mb-0">Nova Transmissão</h3>
-            <p class="text-muted">Selecione os alunos manualmente e dispare as mensagens.</p>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-md-5">
-                <div class="card card-painel p-4 shadow-sm">
-                    <h6 class="fw-bold mb-3"><i class="fas fa-search me-2"></i>1. Buscar Alunos</h6>
-                    <div class="input-group mb-3">
-                        <input type="text" id="busca_aluno" class="form-control" placeholder="Digite o nome..." onkeyup="filtrarAlunos()">
+        <section class="chat-area">
+            <header class="chat-header">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success rounded-circle d-flex align-items-center justify-content-center text-white me-3" style="width: 45px; height: 45px;">
+                        <i class="fab fa-whatsapp fa-lg"></i>
                     </div>
-                    
-                    <div id="lista_busca" class="lista-busca mb-4">
-                        <div class="p-3 text-center text-muted small">Carregando base de alunos...</div>
+                    <div>
+                        <h6 class="fw-bold mb-0">Mensagem de Transmissão</h6>
+                        <small class="text-muted">Status do Servidor: <span class="text-danger">Desconectado</span></small>
                     </div>
+                </div>
+            </header>
 
-                    <h6 class="fw-bold mb-3"><i class="fas fa-users me-2"></i>Destinatários (<span id="count_sel">0</span>)</h6>
-                    <div id="container_selecionados" class="border p-2 rounded bg-light" style="min-height: 100px;">
-                        <span class="text-muted small p-2 d-block">Nenhum aluno adicionado.</span>
+            <div class="flex-grow-1 d-flex flex-column justify-content-center">
+                <div class="message-box">
+                    <textarea class="textarea-wa" id="msgWhatsapp" placeholder="Digite aqui o aviso para os alunos..."></textarea>
+                    <div class="text-end mt-2">
+                        <small class="text-muted">Use [nome] para personalizar</small>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-7">
-                <div class="card card-painel p-4 shadow-sm">
-                    <h6 class="fw-bold mb-3"><i class="fas fa-comment-dots me-2"></i>2. Mensagem</h6>
-                    <textarea id="msg_corpo" class="form-control mb-3" rows="8" placeholder="Olá {nome}, tudo bem?"></textarea>
-                    
-                    <div class="alert alert-info py-2 small">
-                        Use <b>{nome}</b> para personalizar com o primeiro nome do aluno.
+            <footer class="chat-footer">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="text-muted small">
+                        <i class="fas fa-info-circle me-1"></i> As mensagens serão enviadas individualmente para respeitar a privacidade.
                     </div>
-
-                    <div class="d-flex gap-2 mb-3">
-                        <label class="small text-muted mt-2">Delay entre abas (ms):</label>
-                        <input id="delay_input" type="number" class="form-control form-control-sm" value="800" min="200" style="max-width:120px;">
-                    </div>
-
-                    <button id="btn_disparar" class="btn btn-success btn-lg w-100 fw-bold mb-3">
-                        <i class="fas fa-paper-plane me-2"></i> DISPARAR AGORA
+                    <button class="btn-send" onclick="prepararEnvio()">
+                        <i class="fas fa-paper-plane"></i>
                     </button>
-
-                    <h6 class="fw-bold mb-2">Monitor de Envio</h6>
-                    <div id="log_envio">> Aguardando comando...</div>
                 </div>
-            </div>
-        </div>
-    </main>
+            </footer>
+        </section>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // ---------- CONFIGURAÇÃO ----------
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Código de país padrão quando números não vierem em E.164
-        const DEFAULT_COUNTRY_CODE = '55';
-        // Delay padrão entre aberturas de abas (ms) — pode ser alterado pelo input na UI
-        const DEFAULT_DELAY_MS = 800;
+        let destinatarios = [];
 
-        let todosAlunos = [];
-        let selecionados = [];
-
-        // ---------- HELPERS ----------
-        function logger(msg) {
-            const log = document.getElementById('log_envio');
-            const time = new Date().toLocaleTimeString();
-            log.innerHTML += `<br>> [${time}] ${msg}`;
-            log.scrollTop = log.scrollHeight;
+        function alternarFiltros(tipo) {
+            document.getElementById('campoAluno').style.display = tipo === 'aluno' ? 'block' : 'none';
+            document.getElementById('campoProjeto').style.display = (tipo === 'projeto' || tipo === 'turma') ? 'block' : 'none';
+            document.getElementById('campoTurma').style.display = tipo === 'turma' ? 'block' : 'none';
+            destinatarios = [];
+            atualizarContagem();
         }
 
-        // Normaliza telefone: remove tudo que não é dígito e adiciona código de país se necessário
-        function normalizePhone(raw) {
-            if (!raw) return '';
-            let digits = String(raw).replace(/\D/g, '');
-            if (!digits) return '';
-            // Se já começa com o country code, assume ok
-            if (DEFAULT_COUNTRY_CODE && !digits.startsWith(DEFAULT_COUNTRY_CODE) && digits.length <= 11) {
-                digits = DEFAULT_COUNTRY_CODE + digits;
-            }
-            return digits;
+        // Simulação da lógica de busca para interface
+        async function atualizarContagem() {
+            const tipo = document.getElementById('tipoEnvio').value;
+            const projId = document.getElementById('selectProjeto').value;
+            const badge = document.getElementById('contagemDestinatarios');
+            
+            badge.innerText = "Calculando...";
+            
+            // Aqui entra a lógica de Select no Supabase para contar quantos alunos têm aquele ID de projeto ou turma
+            // Por enquanto, apenas para visualização da interface:
+            setTimeout(() => {
+                badge.innerText = "Pronto para enviar";
+            }, 500);
         }
 
-        function waMeUrl(phoneDigits, text) {
-            const encoded = encodeURIComponent(text || '');
-            return `https://wa.me/${phoneDigits}${encoded ? '?text=' + encoded : ''}`;
+        function prepararEnvio() {
+            const msg = document.getElementById('msgWhatsapp').value;
+            if(!msg) { alert("Escreva uma mensagem!"); return; }
+            alert("Interface Pronta! Agora precisamos configurar o 'motor' de envio.");
         }
-
-        // ---------- SUPABASE: carregar e renderizar ----------
-        async function carregarBaseAlunos() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('alunos')
-                    .select('nome, whatsapp')
-                    .order('nome', { ascending: true });
-
-                if (error) {
-                    console.error('Erro Supabase:', error);
-                    document.getElementById('lista_busca').innerHTML = '<div class="p-3 text-center text-danger">Erro ao carregar alunos.</div>';
-                    return;
-                }
-
-                todosAlunos = Array.isArray(data) ? data : [];
-                exibirResultados(todosAlunos);
-            } catch (err) {
-                console.error(err);
-                document.getElementById('lista_busca').innerHTML = '<div class="p-3 text-center text-danger">Erro inesperado.</div>';
-            }
-        }
-
-        function exibirResultados(lista) {
-            const container = document.getElementById('lista_busca');
-            container.innerHTML = '';
-
-            if (!lista || lista.length === 0) {
-                container.innerHTML = '<div class="p-3 text-center text-muted">Nenhum aluno encontrado.</div>';
-                return;
-            }
-
-            for (const aluno of lista) {
-                const div = document.createElement('div');
-                div.className = 'item-aluno small d-flex justify-content-between align-items-center';
-                const nomeText = aluno?.nome ?? '—';
-                const whatsappText = aluno?.whatsapp ?? '';
-
-                const spanNome = document.createElement('span');
-                spanNome.textContent = nomeText;
-
-                const ico = document.createElement('i');
-                ico.className = 'fas fa-plus-circle text-primary';
-
-                div.appendChild(spanNome);
-                div.appendChild(ico);
-
-                // armazenar dados no dataset
-                div.dataset.nome = nomeText;
-                div.dataset.whatsapp = whatsappText;
-
-                div.addEventListener('click', () => {
-                    adicionarAluno(div.dataset.nome, div.dataset.whatsapp);
-                });
-
-                container.appendChild(div);
-            }
-        }
-
-        function filtrarAlunos() {
-            const termo = document.getElementById('busca_aluno').value.trim().toLowerCase();
-            if (!termo) {
-                exibirResultados(todosAlunos);
-                return;
-            }
-            const filtrados = todosAlunos.filter(a => (a?.nome ?? '').toLowerCase().includes(termo));
-            exibirResultados(filtrados);
-        }
-
-        // ---------- SELEÇÃO DE DESTINATÁRIOS ----------
-        function adicionarAluno(nome, whatsapp) {
-            if (!whatsapp || whatsapp === 'null') return alert("Este aluno não possui WhatsApp cadastrado!");
-            const normalized = normalizePhone(whatsapp);
-            if (!normalized) return alert("Telefone inválido para o aluno: " + nome);
-            if (selecionados.find(s => s.whatsapp === normalized)) {
-                return; // evita duplicados
-            }
-            selecionados.push({ nome: nome, whatsapp: normalized });
-            renderizarSelecionados();
-        }
-
-        function removerAlunoByPhone(whatsapp) {
-            selecionados = selecionados.filter(s => s.whatsapp !== whatsapp);
-            renderizarSelecionados();
-        }
-
-        function renderizarSelecionados() {
-            const container = document.getElementById('container_selecionados');
-            document.getElementById('count_sel').innerText = selecionados.length;
-
-            container.innerHTML = '';
-            if (selecionados.length === 0) {
-                container.innerHTML = '<span class="text-muted small p-2 d-block">Nenhum aluno adicionado.</span>';
-                return;
-            }
-
-            for (const s of selecionados) {
-                const span = document.createElement('span');
-                span.className = 'tag-selecionado';
-                span.textContent = (s.nome ? s.nome.split(' ')[0] : s.whatsapp);
-
-                const rm = document.createElement('i');
-                rm.className = 'fas fa-times-circle btn-remove';
-                rm.style.marginLeft = '8px';
-                rm.title = 'Remover';
-                rm.addEventListener('click', () => removerAlunoByPhone(s.whatsapp));
-
-                span.appendChild(rm);
-                container.appendChild(span);
-            }
-        }
-
-        // ---------- DISPARO via wa.me ----------
-        // Abre links wa.me sequencialmente. Retorna relatório.
-        async function iniciarDisparo() {
-            const btn = document.getElementById('btn_disparar');
-            const delayInput = document.getElementById('delay_input');
-            const delay = Math.max(200, parseInt(delayInput.value || DEFAULT_DELAY_MS, 10));
-
-            const msgOriginal = document.getElementById('msg_corpo').value;
-            if (selecionados.length === 0) return alert("Selecione os alunos primeiro!");
-            if (!msgOriginal || msgOriginal.trim() === '') return alert("Escreva a mensagem!");
-
-            // desabilita botão durante envio
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Enviando...';
-
-            logger(`--- INICIANDO ENVIO PARA ${selecionados.length} CONTATOS ---`);
-            const blocked = [];
-            const opened = [];
-
-            for (const aluno of selecionados) {
-                const primeiroNome = (aluno.nome || '').split(' ')[0] || '';
-                const mensagemFinal = msgOriginal.replace(/{nome}/g, primeiroNome);
-
-                logger(`Abrindo WhatsApp para ${aluno.nome} (${aluno.whatsapp})...`);
-                const url = waMeUrl(aluno.whatsapp, mensagemFinal);
-
-                // Tenta abrir a aba; se retornar null, o popup foi bloqueado
-                const newWin = window.open(url, '_blank');
-                if (newWin) {
-                    opened.push(aluno.whatsapp);
-                } else {
-                    blocked.push(aluno.whatsapp);
-                    logger(`⚠️ Bloqueado: ${aluno.whatsapp}`);
-                }
-
-                // aguarda antes do próximo
-                await new Promise(res => setTimeout(res, delay));
-            }
-
-            logger(`--- DISPARO FINALIZADO: aberturas ${opened.length}, bloqueios ${blocked.length} ---`);
-            if (blocked.length > 0) {
-                logger('Lista bloqueada: ' + blocked.join(', '));
-                alert(`Algumas abas foram bloqueadas pelo navegador (${blocked.length}). Copiar lista para clipboard?`);
-                try {
-                    await navigator.clipboard.writeText(blocked.join('\n'));
-                    logger('Lista de bloqueados copiada para a área de transferência.');
-                } catch (e) {
-                    console.warn('Não foi possível copiar para clipboard:', e);
-                }
-            }
-
-            // reabilita botão
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> DISPARAR AGORA';
-        }
-
-        // Hook do botão
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('btn_disparar').addEventListener('click', iniciarDisparo);
-            carregarBaseAlunos();
-        });
     </script>
 </body>
 </html>
-
-
-
-
-
