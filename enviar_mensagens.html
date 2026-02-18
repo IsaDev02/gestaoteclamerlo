@@ -9,34 +9,24 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { --wa-bg: #f0f2f5; --wa-green: #00a884; --sidebar-bg: #1e293b; }
-        body { background-color: var(--wa-bg); font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
-        
+        body { background-color: var(--wa-bg); font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; margin: 0; }
         .main-wrapper { display: flex; height: 100vh; }
-        
-        /* Menu Lateral Sistema */
         .sidebar { width: 80px; background: var(--sidebar-bg); display: flex; flex-direction: column; align-items: center; padding: 20px 0; }
-        .sidebar .nav-link { color: #94a3b8; font-size: 1.5rem; margin-bottom: 25px; transition: 0.3s; }
+        .sidebar .nav-link { color: #94a3b8; font-size: 1.5rem; margin-bottom: 25px; text-decoration: none; }
         .sidebar .nav-link.active { color: #fff; }
-
-        /* Painel de Filtros */
-        .filter-panel { width: 350px; background: #fff; border-right: 1px solid #d1d7db; display: flex; flex-direction: column; }
+        .filter-panel { width: 350px; background: #fff; border-right: 1px solid #d1d7db; display: flex; flex-direction: column; z-index: 20; }
         .filter-header { padding: 20px; background: #f0f2f5; border-bottom: 1px solid #d1d7db; }
         .filter-body { padding: 20px; overflow-y: auto; flex-grow: 1; }
-
-        /* Área do Chat */
         .chat-area { flex-grow: 1; display: flex; flex-direction: column; background: #efeae2; position: relative; }
         .chat-area::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.06; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); pointer-events: none; }
-
         .chat-header { padding: 15px 25px; background: #f0f2f5; border-bottom: 1px solid #d1d7db; z-index: 10; display: flex; align-items: center; }
         .chat-footer { padding: 20px 60px; background: #f0f2f5; z-index: 10; }
-        
         .message-box { background: #fff; border-radius: 15px; padding: 20px; box-shadow: 0 1px 0.5px rgba(11,20,26,.13); position: relative; z-index: 10; width: 80%; margin: 20px auto; }
-        .textarea-wa { width: 100%; border: none; outline: none; resize: none; min-height: 100px; font-size: 1rem; }
-
-        .btn-send { background: var(--wa-green); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: 0.3s; }
-        .btn-send:hover { transform: scale(1.1); background: #019475; }
-
-        .destinatarios-badge { background: #e7fce3; color: #1fa855; border-radius: 20px; padding: 5px 15px; font-weight: 600; font-size: 0.8rem; margin-top: 10px; display: inline-block; }
+        .textarea-wa { width: 100%; border: none; outline: none; resize: none; min-height: 150px; font-size: 1rem; }
+        .btn-send { background: var(--wa-green); color: white; border: none; border-radius: 50%; width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .destinatarios-badge { background: #e7fce3; color: #1fa855; border-radius: 20px; padding: 8px 15px; font-weight: 700; font-size: 0.85rem; margin-top: 10px; display: block; text-align: center; border: 1px solid #c3e6cb; }
+        .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        .search-result-item:hover { background: #f8fafc; color: var(--primary); }
     </style>
 </head>
 <body>
@@ -50,13 +40,13 @@
 
         <aside class="filter-panel">
             <div class="filter-header">
-                <h5 class="fw-bold mb-0">Nova Transmissão</h5>
-                <p class="text-muted small mb-0">Selecione quem receberá a mensagem</p>
+                <h5 class="fw-bold mb-0">Transmissão</h5>
+                <p class="text-muted small mb-0">Selecione o público-alvo</p>
             </div>
             
             <div class="filter-body">
                 <div class="mb-4">
-                    <label class="form-label small fw-bold text-muted">1. TIPO DE ENVIO</label>
+                    <label class="form-label small fw-bold text-muted">MÉTODO DE ENVIO</label>
                     <select class="form-select" id="tipoEnvio" onchange="alternarFiltros(this.value)">
                         <option value="aluno">Individual (Por Aluno)</option>
                         <option value="turma">Por Turma</option>
@@ -65,9 +55,9 @@
                 </div>
 
                 <div id="campoProjeto" class="mb-4" style="display:none;">
-                    <label class="form-label small fw-bold text-muted">2. SELECIONE O PROJETO</label>
-                    <select class="form-select" id="selectProjeto" onchange="atualizarContagem()">
-                        <option value="">Escolha o Projeto...</option>
+                    <label class="form-label small fw-bold text-muted">PROJETO</label>
+                    <select class="form-select" id="selectProjeto" onchange="buscarDadosEnvio()">
+                        <option value="">Selecione...</option>
                         <option value="1">Adolescer para Crescer</option>
                         <option value="2">Criança Certeza</option>
                         <option value="3">Sempre Criança</option>
@@ -78,21 +68,21 @@
                 </div>
 
                 <div id="campoTurma" class="mb-4" style="display:none;">
-                    <label class="form-label small fw-bold text-muted">2. SELECIONE A TURMA</label>
-                    <select class="form-select" id="selectTurma" onchange="atualizarContagem()">
-                        <option value="">Aguardando Projeto...</option>
+                    <label class="form-label small fw-bold text-muted">TURMA</label>
+                    <select class="form-select" id="selectTurma" onchange="buscarDadosEnvio()">
+                        <option value="">Selecione o Projeto Primeiro...</option>
                     </select>
                 </div>
 
                 <div id="campoAluno" class="mb-4">
-                    <label class="form-label small fw-bold text-muted">2. PESQUISAR ALUNO</label>
-                    <input type="text" class="form-control" placeholder="Digite o nome..." onkeyup="buscarAluno(this.value)">
-                    <div id="listaAlunosBusca" class="list-group mt-2 shadow-sm"></div>
+                    <label class="form-label small fw-bold text-muted">PESQUISAR NOME</label>
+                    <input type="text" id="inputBuscaAluno" class="form-control" placeholder="Digite para buscar..." onkeyup="pesquisarAlunoIndividual(this.value)">
+                    <div id="listaAlunosBusca" class="list-group mt-2 border shadow-sm" style="max-height: 200px; overflow-y: auto; display: none; background: white;"></div>
                 </div>
 
-                <div class="mt-5 p-3 bg-light rounded border">
-                    <h6 class="fw-bold small mb-1">Resumo do Público:</h6>
+                <div class="mt-5">
                     <div id="contagemDestinatarios" class="destinatarios-badge">0 destinatários selecionados</div>
+                    <div id="listaNomes" class="text-muted small mt-2 px-2" style="max-height: 150px; overflow-y: auto;"></div>
                 </div>
             </div>
         </aside>
@@ -104,27 +94,24 @@
                         <i class="fab fa-whatsapp fa-lg"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold mb-0">Mensagem de Transmissão</h6>
-                        <small class="text-muted">Status do Servidor: <span class="text-danger">Desconectado</span></small>
+                        <h6 class="fw-bold mb-0">Compor Mensagem</h6>
+                        <small class="text-muted" id="statusEnvio">Pronto para disparar</small>
                     </div>
                 </div>
             </header>
 
             <div class="flex-grow-1 d-flex flex-column justify-content-center">
                 <div class="message-box">
-                    <textarea class="textarea-wa" id="msgWhatsapp" placeholder="Digite aqui o aviso para os alunos..."></textarea>
-                    <div class="text-end mt-2">
-                        <small class="text-muted">Use [nome] para personalizar</small>
-                    </div>
+                    <textarea class="textarea-wa" id="msgWhatsapp" placeholder="Olá [nome], gostaríamos de informar que..."></textarea>
                 </div>
             </div>
 
             <footer class="chat-footer">
                 <div class="d-flex align-items-center justify-content-between">
                     <div class="text-muted small">
-                        <i class="fas fa-info-circle me-1"></i> As mensagens serão enviadas individualmente para respeitar a privacidade.
+                        Dica: O sistema usará o campo <strong>whatsapp</strong> do banco.
                     </div>
-                    <button class="btn-send" onclick="prepararEnvio()">
+                    <button class="btn-send" onclick="dispararMensagens()">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
@@ -138,35 +125,85 @@
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let destinatarios = [];
+        let listaDestinatarios = []; // Armazena {nome, whatsapp}
 
         function alternarFiltros(tipo) {
             document.getElementById('campoAluno').style.display = tipo === 'aluno' ? 'block' : 'none';
             document.getElementById('campoProjeto').style.display = (tipo === 'projeto' || tipo === 'turma') ? 'block' : 'none';
             document.getElementById('campoTurma').style.display = tipo === 'turma' ? 'block' : 'none';
-            destinatarios = [];
-            atualizarContagem();
+            listaDestinatarios = [];
+            document.getElementById('selectProjeto').value = "";
+            document.getElementById('listaNomes').innerHTML = "";
+            atualizarInterfaceContagem();
         }
 
-        // Simulação da lógica de busca para interface
-        async function atualizarContagem() {
+        // 1. BUSCA INDIVIDUAL
+        async function pesquisarAlunoIndividual(termo) {
+            const resDiv = document.getElementById('listaAlunosBusca');
+            if (termo.length < 3) { resDiv.style.display = 'none'; return; }
+
+            const { data } = await supabaseClient.from('alunos').select('nome, whatsapp').ilike('nome', `%${termo}%`).limit(5);
+            
+            if (data) {
+                resDiv.innerHTML = data.map(a => `<div class="search-result-item" onclick="selecionarAluno('${a.nome}', '${a.whatsapp}')">${a.nome}</div>`).join('');
+                resDiv.style.display = 'block';
+            }
+        }
+
+        function selecionarAluno(nome, whatsapp) {
+            listaDestinatarios = [{ nome, whatsapp }];
+            document.getElementById('listaAlunosBusca').style.display = 'none';
+            document.getElementById('inputBuscaAluno').value = nome;
+            atualizarInterfaceContagem();
+        }
+
+        // 2. BUSCA POR PROJETO OU TURMA
+        async function buscarDadosEnvio() {
             const tipo = document.getElementById('tipoEnvio').value;
             const projId = document.getElementById('selectProjeto').value;
-            const badge = document.getElementById('contagemDestinatarios');
-            
-            badge.innerText = "Calculando...";
-            
-            // Aqui entra a lógica de Select no Supabase para contar quantos alunos têm aquele ID de projeto ou turma
-            // Por enquanto, apenas para visualização da interface:
-            setTimeout(() => {
-                badge.innerText = "Pronto para enviar";
-            }, 500);
+            const turmaId = document.getElementById('selectTurma').value;
+
+            if (!projId) return;
+
+            // Se mudou o projeto e o tipo é turma, carrega as turmas primeiro
+            if (tipo === 'turma' && !turmaId) {
+                const { data: turmas } = await supabaseClient.from('turmas').select('id, nome_turma').eq('projeto_id', projId);
+                const st = document.getElementById('selectTurma');
+                st.innerHTML = '<option value="">Selecione a Turma...</option>';
+                turmas.forEach(t => st.add(new Option(t.nome_turma, t.id)));
+                return;
+            }
+
+            let query = supabaseClient.from('alunos').select('nome, whatsapp');
+
+            if (tipo === 'projeto') {
+                // Busca quem tem o ID do projeto na coluna 'projetos'
+                query = query.eq('projetos', projId);
+            } else if (tipo === 'turma' && turmaId) {
+                // Busca via tabela de matriculas
+                const { data: mats } = await supabaseClient.from('matriculas').select('alunos(nome, whatsapp)').eq('turma_id', turmaId);
+                listaDestinatarios = mats.map(m => ({ nome: m.alunos.nome, whatsapp: m.alunos.whatsapp }));
+                atualizarInterfaceContagem();
+                return;
+            }
+
+            const { data } = await query;
+            listaDestinatarios = data || [];
+            atualizarInterfaceContagem();
         }
 
-        function prepararEnvio() {
-            const msg = document.getElementById('msgWhatsapp').value;
-            if(!msg) { alert("Escreva uma mensagem!"); return; }
-            alert("Interface Pronta! Agora precisamos configurar o 'motor' de envio.");
+        function atualizarInterfaceContagem() {
+            document.getElementById('contagemDestinatarios').innerText = `${listaDestinatarios.length} destinatários selecionados`;
+            document.getElementById('listaNomes').innerHTML = listaDestinatarios.map(d => `<div>• ${d.nome} (${d.whatsapp || 'Sem número'})</div>`).join('');
+        }
+
+        function dispararMensagens() {
+            const msgBase = document.getElementById('msgWhatsapp').value;
+            if (listaDestinatarios.length === 0) { alert("Selecione os destinatários!"); return; }
+            if (!msgBase) { alert("Escreva a mensagem!"); return; }
+
+            alert(`Iniciando envio para ${listaDestinatarios.length} pessoas. No próximo passo, configuraremos a API para o envio sem abas.`);
+            // AQUI ENTRARÁ O FETCH PARA A API DE WHATSAPP
         }
     </script>
 </body>
