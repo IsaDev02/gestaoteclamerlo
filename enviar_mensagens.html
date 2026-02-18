@@ -19,14 +19,14 @@
         .filter-body { padding: 20px; overflow-y: auto; flex-grow: 1; }
         .chat-area { flex-grow: 1; display: flex; flex-direction: column; background: #efeae2; position: relative; }
         .chat-area::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.06; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); pointer-events: none; }
-        .chat-header { padding: 15px 25px; background: #f0f2f5; border-bottom: 1px solid #d1d7db; z-index: 10; display: flex; align-items: center; }
+        .chat-header { padding: 15px 25px; background: #f0f2f5; border-bottom: 1px solid #d1d7db; z-index: 10; display: flex; align-items: center; justify-content: space-between; }
         .chat-footer { padding: 20px 60px; background: #f0f2f5; z-index: 10; }
         .message-box { background: #fff; border-radius: 15px; padding: 20px; box-shadow: 0 1px 0.5px rgba(11,20,26,.13); position: relative; z-index: 10; width: 80%; margin: 20px auto; }
         .textarea-wa { width: 100%; border: none; outline: none; resize: none; min-height: 150px; font-size: 1rem; }
         .btn-send { background: var(--wa-green); color: white; border: none; border-radius: 50%; width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .destinatarios-badge { background: #e7fce3; color: #1fa855; border-radius: 20px; padding: 8px 15px; font-weight: 700; font-size: 0.85rem; margin-top: 10px; display: block; text-align: center; border: 1px solid #c3e6cb; }
         .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-        .search-result-item:hover { background: #f8fafc; color: var(--primary); }
+        .search-result-item:hover { background: #f8fafc; color: #3b82f6; }
     </style>
 </head>
 <body>
@@ -70,7 +70,7 @@
                 <div id="campoTurma" class="mb-4" style="display:none;">
                     <label class="form-label small fw-bold text-muted">TURMA</label>
                     <select class="form-select" id="selectTurma" onchange="buscarDadosEnvio()">
-                        <option value="">Selecione o Projeto Primeiro...</option>
+                        <option value="">Aguardando Projeto...</option>
                     </select>
                 </div>
 
@@ -80,7 +80,7 @@
                     <div id="listaAlunosBusca" class="list-group mt-2 border shadow-sm" style="max-height: 200px; overflow-y: auto; display: none; background: white;"></div>
                 </div>
 
-                <div class="mt-5">
+                <div class="mt-4">
                     <div id="contagemDestinatarios" class="destinatarios-badge">0 destinatários selecionados</div>
                     <div id="listaNomes" class="text-muted small mt-2 px-2" style="max-height: 150px; overflow-y: auto;"></div>
                 </div>
@@ -98,6 +98,7 @@
                         <small class="text-muted" id="statusEnvio">Pronto para disparar</small>
                     </div>
                 </div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalConexao()"><i class="fas fa-qrcode me-2"></i>Conectar WhatsApp</button>
             </header>
 
             <div class="flex-grow-1 d-flex flex-column justify-content-center">
@@ -108,9 +109,7 @@
 
             <footer class="chat-footer">
                 <div class="d-flex align-items-center justify-content-between">
-                    <div class="text-muted small">
-                        Dica: O sistema usará o campo <strong>whatsapp</strong> do banco.
-                    </div>
+                    <div class="text-muted small">Dica: Use <b>[nome]</b> para personalizar a mensagem.</div>
                     <button class="btn-send" onclick="dispararMensagens()">
                         <i class="fas fa-paper-plane"></i>
                     </button>
@@ -119,31 +118,42 @@
         </section>
     </div>
 
+    <div class="modal fade" id="modalQR" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content text-center p-4">
+                <h6 class="fw-bold">Conectar Servidor</h6>
+                <div id="areaQR" class="my-3"><div class="spinner-border text-primary"></div></div>
+                <p class="small text-muted">Escaneie o código com seu WhatsApp para ativar o envio automático.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let listaDestinatarios = []; // Armazena {nome, whatsapp}
+        // CONFIGURAÇÕES DA API NO SEU WINDOWS
+        const API_URL = "http://localhost:8080"; 
+        const API_KEY = "minha_chave_secreta";
+        const INSTANCE = "CentroSocial";
+
+        let listaDestinatarios = [];
 
         function alternarFiltros(tipo) {
             document.getElementById('campoAluno').style.display = tipo === 'aluno' ? 'block' : 'none';
             document.getElementById('campoProjeto').style.display = (tipo === 'projeto' || tipo === 'turma') ? 'block' : 'none';
             document.getElementById('campoTurma').style.display = tipo === 'turma' ? 'block' : 'none';
             listaDestinatarios = [];
-            document.getElementById('selectProjeto').value = "";
-            document.getElementById('listaNomes').innerHTML = "";
             atualizarInterfaceContagem();
         }
 
-        // 1. BUSCA INDIVIDUAL
         async function pesquisarAlunoIndividual(termo) {
             const resDiv = document.getElementById('listaAlunosBusca');
             if (termo.length < 3) { resDiv.style.display = 'none'; return; }
-
             const { data } = await supabaseClient.from('alunos').select('nome, whatsapp').ilike('nome', `%${termo}%`).limit(5);
-            
             if (data) {
                 resDiv.innerHTML = data.map(a => `<div class="search-result-item" onclick="selecionarAluno('${a.nome}', '${a.whatsapp}')">${a.nome}</div>`).join('');
                 resDiv.style.display = 'block';
@@ -157,53 +167,96 @@
             atualizarInterfaceContagem();
         }
 
-        // 2. BUSCA POR PROJETO OU TURMA
         async function buscarDadosEnvio() {
             const tipo = document.getElementById('tipoEnvio').value;
             const projId = document.getElementById('selectProjeto').value;
             const turmaId = document.getElementById('selectTurma').value;
-
             if (!projId) return;
 
-            // Se mudou o projeto e o tipo é turma, carrega as turmas primeiro
             if (tipo === 'turma' && !turmaId) {
                 const { data: turmas } = await supabaseClient.from('turmas').select('id, nome_turma').eq('projeto_id', projId);
                 const st = document.getElementById('selectTurma');
-                st.innerHTML = '<option value="">Selecione a Turma...</option>';
+                st.innerHTML = '<option value="">Escolha a Turma...</option>';
                 turmas.forEach(t => st.add(new Option(t.nome_turma, t.id)));
                 return;
             }
 
             let query = supabaseClient.from('alunos').select('nome, whatsapp');
-
-            if (tipo === 'projeto') {
-                // Busca quem tem o ID do projeto na coluna 'projetos'
-                query = query.eq('projetos', projId);
-            } else if (tipo === 'turma' && turmaId) {
-                // Busca via tabela de matriculas
+            if (tipo === 'projeto') query = query.eq('projetos', projId);
+            else if (tipo === 'turma' && turmaId) {
                 const { data: mats } = await supabaseClient.from('matriculas').select('alunos(nome, whatsapp)').eq('turma_id', turmaId);
-                listaDestinatarios = mats.map(m => ({ nome: m.alunos.nome, whatsapp: m.alunos.whatsapp }));
-                atualizarInterfaceContagem();
-                return;
+                listaDestinatarios = mats.filter(m => m.alunos).map(m => ({ nome: m.alunos.nome, whatsapp: m.alunos.whatsapp }));
+                atualizarInterfaceContagem(); return;
             }
-
             const { data } = await query;
             listaDestinatarios = data || [];
             atualizarInterfaceContagem();
         }
 
         function atualizarInterfaceContagem() {
-            document.getElementById('contagemDestinatarios').innerText = `${listaDestinatarios.length} destinatários selecionados`;
-            document.getElementById('listaNomes').innerHTML = listaDestinatarios.map(d => `<div>• ${d.nome} (${d.whatsapp || 'Sem número'})</div>`).join('');
+            document.getElementById('contagemDestinatarios').innerText = `${listaDestinatarios.length} selecionados`;
+            document.getElementById('listaNomes').innerHTML = listaDestinatarios.map(d => `<div>• ${d.nome}</div>`).join('');
         }
 
-        function dispararMensagens() {
+        // --- LÓGICA DE ENVIO REAL ---
+        async function dispararMensagens() {
             const msgBase = document.getElementById('msgWhatsapp').value;
-            if (listaDestinatarios.length === 0) { alert("Selecione os destinatários!"); return; }
-            if (!msgBase) { alert("Escreva a mensagem!"); return; }
+            const statusLabel = document.getElementById('statusEnvio');
+            if (listaDestinatarios.length === 0 || !msgBase) { alert("Preencha os dados!"); return; }
 
-            alert(`Iniciando envio para ${listaDestinatarios.length} pessoas. No próximo passo, configuraremos a API para o envio sem abas.`);
-            // AQUI ENTRARÁ O FETCH PARA A API DE WHATSAPP
+            if(!confirm(`Iniciar envio para ${listaDestinatarios.length} pessoas?`)) return;
+
+            for (let i = 0; i < listaDestinatarios.length; i++) {
+                const aluno = listaDestinatarios[i];
+                if (!aluno.whatsapp) continue;
+                
+                let fone = aluno.whatsapp.replace(/\D/g, '');
+                if (fone.length === 11) fone = "55" + fone;
+
+                const msgFinal = msgBase.replace(/\[nome\]/g, aluno.nome);
+                statusLabel.innerText = `Enviando para ${aluno.nome} (${i+1}/${listaDestinatarios.length})...`;
+
+                try {
+                    await fetch(`${API_URL}/message/sendText/${INSTANCE}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'apikey': API_KEY },
+                        body: JSON.stringify({
+                            "number": fone,
+                            "textMessage": { "text": msgFinal }
+                        })
+                    });
+                } catch (e) { console.error("Erro no envio", e); }
+                
+                await new Promise(r => setTimeout(r, 2000)); // Delay anti-ban
+            }
+            statusLabel.innerText = "✓ Transmissão Finalizada!";
+        }
+
+        // --- CONEXÃO QR CODE ---
+        async function abrirModalConexao() {
+            const modal = new bootstrap.Modal(document.getElementById('modalQR'));
+            modal.show();
+            try {
+                // Cria instância se não existir
+                await fetch(`${API_URL}/instance/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'apikey': API_KEY },
+                    body: JSON.stringify({ "instanceName": INSTANCE, "token": API_KEY, "qrcode": true })
+                });
+                
+                // Pega o QR Code
+                const res = await fetch(`${API_URL}/instance/connect/${INSTANCE}`, {
+                    headers: { 'apikey': API_KEY }
+                });
+                const data = await res.json();
+                if(data.code) {
+                    document.getElementById('areaQR').innerHTML = `<img src="${data.base64}" class="img-fluid">`;
+                } else {
+                    document.getElementById('areaQR').innerHTML = "<span class='text-success'>Conectado!</span>";
+                }
+            } catch (e) {
+                document.getElementById('areaQR').innerHTML = "Erro ao conectar ao servidor.";
+            }
         }
     </script>
 </body>
