@@ -26,6 +26,13 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
+        /* Estilo da Tabela de Histórico */
+        .table-historico { font-size: 0.9rem; width: 100%; }
+        .table-historico thead { background: #f8fafc; }
+        .table-historico th { color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; padding: 12px; }
+        .table-historico td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
+        .badge-projeto { padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; background: #e0f2fe; color: #0369a1; }
+
         .foto-edit-container { display: flex; align-items: center; gap: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
         .img-preview { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         
@@ -44,7 +51,6 @@
             <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
             <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
             <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
-            
             <div class="mt-5 px-4">
                 <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
             </div>
@@ -64,6 +70,7 @@
             <li class="nav-item"><a class="nav-link active" href="#" onclick="toggleTab(event, 'aba-dados')">Dados Pessoais</a></li>
             <li class="nav-item"><a class="nav-link" href="#" onclick="toggleTab(event, 'aba-familia')">Família e Social</a></li>
             <li class="nav-item"><a class="nav-link" href="#" onclick="toggleTab(event, 'aba-escola')">Escolaridade</a></li>
+            <li class="nav-item"><a class="nav-link text-danger" href="#" onclick="toggleTab(event, 'aba-historico')"><i class="fas fa-history me-1"></i> Histórico</a></li>
         </ul>
 
         <form id="formEdicao">
@@ -141,6 +148,26 @@
                     </div>
                 </div>
             </div>
+
+            <div id="aba-historico" class="tab-content">
+                <div class="form-card">
+                    <div class="section-title"><i class="fas fa-history me-2"></i> Registro de Movimentações</div>
+                    <div class="table-responsive">
+                        <table class="table-historico">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>De (Projeto Anterior)</th>
+                                    <th>Para (Novo Projeto)</th>
+                                    <th>Observação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-historico">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </form>
     </main>
 
@@ -159,9 +186,48 @@
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             e.currentTarget.classList.add('active');
+
+            // Se clicar na aba histórico, carregar os dados na hora
+            if (id === 'aba-historico') {
+                carregarHistorico();
+            }
         }
 
-        // Máscaras
+        // Função para carregar o histórico do Supabase
+        async function carregarHistorico() {
+            const container = document.getElementById('lista-historico');
+            container.innerHTML = '<tr><td colspan="4" class="text-center py-4">Buscando histórico...</td></tr>';
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('historico_projetos')
+                    .select('*')
+                    .eq('aluno_id', alunoId)
+                    .order('data_mudanca', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">Nenhuma movimentação registrada para este aluno.</td></tr>';
+                    return;
+                }
+
+                container.innerHTML = data.map(item => `
+                    <tr>
+                        <td><span class="fw-medium">${new Date(item.data_mudanca).toLocaleDateString('pt-BR')}</span></td>
+                        <td><span class="badge-projeto">${item.projeto_anterior || 'Nenhum'}</span></td>
+                        <td><span class="badge-projeto" style="background:#dcfce7; color:#15803d">${item.projeto_novo}</span></td>
+                        <td class="text-muted small">${item.observacao || '-'}</td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-danger">Erro ao carregar histórico.</td></tr>';
+            }
+        }
+
+        // Máscaras (MANTIDAS)
         document.addEventListener('input', (e) => {
             const el = e.target;
             if (el.classList.contains('mascara-cpf')) el.value = el.value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2').replace(/(-\d{2})\d+?$/, '$1');
@@ -169,6 +235,7 @@
             if (el.classList.contains('mascara-cep')) el.value = el.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').replace(/(-\d{3})\d+?$/, '$1');
         });
 
+        // Carregar Dados Iniciais (MANTIDO)
         async function carregarDados() {
             if (!alunoId) return alert("ID inválido");
             const { data, error } = await supabaseClient.from('alunos').select('*').eq('id', alunoId).single();
@@ -205,9 +272,9 @@
             document.getElementById('serie').value = data.serie || '';
             document.getElementById('periodo_escolar').value = data.periodo_escolar || 'MANHÃ';
 
-            // Carregar Benefícios
             if (data.beneficios_detalhados) {
                 const lista = data.beneficios_detalhados.split(' | ');
+                document.getElementById('containerBeneficios').innerHTML = ''; // Limpar antes de carregar
                 lista.forEach(item => {
                     const [n, v] = item.split(': R$ ');
                     adicionarLinhaBeneficio(n, v);
@@ -293,5 +360,3 @@
     </script>
 </body>
 </html>
-
-
