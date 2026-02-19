@@ -26,19 +26,8 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        .foto-edit-container { display: flex; align-items: center; gap: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
-        .img-preview { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        
-        .benefit-row { background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
-        .age-display { background: #eff6ff; color: var(--primary); font-weight: 800; text-align: center; }
-
-        /* Estilos do Histórico */
-        .hist-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
-        .hist-row { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
-        .hist-cell { padding: 12px; font-size: 0.85rem; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
-        .hist-badge { padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 0.75rem; }
-        .badge-old { background: #fee2e2; color: #991b1b; }
-        .badge-new { background: #dcfce7; color: #166534; }
+        .badge-old { background: #fee2e2; color: #991b1b; padding: 5px 10px; border-radius: 6px; font-weight: 600; }
+        .badge-new { background: #dcfce7; color: #166534; padding: 5px 10px; border-radius: 6px; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -87,34 +76,68 @@
                                 <option value="REFORÇO">REFORÇO</option>
                             </select>
                         </div>
-                        <div class="col-md-3"><label class="form-label">Nascimento</label><input type="date" id="data_nasc" class="form-control"></div>
+                        <div class="col-md-3"><label class="form-label">Nascimento</label><input type="date" id="data_nasc" class="form-control" onchange="calcularIdade(this.value)"></div>
                         <div class="col-md-2"><label class="form-label">Idade</label><input type="text" id="idade" class="form-control age-display" readonly></div>
                         <div class="col-md-3"><label class="form-label">Whatsapp</label><input type="text" id="whatsapp" class="form-control mascara-fone"></div>
                     </div>
                 </div>
-                </div>
 
-            <div id="aba-historico" class="tab-content">
                 <div class="form-card">
-                    <div class="section-title"><i class="fas fa-history me-2"></i> Linha do Tempo de Projetos</div>
-                    <div class="table-responsive">
-                        <table class="hist-table">
-                            <thead>
-                                <tr class="text-muted small uppercase">
-                                    <th>Data</th>
-                                    <th>Projeto Anterior</th>
-                                    <th>Novo Projeto</th>
-                                    <th>Motivo</th>
-                                </tr>
-                            </thead>
-                            <tbody id="corpo-historico">
-                                </tbody>
-                        </table>
+                    <div class="section-title"><i class="fas fa-map-marker-alt me-2"></i> Endereço</div>
+                    <div class="row g-3">
+                        <div class="col-md-2"><label class="form-label">CEP</label><input type="text" id="cep" class="form-control mascara-cep" onblur="buscarCEP(this.value)"></div>
+                        <div class="col-md-5"><label class="form-label">Rua</label><input type="text" id="rua" class="form-control"></div>
+                        <div class="col-md-1"><label class="form-label">Nº</label><input type="text" id="numero" class="form-control"></div>
+                        <div class="col-md-2"><label class="form-label">Bairro</label><input type="text" id="bairro" class="form-control"></div>
+                        <div class="col-md-2"><label class="form-label">Cidade</label><input type="text" id="cidade" class="form-control"></div>
                     </div>
                 </div>
             </div>
 
-            </form>
+            <div id="aba-familia" class="tab-content">
+                <div class="form-card">
+                    <div class="section-title"><i class="fas fa-users me-2"></i> Núcleo Familiar</div>
+                    <div class="row g-3">
+                        <div class="col-md-4"><label class="form-label">Mãe</label><input type="text" id="nome_mae" class="form-control"></div>
+                        <div class="col-md-2"><label class="form-label">Situação</label><select id="situacao_mae" class="form-select"><option>PRESENTE</option><option>AUSENTE</option><option>FALECIDO</option></select></div>
+                        <div class="col-md-3"><label class="form-label">CPF Mãe</label><input type="text" id="cpf_mae" class="form-control mascara-cpf"></div>
+                        <div class="col-md-3"><label class="form-label">Profissão</label><input type="text" id="profissao_mae" class="form-control"></div>
+                    </div>
+                </div>
+                <div class="form-card">
+                    <div class="section-title"><i class="fas fa-hand-holding-usd me-2"></i> Benefícios Sociais</div>
+                    <div id="containerBeneficios"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="adicionarLinhaBeneficio()">+ Adicionar Benefício</button>
+                </div>
+            </div>
+
+            <div id="aba-escola" class="tab-content">
+                <div class="form-card">
+                    <div class="section-title"><i class="fas fa-school me-2"></i> Vida Escolar</div>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label">Escola</label><input type="text" id="escola" class="form-control"></div>
+                        <div class="col-md-3"><label class="form-label">Série</label><input type="text" id="serie" class="form-control"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="aba-historico" class="tab-content">
+                <div class="form-card">
+                    <div class="section-title"><i class="fas fa-history me-2"></i> Histórico de Mudanças</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Anterior</th>
+                                <th>Novo</th>
+                                <th>Observação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-historico-corpo"></tbody>
+                    </table>
+                </div>
+            </div>
+        </form>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -125,7 +148,7 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const alunoId = urlParams.get('id');
-        let projetoOriginal = ""; // Variável global para saber de onde o aluno saiu
+        let PROJETO_ORIGINAL = ""; 
 
         function toggleTab(e, id) {
             e.preventDefault();
@@ -143,61 +166,100 @@
             document.getElementById('nome_titulo').innerText = data.nome;
             document.getElementById('nome').value = data.nome || '';
             document.getElementById('projeto_atual').value = data.projeto || 'NENHUM';
-            projetoOriginal = data.projeto || 'NENHUM'; // Guarda o valor inicial
-            // ... (restante dos campos igual ao seu carregarDados)
+            PROJETO_ORIGINAL = data.projeto || 'NENHUM'; // CHAVE PARA O HISTÓRICO
+
+            document.getElementById('data_nasc').value = data.data_nascimento || '';
+            document.getElementById('whatsapp').value = data.whatsapp || '';
+            document.getElementById('cep').value = data.cep || '';
+            document.getElementById('rua').value = data.rua || '';
+            document.getElementById('numero').value = data.numero || '';
+            document.getElementById('bairro').value = data.bairro || '';
+            document.getElementById('cidade').value = data.cidade || '';
+            document.getElementById('nome_mae').value = data.nome_mae || '';
+            document.getElementById('situacao_mae').value = data.situacao_mae || 'PRESENTE';
+            document.getElementById('cpf_mae').value = data.cpf_mae || '';
+            document.getElementById('profissao_mae').value = data.profissao_mae || '';
+            document.getElementById('escola').value = data.escola || '';
+            document.getElementById('serie').value = data.serie || '';
+
+            if (data.beneficios_detalhados) {
+                data.beneficios_detalhados.split(' | ').forEach(item => {
+                    const [n, v] = item.split(': R$ ');
+                    adicionarLinhaBeneficio(n, v);
+                });
+            }
+            calcularIdade(data.data_nascimento);
         }
 
         async function carregarHistorico() {
-            const container = document.getElementById('corpo-historico');
-            container.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
-
-            const { data, error } = await supabaseClient
-                .from('historico_projetos')
-                .select('*')
-                .eq('aluno_id', alunoId)
-                .order('data_mudanca', { ascending: false });
-
-            if (error || !data) {
-                container.innerHTML = '<tr><td colspan="4">Sem histórico registrado.</td></tr>';
+            const corpo = document.getElementById('lista-historico-corpo');
+            corpo.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
+            const { data, error } = await supabaseClient.from('historico_projetos').select('*').eq('aluno_id', alunoId).order('data_mudanca', {ascending: false});
+            
+            if (error || !data.length) {
+                corpo.innerHTML = '<tr><td colspan="4">Sem registros.</td></tr>';
                 return;
             }
 
-            container.innerHTML = data.map(h => `
-                <tr class="hist-row">
-                    <td class="hist-cell">${new Date(h.data_mudanca).toLocaleDateString('pt-BR')}</td>
-                    <td class="hist-cell"><span class="hist-badge badge-old">${h.projeto_anterior}</span></td>
-                    <td class="hist-cell"><span class="hist-badge badge-new">${h.projeto_novo}</span></td>
-                    <td class="hist-cell text-muted">${h.observacao || 'Alteração manual'}</td>
+            corpo.innerHTML = data.map(h => `
+                <tr>
+                    <td>${new Date(h.data_mudanca).toLocaleDateString('pt-BR')}</td>
+                    <td><span class="badge-old">${h.projeto_anterior}</span></td>
+                    <td><span class="badge-new">${h.projeto_novo}</span></td>
+                    <td>${h.observacao || '-'}</td>
                 </tr>
             `).join('');
         }
 
         async function atualizarCadastro() {
             const novoProjeto = document.getElementById('projeto_atual').value;
-            
-            const dadosAtualizados = {
+            const dados = {
                 nome: document.getElementById('nome').value,
                 projeto: novoProjeto,
-                // ... (todos os outros campos que você já tem no seu atualizarCadastro)
+                data_nascimento: document.getElementById('data_nasc').value,
+                whatsapp: document.getElementById('whatsapp').value,
+                cep: document.getElementById('cep').value,
+                rua: document.getElementById('rua').value,
+                numero: document.getElementById('numero').value,
+                bairro: document.getElementById('bairro').value,
+                cidade: document.getElementById('cidade').value,
+                nome_mae: document.getElementById('nome_mae').value,
+                situacao_mae: document.getElementById('situacao_mae').value,
+                cpf_mae: document.getElementById('cpf_mae').value,
+                profissao_mae: document.getElementById('profissao_mae').value,
+                escola: document.getElementById('escola').value,
+                serie: document.getElementById('serie').value
             };
 
-            // 1. Atualiza o cadastro do aluno
-            const { error: errUpdate } = await supabaseClient.from('alunos').update(dadosAtualizados).eq('id', alunoId);
+            const { error } = await supabaseClient.from('alunos').update(dados).eq('id', alunoId);
             
-            if (errUpdate) return alert("Erro ao atualizar");
-
-            // 2. Se o projeto mudou, grava no histórico automaticamente
-            if (novoProjeto !== projetoOriginal) {
+            if (!error && novoProjeto !== PROJETO_ORIGINAL) {
                 await supabaseClient.from('historico_projetos').insert([{
                     aluno_id: alunoId,
-                    projeto_anterior: projetoOriginal,
+                    projeto_anterior: PROJETO_ORIGINAL,
                     projeto_novo: novoProjeto,
-                    observacao: 'Mudança de projeto via painel de edição'
+                    observacao: 'Mudança via sistema'
                 }]);
             }
 
-            alert("Dados e histórico atualizados!");
+            alert("Sucesso!");
             window.location.href = 'lista_geral.html';
+        }
+
+        function adicionarLinhaBeneficio(n='', v='') {
+            const div = document.createElement('div');
+            div.className = 'benefit-row row g-2';
+            div.innerHTML = `<div class="col-7"><input type="text" class="form-control ben-nome" value="${n}"></div>
+                             <div class="col-4"><input type="text" class="form-control ben-valor" value="${v}"></div>
+                             <div class="col-1"><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">×</button></div>`;
+            document.getElementById('containerBeneficios').appendChild(div);
+        }
+
+        function calcularIdade(d) {
+            if (!d) return;
+            const nasc = new Date(d);
+            const idade = new Date().getFullYear() - nasc.getFullYear();
+            document.getElementById('idade').value = idade;
         }
 
         window.onload = carregarDados;
