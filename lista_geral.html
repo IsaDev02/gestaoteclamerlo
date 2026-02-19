@@ -54,10 +54,10 @@
 
         <div class="table-container">
             <div class="row mb-4">
-                <div class="col-md-5">
+                <div class="col-md-6">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" id="filtro_nome" class="form-control border-start-0" placeholder="Pesquisar por nome do aluno..." onkeyup="buscarAlunos()">
+                        <input type="text" id="filtro_geral" class="form-control border-start-0" placeholder="Pesquisar por Nome ou ID do aluno..." onkeyup="buscarAlunos()">
                     </div>
                 </div>
             </div>
@@ -73,8 +73,7 @@
                             <th width="120" class="text-center">Ações</th>
                         </tr>
                     </thead>
-                    <tbody id="corpo_tabela">
-                        </tbody>
+                    <tbody id="corpo_tabela"></tbody>
                 </table>
             </div>
 
@@ -119,37 +118,40 @@
             try {
                 corpoTabela.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary spinner-border-sm me-2"></div> Carregando dados...</td></tr>';
 
-                // Query com range (paginação) e order (ID Decrescente)
                 let query = supabaseClient
                     .from('alunos')
-                    .select('id, foto, nome, projetos', { count: 'exact' })
+                    .select('id, foto, nome, projetos', { count: 'exact' });
+
+                // LÓGICA DE BUSCA: Por ID (se for número) ou Nome
+                if (buscaTermo) {
+                    const ehNumero = /^\d+$/.test(buscaTermo);
+                    if (ehNumero) {
+                        query = query.eq('id', buscaTermo);
+                    } else {
+                        query = query.ilike('nome', `%${buscaTermo}%`);
+                    }
+                }
+
+                const { data, error, count } = await query
                     .order('id', { ascending: false }) 
                     .range(from, to);
 
-                // Aplica filtro se houver busca
-                if (buscaTermo) {
-                    query = query.ilike('nome', `%${buscaTermo}%`);
-                }
-
-                const { data, error, count } = await query;
-
                 if (error) throw error;
 
-                // Atualiza contadores e botões
-                document.getElementById('total_alunos').innerText = `${count} alunos cadastrados`;
+                // Atualização dos indicadores
+                document.getElementById('total_alunos').innerText = `${count} alunos encontrados`;
                 document.getElementById('info_paginacao').innerText = `Exibindo ${data.length > 0 ? from + 1 : 0} a ${Math.min(to + 1, count)} de ${count}`;
                 
                 document.getElementById('item_anterior').classList.toggle('disabled', paginaAtual === 0);
                 document.getElementById('item_proximo').classList.toggle('disabled', (to + 1) >= count);
 
                 if (!data || data.length === 0) {
-                    corpoTabela.innerHTML = '<tr><td colspan="5" class="text-center py-4">Nenhum aluno encontrado.</td></tr>';
+                    corpoTabela.innerHTML = '<tr><td colspan="5" class="text-center py-4">Nenhum resultado para sua busca.</td></tr>';
                     return;
                 }
 
                 let htmlFinal = '';
                 data.forEach(aluno => {
-                    // Lógica da Foto: se estiver na mesma pasta, o banco deve ter "fotos/nome.jpg"
                     const urlFoto = (aluno.foto && aluno.foto.trim() !== "") ? aluno.foto.trim() : FOTO_PADRAO;
                     const nomeProjeto = nomesProjetos[aluno.projetos] || 'Não definido';
 
@@ -176,23 +178,27 @@
 
             } catch (err) {
                 console.error("Erro:", err);
-                corpoTabela.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger border-0">Erro ao carregar: ${err.message}</td></tr>`;
+                corpoTabela.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger border-0">Erro: ${err.message}</td></tr>`;
             }
         }
 
         function mudarPagina(passo) {
             paginaAtual += passo;
             carregarAlunos();
-            window.scrollTo(0, 0); // Volta ao topo da tabela
+            window.scrollTo(0, 0);
         }
 
         function buscarAlunos() {
-            buscaTermo = document.getElementById('filtro_nome').value;
-            paginaAtual = 0; // Reseta para a primeira página ao buscar
+            buscaTermo = document.getElementById('filtro_geral').value.trim();
+            paginaAtual = 0; 
             carregarAlunos();
         }
 
-        // Inicia a aplicação
+        function logout() {
+            // Adicione aqui sua lógica de logout se houver
+            window.location.href = 'index.html';
+        }
+
         window.onload = carregarAlunos;
     </script>
 </body>
