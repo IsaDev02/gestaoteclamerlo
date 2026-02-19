@@ -124,7 +124,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const alunoId = urlParams.get('id');
 
-        // Gerar histórico
         const histContainer = document.getElementById('lista-projetos-antigos');
         for (let i = 1; i <= 6; i++) {
             histContainer.innerHTML += `
@@ -180,6 +179,7 @@
             btn.innerText = "Salvando...";
             const idNumerico = parseInt(alunoId);
 
+            // Objeto que vai para a tabela 'alunos'
             const dadosAluno = {
                 nome: document.getElementById('nome').value,
                 data_nascimento: document.getElementById('data_nasc_input').value || null, 
@@ -194,10 +194,9 @@
                 foto: document.getElementById('caminho_final_foto').value
             };
 
+            // Objeto que vai para a tabela 'historico_projetos'
             const dadosHist = {
-                aluno_id: idNumerico,
                 projeto_atual: document.getElementById('projeto_atual').value
-                // STATUS REMOVIDO CONFORME SOLICITADO
             };
             
             for(let i=1; i<=6; i++) {
@@ -206,18 +205,20 @@
             }
 
             try {
+                // Comando que altera o banco Supabase na tabela ALUNOS
                 const { error: err1 } = await supabaseClient.from('alunos').update(dadosAluno).eq('id', idNumerico);
                 if (err1) throw err1;
 
-                const { error: err2 } = await supabaseClient.from('historico_projetos').upsert(dadosHist, { onConflict: 'aluno_id' });
+                // Comando que altera o banco Supabase na tabela HISTORICO
+                const { error: err2 } = await supabaseClient.from('historico_projetos').update(dadosHist).eq('aluno_id', idNumerico);
                 if (err2) throw err2;
 
-                alert("Dados atualizados com sucesso!");
+                alert("Sucesso! As alterações foram gravadas no banco de dados.");
                 window.location.href = 'lista_geral.html';
 
             } catch (err) {
                 console.error(err);
-                alert("Erro ao salvar: " + err.message);
+                alert("Erro ao gravar no banco: " + err.message);
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Salvar Alterações";
