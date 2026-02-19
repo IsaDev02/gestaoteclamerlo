@@ -106,16 +106,9 @@
             </div>
 
             <div id="aba-historico" class="tab-content">
-                <div class="section-title">Situação Atual</div>
+                <div class="section-title">Projetos</div>
                 <div class="row g-3 mb-4">
-                    <div class="col-md-8"><label class="form-label">Projeto Atual</label><input type="text" id="projeto_atual" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Status</label>
-                        <select id="status_historico" class="form-select">
-                            <option value="Ativo">Ativo</option>
-                            <option value="Concluído">Concluído</option>
-                            <option value="Desistente">Desistente</option>
-                        </select>
-                    </div>
+                    <div class="col-md-12"><label class="form-label">Projeto Atual</label><input type="text" id="projeto_atual" class="form-control"></div>
                 </div>
                 <div id="lista-projetos-antigos"></div>
             </div>
@@ -131,7 +124,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const alunoId = urlParams.get('id');
 
-        // Gerar Grid de Histórico
+        // Gerar histórico
         const histContainer = document.getElementById('lista-projetos-antigos');
         for (let i = 1; i <= 6; i++) {
             histContainer.innerHTML += `
@@ -153,12 +146,10 @@
             if (!alunoId) return;
             const idNumerico = parseInt(alunoId);
 
-            const { data: aluno, error } = await supabaseClient.from('alunos').select('*').eq('id', idNumerico).single();
-            
+            const { data: aluno } = await supabaseClient.from('alunos').select('*').eq('id', idNumerico).single();
             if (aluno) {
                 document.getElementById('nome_titulo').innerText = aluno.nome;
                 document.getElementById('nome').value = aluno.nome || '';
-                // MAPEAMENTO DA COLUNA CORRETA
                 document.getElementById('data_nasc_input').value = aluno.data_nascimento || ''; 
                 document.getElementById('genero').value = aluno.genero || 'Masculino';
                 document.getElementById('whatsapp').value = aluno.whatsapp || '';
@@ -176,7 +167,6 @@
             const { data: hist } = await supabaseClient.from('historico_projetos').select('*').eq('aluno_id', idNumerico).maybeSingle();
             if (hist) {
                 document.getElementById('projeto_atual').value = hist.projeto_atual || '';
-                document.getElementById('status_historico').value = hist.status || 'Ativo';
                 for (let i = 1; i <= 6; i++) {
                     document.getElementById(`projeto_${i}`).value = hist[`projeto_${i}`] || '';
                     document.getElementById(`data_termino_${i}`).value = hist[`data_termino_${i}`] || '';
@@ -188,10 +178,8 @@
             const btn = document.getElementById('btnSalvar');
             btn.disabled = true;
             btn.innerText = "Salvando...";
-
             const idNumerico = parseInt(alunoId);
 
-            // AQUI É ONDE O ERRO ACONTECIA: Enviei exatamente data_nascimento
             const dadosAluno = {
                 nome: document.getElementById('nome').value,
                 data_nascimento: document.getElementById('data_nasc_input').value || null, 
@@ -206,37 +194,29 @@
                 foto: document.getElementById('caminho_final_foto').value
             };
 
+            const dadosHist = {
+                aluno_id: idNumerico,
+                projeto_atual: document.getElementById('projeto_atual').value
+                // STATUS REMOVIDO CONFORME SOLICITADO
+            };
+            
+            for(let i=1; i<=6; i++) {
+                dadosHist[`projeto_${i}`] = document.getElementById(`projeto_${i}`).value;
+                dadosHist[`data_termino_${i}`] = document.getElementById(`data_termino_${i}`).value || null;
+            }
+
             try {
-                const { error: errorAluno } = await supabaseClient
-                    .from('alunos')
-                    .update(dadosAluno)
-                    .eq('id', idNumerico);
+                const { error: err1 } = await supabaseClient.from('alunos').update(dadosAluno).eq('id', idNumerico);
+                if (err1) throw err1;
 
-                if (errorAluno) throw errorAluno;
-
-                // Salvar Histórico
-                const dadosHist = {
-                    aluno_id: idNumerico,
-                    projeto_atual: document.getElementById('projeto_atual').value,
-                    status: document.getElementById('status_historico').value
-                };
-                
-                for(let i=1; i<=6; i++) {
-                    dadosHist[`projeto_${i}`] = document.getElementById(`projeto_${i}`).value;
-                    dadosHist[`data_termino_${i}`] = document.getElementById(`data_termino_${i}`).value || null;
-                }
-
-                const { error: errorHist } = await supabaseClient
-                    .from('historico_projetos')
-                    .upsert(dadosHist, { onConflict: 'aluno_id' });
-
-                if (errorHist) throw errorHist;
+                const { error: err2 } = await supabaseClient.from('historico_projetos').upsert(dadosHist, { onConflict: 'aluno_id' });
+                if (err2) throw err2;
 
                 alert("Dados atualizados com sucesso!");
                 window.location.href = 'lista_geral.html';
 
             } catch (err) {
-                console.error("Erro completo:", err);
+                console.error(err);
                 alert("Erro ao salvar: " + err.message);
             } finally {
                 btn.disabled = false;
