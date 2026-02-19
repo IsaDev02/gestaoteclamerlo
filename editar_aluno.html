@@ -67,7 +67,7 @@
                         <input type="hidden" id="caminho_final_foto">
                     </div>
                     <div class="col-md-5"><label class="form-label">Nome Completo</label><input type="text" id="nome" class="form-control"></div>
-                    <div class="col-md-3"><label class="form-label">Data Nasc.</label><input type="date" id="data_nasc" class="form-control" onchange="calcularIdade(this.value)"></div>
+                    <div class="col-md-3"><label class="form-label">Data Nasc.</label><input type="date" id="data_nascimento" class="form-control" onchange="calcularIdade(this.value)"></div>
                     <div class="col-md-2"><label class="form-label">Idade</label><div id="idade_display" class="age-display">--</div></div>
                     
                     <div class="col-md-3"><label class="form-label">WhatsApp</label><input type="text" id="whatsapp" class="form-control"></div>
@@ -141,7 +141,7 @@
             if (aluno) {
                 document.getElementById('nome_titulo').innerText = aluno.nome;
                 document.getElementById('nome').value = aluno.nome || '';
-                document.getElementById('data_nasc').value = aluno.data_nasc || '';
+                document.getElementById('data_nascimento').value = aluno.data_nascimento || '';
                 document.getElementById('genero').value = aluno.genero || 'Masculino';
                 document.getElementById('whatsapp').value = aluno.whatsapp || '';
                 document.getElementById('cpf').value = aluno.cpf || '';
@@ -151,7 +151,7 @@
                 document.getElementById('bairro').value = aluno.bairro || '';
                 document.getElementById('caminho_final_foto').value = aluno.foto || '';
                 document.getElementById('img_preview').src = aluno.foto || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                calcularIdade(aluno.data_nasc);
+                calcularIdade(aluno.data_nascimento);
             }
 
             const { data: hist } = await supabaseClient.from('historico_projetos').select('*').eq('aluno_id', idNumerico).maybeSingle();
@@ -174,7 +174,7 @@
 
             const dadosAluno = {
                 nome: document.getElementById('nome').value,
-                data_nasc: document.getElementById('data_nasc').value || null,
+                data_nascimento: document.getElementById('data_nascimento').value || null,
                 genero: document.getElementById('genero').value,
                 whatsapp: document.getElementById('whatsapp').value.replace(/\D/g, ''),
                 cpf: document.getElementById('cpf').value,
@@ -249,3 +249,4 @@
     </script>
 </body>
 </html>
+
