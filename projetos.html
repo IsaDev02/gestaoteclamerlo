@@ -22,9 +22,6 @@
         .student-item:hover { background: #f0f7ff; }
         
         .insert-section { background: #f1f5f9; padding: 20px; border-bottom: 1px solid #e2e8f0; }
-        #resultadoBuscaInserir { position: absolute; width: 95%; background: white; border: 1px solid #e2e8f0; border-radius: 8px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 10px 20px rgba(0,0,0,0.1); display: none; }
-        .search-item-add { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
-        .search-item-add:hover { background: #3b82f6; color: white; }
     </style>
 </head>
 <body>
@@ -48,7 +45,7 @@
     <main class="main-content">
         <header class="mb-5">
             <h3 class="fw-bold mb-1">Gerenciamento de Projetos</h3>
-            <p class="text-muted small">Insira os IDs dos alunos separados por vírgula para vinculá-los.</p>
+            <p class="text-muted small">Insira os IDs dos alunos separados por vírgula.</p>
         </header>
 
         <div class="row g-3" id="gradeProjetos">
@@ -59,17 +56,17 @@
             <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-white">
                 <div>
                     <h5 class="fw-bold mb-0 text-uppercase" id="tituloProjetoSelecionado">---</h5>
-                    <small class="text-primary fw-bold">PROJETO SELECIONADO</small>
+                    <small class="text-primary fw-bold">PROJETOS</small>
                 </div>
                 <button class="btn btn-close btn-sm" onclick="fecharLista()"></button>
             </div>
 
             <div class="insert-section">
-                <label class="form-label small fw-bold text-muted">VINCULAR POR ID (Ex: 10, 25, 48)</label>
+                <label class="form-label small fw-bold text-muted">VINCULAR ALUNOS (DIGITE OS IDS SEPARADOS POR VÍRGULA)</label>
                 <div class="input-group">
                     <span class="input-group-text bg-white"><i class="fas fa-id-card text-primary"></i></span>
-                    <input type="text" id="inputIdsAlunos" class="form-control" placeholder="Digite os IDs separados por vírgula...">
-                    <button class="btn btn-primary fw-bold" onclick="vincularAlunosPorId()">Vincular IDs</button>
+                    <input type="text" id="inputIdsAlunos" class="form-control" placeholder="Ex: 102, 105, 110...">
+                    <button class="btn btn-primary fw-bold" onclick="vincularAlunosPorId()">Vincular</button>
                 </div>
                 <div id="statusVinculo" class="mt-2 small fw-bold" style="display:none;"></div>
             </div>
@@ -97,8 +94,12 @@
 
         async function carregarContagens() {
             const grade = document.getElementById('gradeProjetos');
+            // Busca a contagem exata da tabela ALUNOS baseada na coluna PROJETOS
             const promessas = Object.keys(nomesDosProjetos).map(async (id) => {
-                const { count } = await supabaseClient.from('alunos').select('*', { count: 'exact', head: true }).eq('projetos', id);
+                const { count } = await supabaseClient
+                    .from('alunos')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('projetos', id);
                 return { id, total: count || 0 };
             });
 
@@ -130,13 +131,13 @@
             const listaDiv = document.getElementById('listaAlunos');
             listaDiv.innerHTML = '<div class="p-4 text-center"><div class="spinner-border text-primary"></div></div>';
 
-            const { data: aData, error } = await supabaseClient
+            const { data: aData } = await supabaseClient
                 .from('alunos')
                 .select('id, nome')
                 .eq('projetos', projetoAtivoId)
-                .order('nome', { ascending: true });
+                .order('nome');
 
-            listaDiv.innerHTML = aData && aData.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno vinculado a este projeto.</div>';
+            listaDiv.innerHTML = aData && aData.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno neste projeto.</div>';
             
             if (aData) {
                 aData.forEach(aluno => {
@@ -152,45 +153,39 @@
             }
         }
 
-        // FUNÇÃO FOCADA 100% NO ID DO SUPABASE
         async function vincularAlunosPorId() {
             const input = document.getElementById('inputIdsAlunos');
             const status = document.getElementById('statusVinculo');
             
-            // Pega os IDs, remove espaços e filtra apenas o que for número
+            // Converte a string de IDs em uma lista de números puros
             const ids = input.value.split(',')
                              .map(id => id.trim())
-                             .filter(id => id !== "" && !isNaN(id));
+                             .filter(id => id !== "" && !isNaN(id))
+                             .map(id => parseInt(id));
 
-            if (ids.length === 0) {
-                alert("Por favor, digite IDs numéricos válidos.");
-                return;
-            }
+            if (ids.length === 0) return alert("Digite IDs válidos.");
 
             status.style.display = 'block';
             status.className = "mt-2 small fw-bold text-primary";
-            status.innerText = "Processando vínculos...";
+            status.innerText = "Sincronizando com o banco...";
 
-            // Executa o Update no Supabase onde o ID estiver na lista informada
+            // ATUALIZAÇÃO CRUCIAL: Usa .in('id', ids) para atualizar todos de uma vez
             const { error } = await supabaseClient
                 .from('alunos')
                 .update({ projetos: projetoAtivoId })
-                .in('id', ids); // O comando .in() verifica se o ID está no array fornecido
+                .in('id', ids);
 
             if (error) {
-                console.error(error);
                 status.className = "mt-2 small fw-bold text-danger";
-                status.innerText = "Erro ao vincular: " + error.message;
+                status.innerText = "Erro: " + error.message;
             } else {
                 status.className = "mt-2 small fw-bold text-success";
-                status.innerText = "IDs vinculados com sucesso!";
+                status.innerText = "Sucesso! Dashboard atualizado.";
                 input.value = '';
                 
-                // Atualiza a interface
-                setTimeout(() => {
-                    atualizarListaAlunos();
-                    carregarContagens();
-                }, 500);
+                // Recarrega as contagens para garantir que o número mude na tela
+                await carregarContagens();
+                await atualizarListaAlunos();
             }
         }
 
@@ -198,8 +193,8 @@
             event.stopPropagation();
             if(!confirm("Remover o aluno ID " + id + " deste projeto?")) return;
             await supabaseClient.from('alunos').update({ projetos: null }).eq('id', id);
-            atualizarListaAlunos();
-            carregarContagens();
+            await carregarContagens();
+            await atualizarListaAlunos();
         }
 
         function fecharLista() { document.getElementById('containerAlunos').style.display = 'none'; }
