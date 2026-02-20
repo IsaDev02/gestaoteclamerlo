@@ -8,12 +8,19 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --wa-bg: #f0f2f5; --wa-green: #00a884; --sidebar-bg: #1e293b; }
+        :root { --wa-bg: #f0f2f5; --wa-green: #00a884; --sidebar-bg: #1e293b; --primary: #3b82f6; }
         body { background-color: var(--wa-bg); font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; margin: 0; }
+        
         .main-wrapper { display: flex; height: 100vh; }
-        .sidebar { width: 80px; background: var(--sidebar-bg); display: flex; flex-direction: column; align-items: center; padding: 20px 0; }
-        .sidebar .nav-link { color: #94a3b8; font-size: 1.5rem; margin-bottom: 25px; text-decoration: none; }
-        .sidebar .nav-link.active { color: #fff; }
+
+        /* MENU LATERAL PADRONIZADO */
+        .sidebar { width: 240px; height: 100vh; background: var(--sidebar-bg); padding: 20px 0; flex-shrink: 0; }
+        .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; font-size: 0.9rem; text-decoration: none; display: block; transition: 0.3s; }
+        .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        .sidebar .nav-link.active { color: #fff; background: var(--primary); font-weight: 600; }
+        .sidebar-logo { color: white; font-weight: 700; padding: 0 25px 30px 25px; display: block; font-size: 1.2rem; }
+
+        /* RESTANTE DO LAYOUT PRESERVADO */
         .filter-panel { width: 350px; background: #fff; border-right: 1px solid #d1d7db; display: flex; flex-direction: column; z-index: 20; }
         .filter-header { padding: 20px; background: #f0f2f5; border-bottom: 1px solid #d1d7db; }
         .filter-body { padding: 20px; overflow-y: auto; flex-grow: 1; }
@@ -32,18 +39,25 @@
 <body>
 
     <div class="main-wrapper">
-        <nav class="nav flex-column">
-            <a class="nav-link active" href="#"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
-            <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
-            <a class="nav-link" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
-            <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
-            <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
-            <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
-            
-            <div class="mt-5 px-4">
-                <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <i class="fas fa-graduation-cap me-2"></i>Centro Social
             </div>
-        </nav>
+            <nav>
+                <a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
+                <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
+                <a class="nav-link" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
+                <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
+                <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
+                <a class="nav-link active" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
+                
+                <div class="mt-5 px-4">
+                    <button class="btn btn-sm btn-outline-danger w-100 opacity-75" onclick="logout()" style="font-size: 0.8rem;">
+                        <i class="fas fa-sign-out-alt me-1"></i> Sair do Sistema
+                    </button>
+                </div>
+            </nav>
+        </aside>
 
         <aside class="filter-panel">
             <div class="filter-header">
@@ -142,9 +156,8 @@
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // CONFIGURAÇÕES DA API NO SEU WINDOWS
         const API_URL = "https://transparency-font-agrees-purposes.trycloudflare.com"; 
-        const API_KEY = "minha_chave_secreta"; // Deve ser a mesma que você usou no comando Docker (AUTH_ID)
+        const API_KEY = "minha_chave_secreta";
         const INSTANCE = "CentroSocial";
 
         let listaDestinatarios = [];
@@ -205,7 +218,6 @@
             document.getElementById('listaNomes').innerHTML = listaDestinatarios.map(d => `<div>• ${d.nome}</div>`).join('');
         }
 
-        // --- LÓGICA DE ENVIO REAL ---
         async function dispararMensagens() {
             const msgBase = document.getElementById('msgWhatsapp').value;
             const statusLabel = document.getElementById('statusEnvio');
@@ -234,24 +246,21 @@
                     });
                 } catch (e) { console.error("Erro no envio", e); }
                 
-                await new Promise(r => setTimeout(r, 2000)); // Delay anti-ban
+                await new Promise(r => setTimeout(r, 2000)); 
             }
             statusLabel.innerText = "✓ Transmissão Finalizada!";
         }
 
-        // --- CONEXÃO QR CODE ---
         async function abrirModalConexao() {
             const modal = new bootstrap.Modal(document.getElementById('modalQR'));
             modal.show();
             try {
-                // Cria instância se não existir
                 await fetch(`${API_URL}/instance/create`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'apikey': API_KEY },
                     body: JSON.stringify({ "instanceName": INSTANCE, "token": API_KEY, "qrcode": true })
                 });
                 
-                // Pega o QR Code
                 const res = await fetch(`${API_URL}/instance/connect/${INSTANCE}`, {
                     headers: { 'apikey': API_KEY }
                 });
@@ -268,5 +277,3 @@
     </script>
 </body>
 </html>
-
-
