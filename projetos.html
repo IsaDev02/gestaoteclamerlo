@@ -20,6 +20,8 @@
         .student-list-container { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 30px; display: none; }
         .student-item { padding: 12px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
         .insert-section { background: #f8fafc; padding: 20px; border-bottom: 1px solid #e2e8f0; }
+        /* Classe de destaque para inativos */
+        .text-inactive { color: #dc3545 !important; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -63,12 +65,8 @@
 
         async function carregarContagens() {
             const grade = document.getElementById('gradeProjetos');
-            grade.innerHTML = '<div class="text-center p-5">Carregando...</div>';
-            
-            // Busca todos os alunos que possuem algum projeto vinculado de uma vez só
             const { data, error } = await supabaseClient.from('alunos').select('projetos');
-            
-            if (error) return console.error("Erro na contagem:", error);
+            if (error) return;
 
             grade.innerHTML = '';
             Object.keys(nomesDosProjetos).forEach(pId => {
@@ -94,13 +92,22 @@
             const listaDiv = document.getElementById('listaAlunos');
             listaDiv.innerHTML = '<div class="p-4 text-center">Buscando alunos...</div>';
 
-            const { data } = await supabaseClient.from('alunos').select('id, nome').eq('projetos', projetoAtivoId).order('nome');
+            // Seleciona ID, NOME e ATIVO para fazer a verificação
+            const { data } = await supabaseClient.from('alunos')
+                .select('id, nome, ativo')
+                .eq('projetos', projetoAtivoId)
+                .order('nome');
 
             listaDiv.innerHTML = data && data.length ? '' : '<div class="p-4 text-center">Nenhum aluno vinculado.</div>';
+            
             data?.forEach(aluno => {
+                // Lógica de verificação: se for "0", false ou string "0"
+                const isInactive = String(aluno.ativo).trim() === "0";
+                const textClass = isInactive ? 'text-inactive' : '';
+
                 listaDiv.innerHTML += `
                     <div class="student-item">
-                        <span><strong>ID ${aluno.id}</strong> - ${aluno.nome}</span>
+                        <span class="${textClass}"><strong>ID ${aluno.id}</strong> - ${aluno.nome} ${isInactive ? '(INATIVO)' : ''}</span>
                         <button class="btn btn-sm btn-outline-danger" onclick="removerDoProjeto('${aluno.id}')">Remover</button>
                     </div>`;
             });
@@ -108,19 +115,14 @@
 
         async function vincularAlunosPorId() {
             const input = document.getElementById('inputIdsAlunos');
-            // IMPORTANTE: Converte para NÚMERO INTEIRO (parseInt)
-            const ids = input.value.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            const ids = input.value.split(',').map(id => id.trim()).filter(id => id !== "");
+            if (ids.length === 0) return;
 
-            if (ids.length === 0) return alert("Digite IDs válidos.");
-
-            // Faz o update convertendo o projetoAtivoId para número também
             const { error } = await supabaseClient.from('alunos')
-                .update({ projetos: parseInt(projetoAtivoId) }) 
+                .update({ projetos: projetoAtivoId })
                 .in('id', ids);
 
-            if (error) {
-                alert("Erro ao salvar: " + error.message);
-            } else {
+            if (!error) {
                 input.value = '';
                 await carregarContagens();
                 await atualizarListaAlunos();
@@ -128,7 +130,6 @@
         }
 
         async function removerDoProjeto(id) {
-            if(!confirm("Remover aluno?")) return;
             await supabaseClient.from('alunos').update({ projetos: null }).eq('id', id);
             await carregarContagens();
             await atualizarListaAlunos();
