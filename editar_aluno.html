@@ -1,387 +1,201 @@
 <!DOCTYPE html>
-
 <html lang="pt-br">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Projetos | Centro Social Irmã Tecla Merlo</title>
-
+    <title>Editar Aluno | Centro Social Irmã Tecla Merlo</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
-
         :root { --bg-body: #f8fafc; --sidebar-bg: #1e293b; --primary: #3b82f6; }
-
         body { background-color: var(--bg-body); font-family: 'Inter', sans-serif; color: #1e293b; }
-
         .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar-bg); padding: 20px 0; z-index: 100;}
-
         .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; text-decoration: none; display: block; }
-
         .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.05); }
-
         .main-content { margin-left: 240px; padding: 40px; }
+        
+        .card-form { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 30px; }
 
-        .project-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.3s ease; display: flex; justify-content: space-between; align-items: center; }
+        /* Estilo do Switch de Status */
+        .status-header {
+            background: #f8fafc; padding: 15px 25px; border-radius: 10px; margin-bottom: 25px;
+            display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0;
+        }
+        .form-check-input:checked { background-color: #10b981; border-color: #10b981; }
 
-        .project-card:hover { transform: translateY(-3px); border-color: var(--primary); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-
-        .count-circle { background: #eff6ff; color: var(--primary); width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; }
-
-        .student-list-container { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 30px; display: none; overflow: hidden; }
-
-        .student-item { padding: 12px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
-
-        .student-item:hover { background: #f0f7ff; }
-
-        .insert-section { background: #f1f5f9; padding: 20px; border-bottom: 1px solid #e2e8f0; }
-
-
-
-        /* Estilos para Aluno Inativo */
-
-        .aluno-inativo { color: #dc3545 !important; font-weight: 600; }
-
-        .badge-inativo { font-size: 0.65rem; background: #fee2e2; color: #dc3545; padding: 2px 6px; border-radius: 4px; margin-left: 8px; text-transform: uppercase; }
-
+        /* Estilo das Abas */
+        .nav-tabs { border-bottom: 2px solid #e2e8f0; margin-bottom: 25px; }
+        .nav-tabs .nav-link { border: none; color: #64748b; font-weight: 600; padding: 10px 20px; transition: 0.3s; }
+        .nav-tabs .nav-link.active { color: var(--primary); border-bottom: 3px solid var(--primary); background: transparent; }
+        
+        textarea.form-control { resize: none; border-radius: 8px; border: 1px solid #e2e8f0; }
     </style>
-
 </head>
-
 <body>
 
-
-
     <aside class="sidebar">
-
         <div class="px-4 mb-5 text-white fw-bold"><h5><i class="fas fa-graduation-cap me-2"></i>Centro Social</h5></div>
-
         <nav class="nav flex-column">
-
             <a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
-
             <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
-
-            <a class="nav-link active" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
-
+            <a class="nav-link" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
             <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
-
-            <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
-
-            <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
-
-            
-
-            <div class="mt-5 px-4">
-
-                <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
-
-            </div>
-
         </nav>
-
     </aside>
 
-
-
     <main class="main-content">
-
-        <header class="mb-5">
-
-            <h3 class="fw-bold mb-1">Gerenciamento de Projetos</h3>
-
-            <p class="text-muted small">Alunos com status "false" no banco aparecem em vermelho.</p>
-
+        <header class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="fw-bold mb-0">Editar Aluno</h3>
+                <small class="text-muted" id="subtituloId">Carregando...</small>
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary fw-bold me-2" onclick="window.history.back()">Cancelar</button>
+                <button class="btn btn-primary fw-bold px-4" onclick="salvarAlteracoes()">Salvar Alterações</button>
+            </div>
         </header>
 
-
-
-        <div class="row g-3" id="gradeProjetos">
-
-            <div class="text-center p-5"><div class="spinner-border text-primary"></div></div>
-
-        </div>
-
-
-
-        <div class="student-list-container shadow-sm" id="containerAlunos">
-
-            <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-white">
-
+        <div class="card-form shadow-sm">
+            
+            <div class="status-header">
                 <div>
-
-                    <h5 class="fw-bold mb-0 text-uppercase" id="tituloProjetoSelecionado">---</h5>
-
-                    <small class="text-primary fw-bold">PROJETOS</small>
-
+                    <span class="text-muted small d-block fw-bold">SITUAÇÃO DO ALUNO NO SISTEMA</span>
+                    <h6 id="statusLabel" class="mb-0 fw-bold">---</h6>
                 </div>
-
-                <button class="btn btn-close btn-sm" onclick="fecharLista()"></button>
-
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="statusSwitch" style="transform: scale(1.6); cursor: pointer;" onchange="ajustarLabelStatus()">
+                </div>
             </div>
 
+            <ul class="nav nav-tabs" id="editTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabDados">Dados Gerais</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHistorico">Histórico e Observações</button>
+                </li>
+            </ul>
 
-
-            <div class="insert-section">
-
-                <label class="form-label small fw-bold text-muted">VINCULAR ALUNOS (DIGITE OS IDS SEPARADOS POR VÍRGULA)</label>
-
-                <div class="input-group">
-
-                    <span class="input-group-text bg-white"><i class="fas fa-id-card text-primary"></i></span>
-
-                    <input type="text" id="inputIdsAlunos" class="form-control" placeholder="Ex: 102, 105, 110...">
-
-                    <button class="btn btn-primary fw-bold" onclick="vincularAlunosPorId()">Vincular</button>
-
+            <div class="tab-content pt-3">
+                <div class="tab-pane fade show active" id="tabDados">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Nome Completo</label>
+                            <input type="text" id="nome" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Gênero</label>
+                            <select id="genero" class="form-select">
+                                <option value="Masculino">Masculino</option>
+                                <option value="Feminino">Feminino</option>
+                            </select>
+                        </div>
+                        </div>
                 </div>
 
-                <div id="statusVinculo" class="mt-2 small fw-bold" style="display:none;"></div>
-
+                <div class="tab-pane fade" id="tabHistorico">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Anotações Internas, Ocorrências e Histórico</label>
+                        <textarea id="observacoes" class="form-control" rows="12" placeholder="Escreva aqui o histórico do aluno..."></textarea>
+                    </div>
+                    <div class="alert alert-light border small text-muted">
+                        <i class="fas fa-info-circle me-2"></i>Este campo é salvo na coluna "observacoes" do banco de dados.
+                    </div>
+                </div>
             </div>
-
-
-
-            <div id="listaAlunos"></div>
-
         </div>
-
     </main>
 
-
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
-
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
-
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const alunoId = urlParams.get('id');
 
+        async function carregarAluno() {
+            if (!alunoId) {
+                alert("ID do aluno não encontrado.");
+                return;
+            }
 
-        const nomesDosProjetos = {
-
-            "1": "Adolescer para Crescer",
-
-            "2": "Criança Certeza",
-
-            "3": "Sempre Criança",
-
-            "4": "Valorizando a Infância",
-
-            "5": "Clube de Mães",
-
-            "6": "Animar e Celebrar"
-
-        };
-
-
-
-        let projetoAtivoId = null;
-
-
-
-        async function carregarContagens() {
-
-            const grade = document.getElementById('gradeProjetos');
-
-            const promessas = Object.keys(nomesDosProjetos).map(async (id) => {
-
-                const { count } = await supabaseClient
-
-                    .from('alunos')
-
-                    .select('*', { count: 'exact', head: true })
-
-                    .eq('projetos', id);
-
-                return { id, total: count || 0 };
-
-            });
-
-
-
-            const resultados = await Promise.all(promessas);
-
-            grade.innerHTML = '';
-
-            resultados.forEach(res => {
-
-                grade.innerHTML += `
-
-                    <div class="col-md-4">
-
-                        <div class="project-card shadow-sm" onclick="abrirProjeto('${res.id}', '${nomesDosProjetos[res.id]}')">
-
-                            <div>
-
-                                <h6 class="fw-bold mb-0">${nomesDosProjetos[res.id]}</h6>
-
-                                <small class="text-muted">ID #${res.id}</small>
-
-                            </div>
-
-                            <div class="count-circle">${res.total}</div>
-
-                        </div>
-
-                    </div>`;
-
-            });
-
-        }
-
-
-
-        async function abrirProjeto(id, nome) {
-
-            projetoAtivoId = id;
-
-            document.getElementById('containerAlunos').style.display = 'block';
-
-            document.getElementById('tituloProjetoSelecionado').innerText = nome;
-
-            document.getElementById('statusVinculo').style.display = 'none';
-
-            atualizarListaAlunos();
-
-        }
-
-
-
-        async function atualizarListaAlunos() {
-
-            const listaDiv = document.getElementById('listaAlunos');
-
-            listaDiv.innerHTML = '<div class="p-4 text-center"><div class="spinner-border text-primary"></div></div>';
-
-
-
-            const { data: aData } = await supabaseClient
-
+            const { data, error } = await supabaseClient
                 .from('alunos')
+                .select('*')
+                .eq('id', alunoId)
+                .single();
 
-                .select('id, nome, ativo') 
-
-                .eq('projetos', projetoAtivoId)
-
-                .order('nome');
-
-
-
-            listaDiv.innerHTML = aData && aData.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno neste projeto.</div>';
-
-            
-
-            if (aData) {
-
-                aData.forEach(aluno => {
-
-                    // LÓGICA PARA BOOLEANOS (true/false)
-
-                    // Se o valor for estritamente false, ele marca como inativo
-
-                    const isInativo = aluno.ativo === false;
-
-                    const classeDestaque = isInativo ? 'aluno-inativo' : '';
-
-
-
-                    listaDiv.innerHTML += `
-
-                        <div class="student-item" onclick="window.location.href='editar_aluno.html?id=${aluno.id}'">
-
-                            <span class="${classeDestaque}">
-
-                                <strong>ID ${aluno.id}</strong> - ${aluno.nome}
-
-                                ${isInativo ? '<span class="badge-inativo">Inativo</span>' : ''}
-
-                            </span>
-
-                            <div class="d-flex align-items-center">
-
-                                <button class="btn btn-sm btn-outline-danger border-0 me-3" onclick="removerDoProjeto(event, '${aluno.id}')"><i class="fas fa-times"></i></button>
-
-                                <i class="fas fa-chevron-right text-muted small"></i>
-
-                            </div>
-
-                        </div>`;
-
-                });
-
+            if (error) {
+                console.error("Erro:", error);
+                return;
             }
 
+            if (data) {
+                // Preenchendo o cabeçalho
+                document.getElementById('subtituloId').innerText = "Editando Registro ID #" + data.id;
+                
+                // Preenchendo campos de dados (Adicione os outros campos que você tem)
+                document.getElementById('nome').value = data.nome || '';
+                document.getElementById('genero').value = data.genero || 'Masculino';
+                
+                // Preenchendo a aba de Histórico/Observações
+                document.getElementById('observacoes').value = data.observacoes || '';
+                
+                // Configurando o Switch de Status (conforme seu banco true/false)
+                document.getElementById('statusSwitch').checked = (data.ativo === true);
+                ajustarLabelStatus();
+            }
         }
 
+        // Atualiza o texto e a cor do status dinamicamente
+        function ajustarLabelStatus() {
+            const switchEl = document.getElementById('statusSwitch');
+            const label = document.getElementById('statusLabel');
+            if (switchEl.checked) {
+                label.innerText = "ALUNO ATIVO";
+                label.style.color = "#10b981";
+            } else {
+                label.innerText = "ALUNO DESATIVADO";
+                label.style.color = "#dc3545";
+            }
+        }
 
+        async function salvarAlteracoes() {
+            const btn = document.querySelector('button[onclick="salvarAlteracoes()"]');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = "Gravando...";
 
-        async function vincularAlunosPorId() {
+            // Coletando todos os dados (incluindo as novidades)
+            const updates = {
+                nome: document.getElementById('nome').value,
+                genero: document.getElementById('genero').value,
+                observacoes: document.getElementById('observacoes').value, // Aba Histórico
+                ativo: document.getElementById('statusSwitch').checked     // Switch de Status
+            };
 
-            const input = document.getElementById('inputIdsAlunos');
+            const { error } = await supabaseClient
+                .from('alunos')
+                .update(updates)
+                .eq('id', alunoId);
 
-            const status = document.getElementById('statusVinculo');
-
-            const ids = input.value.split(',').map(id => id.trim()).filter(id => id !== "" && !isNaN(id));
-
-            if (ids.length === 0) return alert("Digite IDs válidos.");
-
-            status.style.display = 'block';
-
-            status.innerText = "Sincronizando...";
-
-            const { error } = await supabaseClient.from('alunos').update({ projetos: projetoAtivoId }).in('id', ids);
-
-            if (!error) {
-
-                input.value = '';
-
-                await carregarContagens();
-
-                await atualizarListaAlunos();
-
-                status.innerText = "Sucesso!";
-
+            if (error) {
+                alert("Erro ao salvar alterações: " + error.message);
+            } else {
+                alert("Dados atualizados com sucesso!");
+                // Se quiser que ele volte para a lista após salvar:
+                // window.location.href = 'lista_geral.html';
             }
 
+            btn.disabled = false;
+            btn.innerText = originalText;
         }
 
-
-
-        async function removerDoProjeto(event, id) {
-
-            event.stopPropagation();
-
-            if(!confirm("Remover o aluno ID " + id + " deste projeto?")) return;
-
-            await supabaseClient.from('alunos').update({ projetos: null }).eq('id', id);
-
-            await carregarContagens();
-
-            await atualizarListaAlunos();
-
-        }
-
-
-
-        function fecharLista() { document.getElementById('containerAlunos').style.display = 'none'; }
-
-        window.onload = carregarContagens;
-
+        window.onload = carregarAluno;
     </script>
-
 </body>
-
 </html>
