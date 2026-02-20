@@ -25,6 +25,10 @@
         .tab-content.active { display: block; }
         .img-preview { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background: #f1f5f9; }
         .btn-salvar { padding: 10px 40px; font-weight: 700; border-radius: 8px; }
+        
+        /* Estilo para o Switch de Status no Topo */
+        .status-badge-wrapper { background: #f1f5f9; padding: 10px 20px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        .form-check-input:checked { background-color: #10b981; border-color: #10b981; }
     </style>
 </head>
 <body>
@@ -39,9 +43,18 @@
 
     <main class="main-content">
         <header class="mb-4 d-flex justify-content-between align-items-center">
-            <div>
-                <h3 class="fw-bold mb-0">Editar Aluno</h3>
-                <span id="nome_titulo" class="text-primary fw-medium small">Carregando...</span>
+            <div class="d-flex align-items-center gap-4">
+                <div>
+                    <h3 class="fw-bold mb-0">Editar Aluno</h3>
+                    <span id="nome_titulo" class="text-primary fw-medium small">Carregando...</span>
+                </div>
+                <div class="status-badge-wrapper d-flex align-items-center gap-2">
+                    <span class="form-label mb-0">STATUS:</span>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="ativo" style="transform: scale(1.2); cursor: pointer;" onchange="atualizarLabelStatus()">
+                        <label class="form-check-label fw-bold small ms-1" for="ativo" id="label_status">---</label>
+                    </div>
+                </div>
             </div>
             <div>
                 <a href="lista_geral.html" class="btn btn-light border me-2">Sair sem salvar</a>
@@ -69,10 +82,7 @@
                     </div>
                     <div class="col-md">
                         <div class="row g-3">
-                            <div class="col-md-9"><label class="form-label">Nome Completo</label><input type="text" id="nome" class="form-control"></div>
-                            <div class="col-md-3"><label class="form-label">Status</label>
-                                <select id="ativo" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select>
-                            </div>
+                            <div class="col-md-12"><label class="form-label">Nome Completo</label><input type="text" id="nome" class="form-control"></div>
                             <div class="col-md-4"><label class="form-label">Data de Nascimento</label><input type="date" id="data_nascimento" class="form-control" onchange="calcularIdade(this.value)"></div>
                             <div class="col-md-2"><label class="form-label">Idade</label><input type="text" id="idade" class="form-control bg-light text-center" readonly></div>
                             <div class="col-md-3"><label class="form-label">Gênero</label>
@@ -144,6 +154,14 @@
             </div>
 
             <div id="aba-historico" class="tab-content">
+                <div class="section-title">Observações Gerais</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-12">
+                        <label class="form-label">Anotações e Observações Importantes</label>
+                        <textarea id="observacoes" class="form-control" rows="4" placeholder="Digite aqui observações relevantes sobre o aluno..."></textarea>
+                    </div>
+                </div>
+
                 <div class="section-title">Histórico de Projetos</div>
                 <div class="row g-3 mb-4">
                     <div class="col-md-12"><label class="form-label">Projeto Atual</label><input type="text" id="projeto_atual" class="form-control"></div>
@@ -163,7 +181,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const alunoId = urlParams.get('id');
 
-        // INICIALIZAÇÃO DA ABA HISTÓRICO (MANTIDA ORIGINAL)
         const histContainer = document.getElementById('lista-projetos-antigos');
         for (let i = 1; i <= 6; i++) {
             histContainer.innerHTML += `
@@ -181,39 +198,43 @@
             document.getElementById(link).classList.add('active');
         }
 
+        // Função para atualizar o texto do Status visualmente
+        function atualizarLabelStatus() {
+            const isChecked = document.getElementById('ativo').checked;
+            const label = document.getElementById('label_status');
+            label.innerText = isChecked ? "ATIVO" : "INATIVO";
+            label.style.color = isChecked ? "#10b981" : "#dc3545";
+        }
+
         async function carregarDados() {
             if (!alunoId) return;
 
-            // CARREGA TABELA ALUNOS
             const { data: a } = await supabaseClient.from('alunos').select('*').eq('id', alunoId).single();
             if (a) {
                 document.getElementById('nome_titulo').innerText = a.nome;
                 
-                // Mapeamento exato de todas as colunas enviadas
                 const colunas = [
                     'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logadouro', 
                     'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
                     'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo', 
                     'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae', 
-                    'projetos', 'turmas', 'ativo', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
-                    'rg_mae', 'cpf_mae'
+                    'projetos', 'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
+                    'rg_mae', 'cpf_mae', 'observacoes' // Adicionado observações
                 ];
 
                 colunas.forEach(col => {
                     const el = document.getElementById(col);
-                    if (el) {
-                        if (el.tagName === 'SELECT') {
-                            el.value = String(a[col]);
-                        } else {
-                            el.value = a[col] || '';
-                        }
-                    }
+                    if (el) el.value = a[col] || '';
                 });
+
+                // Lógica especial para o Switch Ativo (Checkbox)
+                const swAtivo = document.getElementById('ativo');
+                swAtivo.checked = (a.ativo === true || a.ativo === 'true');
+                atualizarLabelStatus();
 
                 if (a.foto) document.getElementById('img_preview').src = a.foto;
             }
 
-            // CARREGA TABELA HISTÓRICO (MANTIDA ORIGINAL)
             const { data: h } = await supabaseClient.from('historico_projetos').select('*').eq('aluno_id', alunoId).maybeSingle();
             if (h) {
                 document.getElementById('projeto_atual').value = h.projeto_atual || '';
@@ -229,27 +250,26 @@
             btn.disabled = true;
             btn.innerText = "Salvando...";
 
-            // COLETA DADOS ALUNOS
             const dadosA = {};
             const colunas = [
                 'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logadouro', 
                 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
                 'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo', 
                 'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae', 
-                'projetos', 'turmas', 'ativo', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
-                'rg_mae', 'cpf_mae'
+                'projetos', 'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
+                'rg_mae', 'cpf_mae', 'observacoes'
             ];
             
             colunas.forEach(col => {
                 const el = document.getElementById(col);
                 if (el) {
-                    let val = el.value;
-                    if (col === 'ativo') val = (val === 'true');
-                    dadosA[col] = val === "" ? null : val;
+                    dadosA[col] = el.value === "" ? null : el.value;
                 }
             });
 
-            // COLETA DADOS HISTÓRICO (MANTIDA ORIGINAL)
+            // Captura o valor do Switch de Ativo
+            dadosA['ativo'] = document.getElementById('ativo').checked;
+
             const dadosH = { projeto_atual: document.getElementById('projeto_atual').value };
             for(let i=1; i<=6; i++) {
                 dadosH[`projeto_${i}`] = document.getElementById(`projeto_${i}`).value || null;
@@ -309,4 +329,3 @@
     </script>
 </body>
 </html>
-
