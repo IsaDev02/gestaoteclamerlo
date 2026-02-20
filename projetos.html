@@ -21,7 +21,6 @@
         .student-item { padding: 12px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
         .student-item:hover { background: #f0f7ff; }
         
-        /* Estilos Novos para Inserção */
         .insert-section { background: #f1f5f9; padding: 20px; border-bottom: 1px solid #e2e8f0; }
         #resultadoBuscaInserir { position: absolute; width: 95%; background: white; border: 1px solid #e2e8f0; border-radius: 8px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 10px 20px rgba(0,0,0,0.1); display: none; }
         .search-item-add { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
@@ -39,13 +38,17 @@
             <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
             <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
             <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
+            
+            <div class="mt-5 px-4">
+                <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
+            </div>
         </nav>
     </aside>
 
     <main class="main-content">
         <header class="mb-5">
             <h3 class="fw-bold mb-1">Gerenciamento de Projetos</h3>
-            <p class="text-muted small">Clique em um projeto para ver os alunos ou adicionar novos.</p>
+            <p class="text-muted small">Insira os IDs dos alunos separados por vírgula para vinculá-los.</p>
         </header>
 
         <div class="row g-3" id="gradeProjetos">
@@ -56,20 +59,19 @@
             <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-white">
                 <div>
                     <h5 class="fw-bold mb-0 text-uppercase" id="tituloProjetoSelecionado">---</h5>
-                    <small class="text-primary fw-bold">PROJETO ATIVO</small>
+                    <small class="text-primary fw-bold">PROJETO SELECIONADO</small>
                 </div>
                 <button class="btn btn-close btn-sm" onclick="fecharLista()"></button>
             </div>
 
             <div class="insert-section">
-                <label class="form-label small fw-bold text-muted">ADICIONAR ALUNOS AO PROJETO</label>
-                <div class="input-group position-relative">
-                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-user-plus text-primary"></i></span>
-                    <input type="text" id="inputBuscaAluno" class="form-control border-start-0" placeholder="Digite nomes separados por vírgula ou busque aqui..." onkeyup="buscarSugestoes(this.value)">
-                    <button class="btn btn-primary fw-bold" onclick="vincularAlunosEmMassa()">Vincular Alunos</button>
-                    <div id="resultadoBuscaInserir"></div>
+                <label class="form-label small fw-bold text-muted">VINCULAR POR ID (Ex: 10, 25, 48)</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="fas fa-id-card text-primary"></i></span>
+                    <input type="text" id="inputIdsAlunos" class="form-control" placeholder="Digite os IDs separados por vírgula...">
+                    <button class="btn btn-primary fw-bold" onclick="vincularAlunosPorId()">Vincular IDs</button>
                 </div>
-                <small class="text-muted mt-2 d-block">Dica: Você pode colar vários nomes ou IDs separados por vírgula.</small>
+                <div id="statusVinculo" class="mt-2 small fw-bold" style="display:none;"></div>
             </div>
 
             <div id="listaAlunos"></div>
@@ -120,6 +122,7 @@
             projetoAtivoId = id;
             document.getElementById('containerAlunos').style.display = 'block';
             document.getElementById('tituloProjetoSelecionado').innerText = nome;
+            document.getElementById('statusVinculo').style.display = 'none';
             atualizarListaAlunos();
         }
 
@@ -127,15 +130,19 @@
             const listaDiv = document.getElementById('listaAlunos');
             listaDiv.innerHTML = '<div class="p-4 text-center"><div class="spinner-border text-primary"></div></div>';
 
-            const { data: aData } = await supabaseClient.from('alunos').select('id, nome').eq('projetos', projetoAtivoId).order('nome');
+            const { data: aData, error } = await supabaseClient
+                .from('alunos')
+                .select('id, nome')
+                .eq('projetos', projetoAtivoId)
+                .order('nome', { ascending: true });
 
-            listaDiv.innerHTML = aData && aData.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno neste projeto.</div>';
+            listaDiv.innerHTML = aData && aData.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno vinculado a este projeto.</div>';
             
             if (aData) {
                 aData.forEach(aluno => {
                     listaDiv.innerHTML += `
                         <div class="student-item" onclick="window.location.href='editar_aluno.html?id=${aluno.id}'">
-                            <span>${aluno.nome}</span>
+                            <span><strong>ID ${aluno.id}</strong> - ${aluno.nome}</span>
                             <div class="d-flex align-items-center">
                                 <button class="btn btn-sm btn-outline-danger border-0 me-3" onclick="removerDoProjeto(event, '${aluno.id}')"><i class="fas fa-times"></i></button>
                                 <i class="fas fa-chevron-right text-muted small"></i>
@@ -145,65 +152,51 @@
             }
         }
 
-        // BUSCA SUGESTÕES ENQUANTO DIGITA
-        async function buscarSugestoes(valor) {
-            const resDiv = document.getElementById('resultadoBuscaInserir');
-            const lista = valor.split(',').pop().trim(); // Pega apenas o último termo após a vírgula
-
-            if (lista.length < 3) { resDiv.style.display = 'none'; return; }
-
-            const { data } = await supabaseClient.from('alunos').select('id, nome').ilike('nome', `%${lista}%`).limit(5);
+        // FUNÇÃO FOCADA 100% NO ID DO SUPABASE
+        async function vincularAlunosPorId() {
+            const input = document.getElementById('inputIdsAlunos');
+            const status = document.getElementById('statusVinculo');
             
-            if (data && data.length > 0) {
-                resDiv.innerHTML = data.map(a => `<div class="search-item-add" onclick="adicionarInput('${a.nome}')">${a.nome}</div>`).join('');
-                resDiv.style.display = 'block';
-            } else {
-                resDiv.style.display = 'none';
+            // Pega os IDs, remove espaços e filtra apenas o que for número
+            const ids = input.value.split(',')
+                             .map(id => id.trim())
+                             .filter(id => id !== "" && !isNaN(id));
+
+            if (ids.length === 0) {
+                alert("Por favor, digite IDs numéricos válidos.");
+                return;
             }
-        }
 
-        function adicionarInput(nome) {
-            const input = document.getElementById('inputBuscaAluno');
-            let valores = input.value.split(',');
-            valores.pop(); // Remove o termo incompleto
-            valores.push(nome);
-            input.value = valores.join(', ') + ', ';
-            document.getElementById('resultadoBuscaInserir').style.display = 'none';
-            input.focus();
-        }
+            status.style.display = 'block';
+            status.className = "mt-2 small fw-bold text-primary";
+            status.innerText = "Processando vínculos...";
 
-        // FUNÇÃO EM MASSA QUE ATUALIZA A COLUNA "PROJETOS"
-        async function vincularAlunosEmMassa() {
-            const input = document.getElementById('inputBuscaAluno');
-            const nomes = input.value.split(',').map(n => n.trim()).filter(n => n !== "");
+            // Executa o Update no Supabase onde o ID estiver na lista informada
+            const { error } = await supabaseClient
+                .from('alunos')
+                .update({ projetos: projetoAtivoId })
+                .in('id', ids); // O comando .in() verifica se o ID está no array fornecido
 
-            if (nomes.length === 0) return alert("Digite ao menos um nome.");
-
-            const btn = document.querySelector('.insert-section button');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-
-            // Para cada nome, faz o update na tabela alunos
-            const promessas = nomes.map(async (nome) => {
-                return await supabaseClient
-                    .from('alunos')
-                    .update({ projetos: projetoAtivoId })
-                    .ilike('nome', nome); // Procura pelo nome (não case sensitive)
-            });
-
-            await Promise.all(promessas);
-            
-            alert("Processo concluído!");
-            input.value = '';
-            btn.disabled = false;
-            btn.innerText = "Vincular Alunos";
-            atualizarListaAlunos();
-            carregarContagens();
+            if (error) {
+                console.error(error);
+                status.className = "mt-2 small fw-bold text-danger";
+                status.innerText = "Erro ao vincular: " + error.message;
+            } else {
+                status.className = "mt-2 small fw-bold text-success";
+                status.innerText = "IDs vinculados com sucesso!";
+                input.value = '';
+                
+                // Atualiza a interface
+                setTimeout(() => {
+                    atualizarListaAlunos();
+                    carregarContagens();
+                }, 500);
+            }
         }
 
         async function removerDoProjeto(event, id) {
             event.stopPropagation();
-            if(!confirm("Remover este aluno do projeto?")) return;
+            if(!confirm("Remover o aluno ID " + id + " deste projeto?")) return;
             await supabaseClient.from('alunos').update({ projetos: null }).eq('id', id);
             atualizarListaAlunos();
             carregarContagens();
