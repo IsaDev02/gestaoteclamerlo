@@ -10,105 +10,151 @@
     <style>
         :root { --bg-body: #f8fafc; --sidebar-bg: #1e293b; --primary: #3b82f6; }
         body { background-color: var(--bg-body); font-family: 'Inter', sans-serif; color: #1e293b; }
-        .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar-bg); padding: 20px 0; z-index: 100;}
-        .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; text-decoration: none; display: block; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.05); }
+        .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar-bg); padding: 20px 0; }
+        .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; font-size: 0.9rem; text-decoration: none; display: block; }
+        .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
         .main-content { margin-left: 240px; padding: 40px; }
-        
-        .card-form { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 30px; }
-
-        /* Estilo do Switch de Status */
-        .status-header {
-            background: #f8fafc; padding: 15px 25px; border-radius: 10px; margin-bottom: 25px;
-            display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0;
-        }
-        .form-check-input:checked { background-color: #10b981; border-color: #10b981; }
-
-        /* Estilo das Abas */
-        .nav-tabs { border-bottom: 2px solid #e2e8f0; margin-bottom: 25px; }
-        .nav-tabs .nav-link { border: none; color: #64748b; font-weight: 600; padding: 10px 20px; transition: 0.3s; }
-        .nav-tabs .nav-link.active { color: var(--primary); border-bottom: 3px solid var(--primary); background: transparent; }
-        
-        textarea.form-control { resize: none; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .form-container { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 35px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .section-title { font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 25px; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid #eff6ff; }
+        .form-label { font-weight: 600; font-size: 0.8rem; color: #64748b; margin-bottom: 5px; }
+        .form-control, .form-select { border-color: #e2e8f0; font-size: 0.9rem; border-radius: 8px; }
+        .nav-tabs { border: none; margin-bottom: 25px; gap: 8px; }
+        .nav-tabs .nav-link { border: 1px solid #e2e8f0; color: #64748b; font-weight: 600; border-radius: 8px !important; transition: 0.3s; }
+        .nav-tabs .nav-link.active { background-color: var(--primary) !important; color: white !important; border-color: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .img-preview { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background: #f1f5f9; }
+        .btn-salvar { padding: 10px 40px; font-weight: 700; border-radius: 8px; }
     </style>
 </head>
 <body>
 
     <aside class="sidebar">
-        <div class="px-4 mb-5 text-white fw-bold"><h5><i class="fas fa-graduation-cap me-2"></i>Centro Social</h5></div>
-        <nav class="nav flex-column">
-            <a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
+        <div class="px-4 mb-5 text-white fw-bold"><h5><i class="fas fa-graduation-cap me-2"></i>Centro Social Irmã Tecla Merlo</h5></div>
+        <nav>
             <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
-            <a class="nav-link" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
-            <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
+            <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
         </nav>
     </aside>
 
     <main class="main-content">
-        <header class="d-flex justify-content-between align-items-center mb-4">
+        <header class="mb-4 d-flex justify-content-between align-items-center">
             <div>
                 <h3 class="fw-bold mb-0">Editar Aluno</h3>
-                <small class="text-muted" id="subtituloId">Carregando...</small>
+                <span id="nome_titulo" class="text-primary fw-medium small">Carregando...</span>
             </div>
             <div>
-                <button class="btn btn-outline-secondary fw-bold me-2" onclick="window.history.back()">Cancelar</button>
-                <button class="btn btn-primary fw-bold px-4" onclick="salvarAlteracoes()">Salvar Alterações</button>
+                <a href="lista_geral.html" class="btn btn-light border me-2">Sair sem salvar</a>
+                <button type="button" id="btnSalvar" class="btn btn-primary btn-salvar" onclick="atualizarCadastro()">Salvar Alterações</button>
             </div>
         </header>
 
-        <div class="card-form shadow-sm">
+        <ul class="nav nav-tabs">
+            <li class="nav-item"><a class="nav-link active" id="l1" href="javascript:void(0)" onclick="toggleAba('aba-dados', 'l1')">Dados Aluno</a></li>
+            <li class="nav-item"><a class="nav-link" id="l2" href="javascript:void(0)" onclick="toggleAba('aba-familia', 'l2')">Família e Renda</a></li>
+            <li class="nav-item"><a class="nav-link" id="l3" href="javascript:void(0)" onclick="toggleAba('aba-institucional', 'l3')">Institucional</a></li>
+            <li class="nav-item"><a class="nav-link" id="l4" href="javascript:void(0)" onclick="toggleAba('aba-historico', 'l4')">Histórico</a></li>
+        </ul>
+
+        <form id="formEdicao" class="form-container">
             
-            <div class="status-header">
-                <div>
-                    <span class="text-muted small d-block fw-bold">SITUAÇÃO DO ALUNO NO SISTEMA</span>
-                    <h6 id="statusLabel" class="mb-0 fw-bold">---</h6>
+            <div id="aba-dados" class="tab-content active">
+                <div class="row g-4 align-items-center mb-4">
+                    <div class="col-md-auto text-center">
+                        <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" id="img_preview" class="img-preview mb-2">
+                        <br>
+                        <input type="file" id="foto_input" accept="image/*" style="display: none;" onchange="processarFoto(this)">
+                        <button type="button" class="btn btn-sm btn-outline-primary border-0 fw-bold" onclick="document.getElementById('foto_input').click()">Alterar Foto</button>
+                        <input type="hidden" id="foto">
+                    </div>
+                    <div class="col-md">
+                        <div class="row g-3">
+                            <div class="col-md-9"><label class="form-label">Nome Completo</label><input type="text" id="nome" class="form-control"></div>
+                            <div class="col-md-3"><label class="form-label">Status</label>
+                                <select id="ativo" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select>
+                            </div>
+                            <div class="col-md-4"><label class="form-label">Data de Nascimento</label><input type="date" id="data_nascimento" class="form-control" onchange="calcularIdade(this.value)"></div>
+                            <div class="col-md-2"><label class="form-label">Idade</label><input type="text" id="idade" class="form-control bg-light text-center" readonly></div>
+                            <div class="col-md-3"><label class="form-label">Gênero</label>
+                                <select id="genero" class="form-select">
+                                    <option value="Masculino">Masculino</option>
+                                    <option value="Feminino">Feminino</option>
+                                    <option value="Outro">Outro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3"><label class="form-label">WhatsApp</label><input type="text" id="whatsapp" class="form-control"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="statusSwitch" style="transform: scale(1.6); cursor: pointer;" onchange="ajustarLabelStatus()">
+
+                <div class="section-title">Documentação e Contato</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3"><label class="form-label">CPF</label><input type="text" id="cpf" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">RG</label><input type="text" id="rg" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">Telefone</label><input type="text" id="telefone" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">Doc Aluno (Ref)</label><input type="text" id="doc_aluno" class="form-control"></div>
+                </div>
+
+                <div class="section-title">Endereço</div>
+                <div class="row g-3">
+                    <div class="col-md-2"><label class="form-label">CEP</label><input type="text" id="cep" class="form-control" onblur="buscarEndereco(this.value)"></div>
+                    <div class="col-md-4"><label class="form-label">Logradouro</label><input type="text" id="logadouro" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label">Nº</label><input type="text" id="numero" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">Complemento</label><input type="text" id="complemento" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">Bairro</label><input type="text" id="bairro" class="form-control"></div>
+                    <div class="col-md-5"><label class="form-label">Cidade</label><input type="text" id="cidade" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">UF</label><input type="text" id="uf" class="form-control"></div>
                 </div>
             </div>
 
-            <ul class="nav nav-tabs" id="editTabs" role="tablist">
-                <li class="nav-item">
-                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabDados">Dados Gerais</button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHistorico">Histórico e Observações</button>
-                </li>
-            </ul>
-
-            <div class="tab-content pt-3">
-                <div class="tab-pane fade show active" id="tabDados">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Nome Completo</label>
-                            <input type="text" id="nome" class="form-control">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Gênero</label>
-                            <select id="genero" class="form-select">
-                                <option value="Masculino">Masculino</option>
-                                <option value="Feminino">Feminino</option>
-                            </select>
-                        </div>
-                        </div>
+            <div id="aba-familia" class="tab-content">
+                <div class="section-title">Dados Maternos</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6"><label class="form-label">Nome da Mãe</label><input type="text" id="nome_mae" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">CPF Mãe</label><input type="text" id="cpf_mae" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">RG Mãe</label><input type="text" id="rg_mae" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">Tel. Mãe</label><input type="text" id="tel_mae" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">Profissão Mãe</label><input type="text" id="prof_mae" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">Salário Mãe</label><input type="text" id="sal_mae" class="form-control"></div>
                 </div>
-
-                <div class="tab-pane fade" id="tabHistorico">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">Anotações Internas, Ocorrências e Histórico</label>
-                        <textarea id="observacoes" class="form-control" rows="12" placeholder="Escreva aqui o histórico do aluno..."></textarea>
-                    </div>
-                    <div class="alert alert-light border small text-muted">
-                        <i class="fas fa-info-circle me-2"></i>Este campo é salvo na coluna "observacoes" do banco de dados.
-                    </div>
+                <div class="section-title">Dados Paternos</div>
+                <div class="row g-3">
+                    <div class="col-md-6"><label class="form-label">Nome do Pai</label><input type="text" id="nome_pai" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">CPF Pai</label><input type="text" id="cpf_pai" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">RG Pai</label><input type="text" id="rg_pai" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">Tel. Pai</label><input type="text" id="tel_pai" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">Profissão Pai</label><input type="text" id="prof_pai" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">Salário Pai</label><input type="text" id="sal_pai" class="form-control"></div>
                 </div>
             </div>
-        </div>
+
+            <div id="aba-institucional" class="tab-content">
+                <div class="section-title">Educação</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6"><label class="form-label">Escola</label><input type="text" id="escola" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">Série</label><input type="text" id="serie" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">Período</label><input type="text" id="periodo" class="form-control"></div>
+                </div>
+                <div class="section-title">Projeto e Turmas</div>
+                <div class="row g-3">
+                    <div class="col-md-4"><label class="form-label">Data Entrada no Projeto</label><input type="date" id="data_entrada_projeto" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">Projetos Atuais</label><input type="text" id="projetos" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">Turmas</label><input type="text" id="turmas" class="form-control"></div>
+                </div>
+            </div>
+
+            <div id="aba-historico" class="tab-content">
+                <div class="section-title">Histórico de Projetos</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-12"><label class="form-label">Projeto Atual</label><input type="text" id="projeto_atual" class="form-control"></div>
+                </div>
+                <div id="lista-projetos-antigos"></div>
+            </div>
+
+        </form>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
@@ -117,85 +163,150 @@
         const urlParams = new URLSearchParams(window.location.search);
         const alunoId = urlParams.get('id');
 
-        async function carregarAluno() {
-            if (!alunoId) {
-                alert("ID do aluno não encontrado.");
-                return;
+        // INICIALIZAÇÃO DA ABA HISTÓRICO (MANTIDA ORIGINAL)
+        const histContainer = document.getElementById('lista-projetos-antigos');
+        for (let i = 1; i <= 6; i++) {
+            histContainer.innerHTML += `
+                <div class="row g-2 mb-2 align-items-center">
+                    <div class="col-md-8"><input type="text" id="projeto_${i}" class="form-control" placeholder="Projeto Anterior ${i}"></div>
+                    <div class="col-md-3"><input type="date" id="data_termino_${i}" class="form-control"></div>
+                    <div class="col-md-1"><span class="badge bg-secondary">P${i}</span></div>
+                </div>`;
+        }
+
+        function toggleAba(id, link) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById(link).classList.add('active');
+        }
+
+        async function carregarDados() {
+            if (!alunoId) return;
+
+            // CARREGA TABELA ALUNOS
+            const { data: a } = await supabaseClient.from('alunos').select('*').eq('id', alunoId).single();
+            if (a) {
+                document.getElementById('nome_titulo').innerText = a.nome;
+                
+                // Mapeamento exato de todas as colunas enviadas
+                const colunas = [
+                    'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logadouro', 
+                    'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
+                    'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo', 
+                    'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae', 
+                    'projetos', 'turmas', 'ativo', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
+                    'rg_mae', 'cpf_mae'
+                ];
+
+                colunas.forEach(col => {
+                    const el = document.getElementById(col);
+                    if (el) {
+                        if (el.tagName === 'SELECT') {
+                            el.value = String(a[col]);
+                        } else {
+                            el.value = a[col] || '';
+                        }
+                    }
+                });
+
+                if (a.foto) document.getElementById('img_preview').src = a.foto;
             }
 
-            const { data, error } = await supabaseClient
-                .from('alunos')
-                .select('*')
-                .eq('id', alunoId)
-                .single();
-
-            if (error) {
-                console.error("Erro:", error);
-                return;
-            }
-
-            if (data) {
-                // Preenchendo o cabeçalho
-                document.getElementById('subtituloId').innerText = "Editando Registro ID #" + data.id;
-                
-                // Preenchendo campos de dados (Adicione os outros campos que você tem)
-                document.getElementById('nome').value = data.nome || '';
-                document.getElementById('genero').value = data.genero || 'Masculino';
-                
-                // Preenchendo a aba de Histórico/Observações
-                document.getElementById('observacoes').value = data.observacoes || '';
-                
-                // Configurando o Switch de Status (conforme seu banco true/false)
-                document.getElementById('statusSwitch').checked = (data.ativo === true);
-                ajustarLabelStatus();
+            // CARREGA TABELA HISTÓRICO (MANTIDA ORIGINAL)
+            const { data: h } = await supabaseClient.from('historico_projetos').select('*').eq('aluno_id', alunoId).maybeSingle();
+            if (h) {
+                document.getElementById('projeto_atual').value = h.projeto_atual || '';
+                for (let i = 1; i <= 6; i++) {
+                    document.getElementById(`projeto_${i}`).value = h[`projeto_${i}`] || '';
+                    document.getElementById(`data_termino_${i}`).value = h[`data_termino_${i}`] || '';
+                }
             }
         }
 
-        // Atualiza o texto e a cor do status dinamicamente
-        function ajustarLabelStatus() {
-            const switchEl = document.getElementById('statusSwitch');
-            const label = document.getElementById('statusLabel');
-            if (switchEl.checked) {
-                label.innerText = "ALUNO ATIVO";
-                label.style.color = "#10b981";
-            } else {
-                label.innerText = "ALUNO DESATIVADO";
-                label.style.color = "#dc3545";
-            }
-        }
-
-        async function salvarAlteracoes() {
-            const btn = document.querySelector('button[onclick="salvarAlteracoes()"]');
-            const originalText = btn.innerText;
+        async function atualizarCadastro() {
+            const btn = document.getElementById('btnSalvar');
             btn.disabled = true;
-            btn.innerText = "Gravando...";
+            btn.innerText = "Salvando...";
 
-            // Coletando todos os dados (incluindo as novidades)
-            const updates = {
-                nome: document.getElementById('nome').value,
-                genero: document.getElementById('genero').value,
-                observacoes: document.getElementById('observacoes').value, // Aba Histórico
-                ativo: document.getElementById('statusSwitch').checked     // Switch de Status
-            };
+            // COLETA DADOS ALUNOS
+            const dadosA = {};
+            const colunas = [
+                'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logadouro', 
+                'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
+                'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo', 
+                'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae', 
+                'projetos', 'turmas', 'ativo', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
+                'rg_mae', 'cpf_mae'
+            ];
+            
+            colunas.forEach(col => {
+                const el = document.getElementById(col);
+                if (el) {
+                    let val = el.value;
+                    if (col === 'ativo') val = (val === 'true');
+                    dadosA[col] = val === "" ? null : val;
+                }
+            });
 
-            const { error } = await supabaseClient
-                .from('alunos')
-                .update(updates)
-                .eq('id', alunoId);
-
-            if (error) {
-                alert("Erro ao salvar alterações: " + error.message);
-            } else {
-                alert("Dados atualizados com sucesso!");
-                // Se quiser que ele volte para a lista após salvar:
-                // window.location.href = 'lista_geral.html';
+            // COLETA DADOS HISTÓRICO (MANTIDA ORIGINAL)
+            const dadosH = { projeto_atual: document.getElementById('projeto_atual').value };
+            for(let i=1; i<=6; i++) {
+                dadosH[`projeto_${i}`] = document.getElementById(`projeto_${i}`).value || null;
+                dadosH[`data_termino_${i}`] = document.getElementById(`data_termino_${i}`).value || null;
             }
 
-            btn.disabled = false;
-            btn.innerText = originalText;
+            try {
+                const { error: e1 } = await supabaseClient.from('alunos').update(dadosA).eq('id', alunoId);
+                if (e1) throw e1;
+
+                const { error: e2 } = await supabaseClient.from('historico_projetos').update(dadosH).eq('aluno_id', alunoId);
+                if (e2) throw e2;
+
+                alert("Alterações gravadas com sucesso!");
+                window.location.href = 'lista_geral.html';
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao salvar: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Salvar Alterações";
+            }
         }
 
-        window.onload = carregarAluno;
+        function calcularIdade(nasc) {
+            if(!nasc) return;
+            const idade = Math.floor((new Date() - new Date(nasc)) / 31557600000);
+            document.getElementById('idade').value = idade;
+        }
+
+        async function buscarEndereco(cep) {
+            const v = cep.replace(/\D/g, '');
+            if(v.length === 8) {
+                const r = await fetch(`https://viacep.com.br/ws/${v}/json/`);
+                const d = await r.json();
+                if(!d.erro) {
+                    document.getElementById('logadouro').value = d.logradouro;
+                    document.getElementById('bairro').value = d.bairro;
+                    document.getElementById('cidade').value = d.localidade;
+                    document.getElementById('uf').value = d.uf;
+                }
+            }
+        }
+
+        function processarFoto(input) {
+            if (input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('img_preview').src = e.target.result;
+                    document.getElementById('foto').value = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        window.onload = carregarDados;
     </script>
 </body>
 </html>
+
