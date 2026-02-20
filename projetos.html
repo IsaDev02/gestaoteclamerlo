@@ -20,10 +20,9 @@
         .student-list-container { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 30px; display: none; overflow: hidden; }
         .student-item { padding: 12px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
         .student-item:hover { background: #f0f7ff; }
-        
         .insert-section { background: #f1f5f9; padding: 20px; border-bottom: 1px solid #e2e8f0; }
 
-        /* NOVA CLASSE PARA ALUNO INATIVO */
+        /* Estilos para Aluno Inativo */
         .aluno-inativo { color: #dc3545 !important; font-weight: 600; }
         .badge-inativo { font-size: 0.65rem; background: #fee2e2; color: #dc3545; padding: 2px 6px; border-radius: 4px; margin-left: 8px; text-transform: uppercase; }
     </style>
@@ -49,7 +48,7 @@
     <main class="main-content">
         <header class="mb-5">
             <h3 class="fw-bold mb-1">Gerenciamento de Projetos</h3>
-            <p class="text-muted small">Insira os IDs dos alunos separados por vírgula.</p>
+            <p class="text-muted small">Alunos com status "false" no banco aparecem em vermelho.</p>
         </header>
 
         <div class="row g-3" id="gradeProjetos">
@@ -134,7 +133,6 @@
             const listaDiv = document.getElementById('listaAlunos');
             listaDiv.innerHTML = '<div class="p-4 text-center"><div class="spinner-border text-primary"></div></div>';
 
-            // ATUALIZADO: Agora busca a coluna 'ativo' também
             const { data: aData } = await supabaseClient
                 .from('alunos')
                 .select('id, nome, ativo') 
@@ -145,8 +143,9 @@
             
             if (aData) {
                 aData.forEach(aluno => {
-                    // LOGICA DE DESTAQUE: Verifica se ativo é "0"
-                    const isInativo = String(aluno.ativo) === "0";
+                    // LÓGICA PARA BOOLEANOS (true/false)
+                    // Se o valor for estritamente false, ele marca como inativo
+                    const isInativo = aluno.ativo === false;
                     const classeDestaque = isInativo ? 'aluno-inativo' : '';
 
                     listaDiv.innerHTML += `
@@ -167,32 +166,16 @@
         async function vincularAlunosPorId() {
             const input = document.getElementById('inputIdsAlunos');
             const status = document.getElementById('statusVinculo');
-            
-            const ids = input.value.split(',')
-                             .map(id => id.trim())
-                             .filter(id => id !== "" && !isNaN(id))
-                             .map(id => parseInt(id));
-
+            const ids = input.value.split(',').map(id => id.trim()).filter(id => id !== "" && !isNaN(id));
             if (ids.length === 0) return alert("Digite IDs válidos.");
-
             status.style.display = 'block';
-            status.className = "mt-2 small fw-bold text-primary";
-            status.innerText = "Sincronizando com o banco...";
-
-            const { error } = await supabaseClient
-                .from('alunos')
-                .update({ projetos: projetoAtivoId })
-                .in('id', ids);
-
-            if (error) {
-                status.className = "mt-2 small fw-bold text-danger";
-                status.innerText = "Erro: " + error.message;
-            } else {
-                status.className = "mt-2 small fw-bold text-success";
-                status.innerText = "Sucesso! Dashboard atualizado.";
+            status.innerText = "Sincronizando...";
+            const { error } = await supabaseClient.from('alunos').update({ projetos: projetoAtivoId }).in('id', ids);
+            if (!error) {
                 input.value = '';
                 await carregarContagens();
                 await atualizarListaAlunos();
+                status.innerText = "Sucesso!";
             }
         }
 
@@ -205,7 +188,6 @@
         }
 
         function fecharLista() { document.getElementById('containerAlunos').style.display = 'none'; }
-        
         window.onload = carregarContagens;
     </script>
 </body>
