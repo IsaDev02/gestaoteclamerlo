@@ -22,6 +22,10 @@
         .student-item:hover { background: #f0f7ff; }
         
         .insert-section { background: #f1f5f9; padding: 20px; border-bottom: 1px solid #e2e8f0; }
+
+        /* NOVA CLASSE PARA ALUNO INATIVO */
+        .aluno-inativo { color: #dc3545 !important; font-weight: 600; }
+        .badge-inativo { font-size: 0.65rem; background: #fee2e2; color: #dc3545; padding: 2px 6px; border-radius: 4px; margin-left: 8px; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -94,7 +98,6 @@
 
         async function carregarContagens() {
             const grade = document.getElementById('gradeProjetos');
-            // Busca a contagem exata da tabela ALUNOS baseada na coluna PROJETOS
             const promessas = Object.keys(nomesDosProjetos).map(async (id) => {
                 const { count } = await supabaseClient
                     .from('alunos')
@@ -131,9 +134,10 @@
             const listaDiv = document.getElementById('listaAlunos');
             listaDiv.innerHTML = '<div class="p-4 text-center"><div class="spinner-border text-primary"></div></div>';
 
+            // ATUALIZADO: Agora busca a coluna 'ativo' também
             const { data: aData } = await supabaseClient
                 .from('alunos')
-                .select('id, nome')
+                .select('id, nome, ativo') 
                 .eq('projetos', projetoAtivoId)
                 .order('nome');
 
@@ -141,9 +145,16 @@
             
             if (aData) {
                 aData.forEach(aluno => {
+                    // LOGICA DE DESTAQUE: Verifica se ativo é "0"
+                    const isInativo = String(aluno.ativo) === "0";
+                    const classeDestaque = isInativo ? 'aluno-inativo' : '';
+
                     listaDiv.innerHTML += `
                         <div class="student-item" onclick="window.location.href='editar_aluno.html?id=${aluno.id}'">
-                            <span><strong>ID ${aluno.id}</strong> - ${aluno.nome}</span>
+                            <span class="${classeDestaque}">
+                                <strong>ID ${aluno.id}</strong> - ${aluno.nome}
+                                ${isInativo ? '<span class="badge-inativo">Inativo</span>' : ''}
+                            </span>
                             <div class="d-flex align-items-center">
                                 <button class="btn btn-sm btn-outline-danger border-0 me-3" onclick="removerDoProjeto(event, '${aluno.id}')"><i class="fas fa-times"></i></button>
                                 <i class="fas fa-chevron-right text-muted small"></i>
@@ -157,7 +168,6 @@
             const input = document.getElementById('inputIdsAlunos');
             const status = document.getElementById('statusVinculo');
             
-            // Converte a string de IDs em uma lista de números puros
             const ids = input.value.split(',')
                              .map(id => id.trim())
                              .filter(id => id !== "" && !isNaN(id))
@@ -169,7 +179,6 @@
             status.className = "mt-2 small fw-bold text-primary";
             status.innerText = "Sincronizando com o banco...";
 
-            // ATUALIZAÇÃO CRUCIAL: Usa .in('id', ids) para atualizar todos de uma vez
             const { error } = await supabaseClient
                 .from('alunos')
                 .update({ projetos: projetoAtivoId })
@@ -182,8 +191,6 @@
                 status.className = "mt-2 small fw-bold text-success";
                 status.innerText = "Sucesso! Dashboard atualizado.";
                 input.value = '';
-                
-                // Recarrega as contagens para garantir que o número mude na tela
                 await carregarContagens();
                 await atualizarListaAlunos();
             }
