@@ -192,31 +192,11 @@
 
 
 
-        // Helper: normaliza diferentes formatos de 'projetos' para um array de inteiros
-        function normalizeProjetos(raw) {
-            if (Array.isArray(raw)) return raw.map(v => parseInt(v)).filter(v => !isNaN(v));
-            if (raw === null || raw === undefined || raw === '') return [];
-            if (typeof raw === 'string') {
-                if (raw.includes(',')) {
-                    return raw.split(',').map(s => parseInt(s.trim())).filter(v => !isNaN(v));
-                }
-                const n = parseInt(raw);
-                return isNaN(n) ? [] : [n];
-            }
-            const n = parseInt(raw);
-            return isNaN(n) ? [] : [n];
-        }
-
-
-
         async function carregarContagens() {
 
             const grade = document.getElementById('gradeProjetos');
 
             const promessas = Object.keys(nomesDosProjetos).map(async (id) => {
-
-                // busca alunos cujo array 'projetos' contém o id atual
-                const projectId = parseInt(id);
 
                 const { count } = await supabaseClient
 
@@ -224,7 +204,7 @@
 
                     .select('*', { count: 'exact', head: true })
 
-                    .contains('projetos', [projectId]);
+                    .eq('projetos', id);
 
                 return { id, total: count || 0 };
 
@@ -292,9 +272,9 @@
 
                 .from('alunos')
 
-                .select('id, nome, ativo, projetos') 
+                .select('id, nome, ativo') 
 
-                .contains('projetos', [parseInt(projetoAtivoId)])
+                .eq('projetos', projetoAtivoId)
 
                 .order('nome');
 
@@ -354,7 +334,7 @@
 
             const status = document.getElementById('statusVinculo');
 
-            const ids = input.value.split(',').map(id => id.trim()).filter(id => id !== "" && !isNaN(id)).map(i => parseInt(i));
+            const ids = input.value.split(',').map(id => id.trim()).filter(id => id !== "" && !isNaN(id));
 
             if (ids.length === 0) return alert("Digite IDs válidos.");
 
@@ -362,71 +342,19 @@
 
             status.innerText = "Sincronizando...";
 
+            const { error } = await supabaseClient.from('alunos').update({ projetos: projetoAtivoId }).in('id', ids);
 
+            if (!error) {
 
-            // Para cada id, busca o aluno, normaliza o campo projetos e adiciona o projeto atual (se não estiver presente)
+                input.value = '';
 
-            for (let id of ids) {
+                await carregarContagens();
 
-                try {
+                await atualizarListaAlunos();
 
-                    const { data: aluno, error } = await supabaseClient
-
-                        .from('alunos')
-
-                        .select('projetos')
-
-                        .eq('id', id)
-
-                        .single();
-
-
-
-                    if (error) {
-
-                        // se não encontrou o aluno, pula
-
-                        continue;
-
-                    }
-
-
-
-                    let projetosAtuais = normalizeProjetos(aluno.projetos);
-
-                    const projInt = parseInt(projetoAtivoId);
-
-                    if (!projetosAtuais.includes(projInt)) {
-
-                        projetosAtuais.push(projInt);
-
-                    }
-
-                    // atualiza o campo projetos no banco
-
-                    await supabaseClient.from('alunos').update({ projetos: projetosAtuais }).eq('id', id);
-
-                } catch (err) {
-
-                    // continue para próximos ids
-
-                    console.error('Erro ao atualizar aluno', id, err);
-
-                }
+                status.innerText = "Sucesso!";
 
             }
-
-
-
-            input.value = '';
-
-            await carregarContagens();
-
-            await atualizarListaAlunos();
-
-            status.innerText = "Sucesso!";
-
-            setTimeout(()=>{ status.style.display = 'none'; }, 2000);
 
         }
 
@@ -438,37 +366,7 @@
 
             if(!confirm("Remover o aluno ID " + id + " deste projeto?")) return;
 
-            try {
-
-                const { data: aluno, error } = await supabaseClient
-
-                    .from('alunos')
-
-                    .select('projetos')
-
-                    .eq('id', id)
-
-                    .single();
-
-
-
-                if (!error && aluno) {
-
-                    let projetosAtuais = normalizeProjetos(aluno.projetos);
-
-                    const projInt = parseInt(projetoAtivoId);
-
-                    projetosAtuais = projetosAtuais.filter(p => p !== projInt);
-
-                    await supabaseClient.from('alunos').update({ projetos: projetosAtuais }).eq('id', id);
-
-                }
-
-            } catch (err) {
-
-                console.error('Erro ao remover projeto do aluno', id, err);
-
-            }
+            await supabaseClient.from('alunos').update({ projetos: null }).eq('id', id);
 
             await carregarContagens();
 
