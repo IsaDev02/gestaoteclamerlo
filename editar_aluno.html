@@ -118,7 +118,7 @@
                 <div class="section-title">Endereço</div>
                 <div class="row g-3">
                     <div class="col-md-2"><label class="form-label">CEP</label><input type="text" id="cep" class="form-control" onblur="buscarEndereco(this.value)"></div>
-                    <div class="col-md-4"><label class="form-label">Logradouro</label><input type="text" id="logadouro" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">Logradouro</label><input type="text" id="logradouro" class="form-control"></div>
                     <div class="col-md-2"><label class="form-label">Nº</label><input type="text" id="numero" class="form-control"></div>
                     <div class="col-md-4"><label class="form-label">Complemento</label><input type="text" id="complemento" class="form-control"></div>
                     <div class="col-md-4"><label class="form-label">Bairro</label><input type="text" id="bairro" class="form-control"></div>
@@ -224,7 +224,7 @@
                 document.getElementById('nome_titulo').innerText = a.nome;
                 
                 const colunas = [
-                    'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logadouro', 
+                    'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logradouro', 
                     'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
                     'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo', 
                     'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae', 
@@ -262,7 +262,7 @@
 
             const dadosA = {};
             const colunas = [
-                'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logadouro', 
+                'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logradouro', 
                 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
                 'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo', 
                 'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae', 
@@ -316,7 +316,7 @@
                 const r = await fetch(`https://viacep.com.br/ws/${v}/json/`);
                 const d = await r.json();
                 if(!d.erro) {
-                    document.getElementById('logadouro').value = d.logradouro;
+                    document.getElementById('logradouro').value = d.logradouro;
                     document.getElementById('bairro').value = d.bairro;
                     document.getElementById('cidade').value = d.localidade;
                     document.getElementById('uf').value = d.uf;
@@ -339,4 +339,5 @@
     </script>
 </body>
 </html>
+
 
