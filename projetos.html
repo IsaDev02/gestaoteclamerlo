@@ -35,13 +35,14 @@
             <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
             <a class="nav-link active" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
             <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
+            <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
         </nav>
     </aside>
 
     <main class="main-content">
         <header class="mb-5">
             <h3 class="fw-bold mb-1">Gerenciamento de Projetos</h3>
-            <p class="text-muted small">Gerencie a participação única ou múltipla de alunos em projetos.</p>
+            <p class="text-muted small">Os alunos cadastrados aparecerão abaixo ao selecionar um projeto.</p>
         </header>
 
         <div class="row g-3" id="gradeProjetos">
@@ -52,19 +53,18 @@
             <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-white">
                 <div>
                     <h5 class="fw-bold mb-0 text-uppercase" id="tituloProjetoSelecionado">---</h5>
-                    <small class="text-primary fw-bold">LISTA DE PARTICIPANTES</small>
+                    <small class="text-primary fw-bold">LISTA DE ALUNOS VINCULADOS</small>
                 </div>
                 <button class="btn btn-close btn-sm" onclick="fecharLista()"></button>
             </div>
 
             <div class="insert-section">
-                <label class="form-label small fw-bold text-muted">VINCULAR ALUNO A ESTE PROJETO (DIGITE O ID)</label>
+                <label class="form-label small fw-bold text-muted">VINCULAR NOVO ALUNO (DIGITE O ID)</label>
                 <div class="input-group">
                     <span class="input-group-text bg-white"><i class="fas fa-id-card text-primary"></i></span>
-                    <input type="text" id="inputIdsAlunos" class="form-control" placeholder="Digite o ID do aluno...">
-                    <button class="btn btn-primary fw-bold" onclick="vincularComOpcoes()">Vincular Aluno</button>
+                    <input type="text" id="inputIdsAlunos" class="form-control" placeholder="Ex: 123">
+                    <button class="btn btn-primary fw-bold" onclick="vincularComOpcoes()">Vincular</button>
                 </div>
-                <div id="statusVinculo" class="mt-2 small fw-bold" style="display:none;"></div>
             </div>
 
             <div id="listaAlunos"></div>
@@ -90,10 +90,10 @@
             
             grade.innerHTML = '';
             Object.keys(nomesDosProjetos).forEach(projId => {
-                const total = todosAlunos ? todosAlunos.filter(a => {
-                    const lista = String(a.projetos || "").split(',');
-                    return lista.includes(projId);
-                }).length : 0;
+                // Conta quantos alunos possuem o ID deste projeto na string de projetos
+                const total = todosAlunos ? todosAlunos.filter(a => 
+                    String(a.projetos || "").split(',').includes(projId)
+                ).length : 0;
 
                 grade.innerHTML += `
                     <div class="col-md-4">
@@ -119,8 +119,18 @@
             const listaDiv = document.getElementById('listaAlunos');
             listaDiv.innerHTML = '<div class="p-4 text-center"><div class="spinner-border text-primary"></div></div>';
 
-            const { data: aData } = await supabaseClient.from('alunos').select('id, nome, ativo, projetos').order('nome');
-            const participantes = aData ? aData.filter(a => String(a.projetos || "").split(',').includes(projetoAtivoId)) : [];
+            // Busca TODOS os alunos e filtra no JavaScript para garantir que IDs como "1" e "10" não se confundam
+            const { data: aData, error } = await supabaseClient.from('alunos').select('id, nome, ativo, projetos').order('nome');
+
+            if (error) {
+                listaDiv.innerHTML = '<div class="p-4 text-center text-danger">Erro ao carregar dados.</div>';
+                return;
+            }
+
+            const participantes = aData.filter(aluno => {
+                const projetosDoAluno = String(aluno.projetos || "").split(',');
+                return projetosDoAluno.includes(projetoAtivoId);
+            });
 
             listaDiv.innerHTML = participantes.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno neste projeto.</div>';
             
@@ -135,57 +145,52 @@
                             ${isInativo ? '<span class="badge-inativo">Inativo</span>' : ''}
                             ${totalProjetos > 1 ? '<span class="badge-multiplo">Multi-projeto</span>' : ''}
                         </span>
-                        <button class="btn btn-sm btn-outline-danger border-0" onclick="removerApenasDesteProjeto(event, '${aluno.id}', '${aluno.projetos}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="d-flex align-items-center">
+                            <button class="btn btn-sm btn-outline-danger border-0 me-2" onclick="removerApenasDesteProjeto(event, '${aluno.id}', '${aluno.projetos}')">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                            <i class="fas fa-chevron-right text-muted small"></i>
+                        </div>
                     </div>`;
             });
         }
 
         async function vincularComOpcoes() {
-            const idAluno = document.getElementById('inputIdsAlunos').value.trim();
+            const idInput = document.getElementById('inputIdsAlunos');
+            const idAluno = idInput.value.trim();
             if (!idAluno) return alert("Digite o ID do aluno.");
 
-            // 1. Verificar se o aluno existe e quais projetos ele tem
             const { data: aluno, error } = await supabaseClient.from('alunos').select('nome, projetos').eq('id', idAluno).single();
             
-            if (error || !aluno) return alert("Aluno não encontrado.");
+            if (error || !aluno) return alert("Aluno não encontrado ou ID inexistente.");
 
             let listaAtual = aluno.projetos ? String(aluno.projetos).split(',').filter(x => x !== "") : [];
 
-            // Se o aluno já estiver NESTE projeto
             if (listaAtual.includes(projetoAtivoId)) {
-                return alert("Este aluno já participa deste projeto.");
+                return alert("O aluno " + aluno.nome + " já está neste projeto.");
             }
 
-            // Se o aluno já participa de OUTRO projeto
             if (listaAtual.length > 0) {
                 const nomesAtuais = listaAtual.map(id => nomesDosProjetos[id] || id).join(', ');
                 const msg = `O aluno ${aluno.nome} já participa de: [${nomesAtuais}].\n\n` +
-                            `Deseja MANTER em ambos os projetos?\n` +
-                            `Clique em OK para MANTER em ambos.\n` +
-                            `Clique em CANCELAR para MUDAR (remover dos outros e deixar apenas neste).`;
+                            `Clique em OK para MANTER EM AMBOS.\n` +
+                            `Clique em CANCELAR para MUDAR (remover dos outros e ficar apenas neste).`;
 
                 if (confirm(msg)) {
-                    // MANTER EM AMBOS
                     listaAtual.push(projetoAtivoId);
                 } else {
-                    // MUDAR DE PROJETO (apenas o novo)
                     listaAtual = [projetoAtivoId];
                 }
             } else {
-                // Se não tem nenhum projeto, apenas adiciona
                 listaAtual.push(projetoAtivoId);
             }
 
-            // Gravar no Banco
             const { error: updError } = await supabaseClient.from('alunos').update({ projetos: listaAtual.join(',') }).eq('id', idAluno);
 
             if (!updError) {
-                document.getElementById('inputIdsAlunos').value = '';
-                carregarContagens();
-                atualizarListaAlunos();
-                alert("Vínculo atualizado com sucesso!");
+                idInput.value = '';
+                await carregarContagens();
+                await atualizarListaAlunos();
             }
         }
 
@@ -200,8 +205,8 @@
                 projetos: novaLista.length > 0 ? novaLista.join(',') : null 
             }).eq('id', idAluno);
 
-            carregarContagens();
-            atualizarListaAlunos();
+            await carregarContagens();
+            await atualizarListaAlunos();
         }
 
         function fecharLista() { document.getElementById('containerAlunos').style.display = 'none'; }
