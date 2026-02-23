@@ -21,34 +21,27 @@
         .student-item { padding: 12px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
         .student-item:hover { background: #f0f7ff; }
         .insert-section { background: #f1f5f9; padding: 20px; border-bottom: 1px solid #e2e8f0; }
-
-        /* Estilos para Aluno Inativo */
         .aluno-inativo { color: #dc3545 !important; font-weight: 600; }
         .badge-inativo { font-size: 0.65rem; background: #fee2e2; color: #dc3545; padding: 2px 6px; border-radius: 4px; margin-left: 8px; text-transform: uppercase; }
+        .badge-multiplo { font-size: 0.65rem; background: #e0e7ff; color: #4338ca; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
     </style>
 </head>
 <body>
 
     <aside class="sidebar">
-        <div class="px-4 mb-5 text-white fw-bold"><h5><i class="fas fa-graduation-cap me-2"></i>Centro Social Irmã Tecla Merlo</h5></div>
+        <div class="px-4 mb-5 text-white fw-bold"><h5><i class="fas fa-graduation-cap me-2"></i>Centro Social</h5></div>
         <nav class="nav flex-column">
             <a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
             <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
             <a class="nav-link active" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
             <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
-            <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
-            <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
-            
-            <div class="mt-5 px-4">
-                <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
-            </div>
         </nav>
     </aside>
 
     <main class="main-content">
         <header class="mb-5">
             <h3 class="fw-bold mb-1">Gerenciamento de Projetos</h3>
-            <p class="text-muted small">Alunos com status "Desativado" no banco aparecem em vermelho.</p>
+            <p class="text-muted small">Gerencie a participação única ou múltipla de alunos em projetos.</p>
         </header>
 
         <div class="row g-3" id="gradeProjetos">
@@ -59,17 +52,17 @@
             <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-white">
                 <div>
                     <h5 class="fw-bold mb-0 text-uppercase" id="tituloProjetoSelecionado">---</h5>
-                    <small class="text-primary fw-bold">PROJETOS</small>
+                    <small class="text-primary fw-bold">LISTA DE PARTICIPANTES</small>
                 </div>
                 <button class="btn btn-close btn-sm" onclick="fecharLista()"></button>
             </div>
 
             <div class="insert-section">
-                <label class="form-label small fw-bold text-muted">VINCULAR ALUNOS (DIGITE OS IDS SEPARADOS POR VÍRGULA)</label>
+                <label class="form-label small fw-bold text-muted">VINCULAR ALUNO A ESTE PROJETO (DIGITE O ID)</label>
                 <div class="input-group">
                     <span class="input-group-text bg-white"><i class="fas fa-id-card text-primary"></i></span>
-                    <input type="text" id="inputIdsAlunos" class="form-control" placeholder="Ex: 102, 105, 110...">
-                    <button class="btn btn-primary fw-bold" onclick="vincularAlunosPorId()">Vincular</button>
+                    <input type="text" id="inputIdsAlunos" class="form-control" placeholder="Digite o ID do aluno...">
+                    <button class="btn btn-primary fw-bold" onclick="vincularComOpcoes()">Vincular Aluno</button>
                 </div>
                 <div id="statusVinculo" class="mt-2 small fw-bold" style="display:none;"></div>
             </div>
@@ -85,37 +78,31 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const nomesDosProjetos = {
-            "1": "Adolescer para Crescer",
-            "2": "Criança Certeza",
-            "3": "Sempre Criança",
-            "4": "Valorizando a Infância",
-            "5": "Clube de Mães",
-            "6": "Animar e Celebrar"
+            "1": "Adolescer para Crescer", "2": "Criança Certeza", "3": "Sempre Criança",
+            "4": "Valorizando a Infância", "5": "Clube de Mães", "6": "Animar e Celebrar"
         };
 
         let projetoAtivoId = null;
 
         async function carregarContagens() {
             const grade = document.getElementById('gradeProjetos');
-            const promessas = Object.keys(nomesDosProjetos).map(async (id) => {
-                const { count } = await supabaseClient
-                    .from('alunos')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('projetos', id);
-                return { id, total: count || 0 };
-            });
-
-            const resultados = await Promise.all(promessas);
+            const { data: todosAlunos } = await supabaseClient.from('alunos').select('projetos');
+            
             grade.innerHTML = '';
-            resultados.forEach(res => {
+            Object.keys(nomesDosProjetos).forEach(projId => {
+                const total = todosAlunos ? todosAlunos.filter(a => {
+                    const lista = String(a.projetos || "").split(',');
+                    return lista.includes(projId);
+                }).length : 0;
+
                 grade.innerHTML += `
                     <div class="col-md-4">
-                        <div class="project-card shadow-sm" onclick="abrirProjeto('${res.id}', '${nomesDosProjetos[res.id]}')">
+                        <div class="project-card shadow-sm" onclick="abrirProjeto('${projId}', '${nomesDosProjetos[projId]}')">
                             <div>
-                                <h6 class="fw-bold mb-0">${nomesDosProjetos[res.id]}</h6>
-                                <small class="text-muted">ID #${res.id}</small>
+                                <h6 class="fw-bold mb-0">${nomesDosProjetos[projId]}</h6>
+                                <small class="text-muted">ID #${projId}</small>
                             </div>
-                            <div class="count-circle">${res.total}</div>
+                            <div class="count-circle">${total}</div>
                         </div>
                     </div>`;
             });
@@ -125,7 +112,6 @@
             projetoAtivoId = id;
             document.getElementById('containerAlunos').style.display = 'block';
             document.getElementById('tituloProjetoSelecionado').innerText = nome;
-            document.getElementById('statusVinculo').style.display = 'none';
             atualizarListaAlunos();
         }
 
@@ -133,58 +119,89 @@
             const listaDiv = document.getElementById('listaAlunos');
             listaDiv.innerHTML = '<div class="p-4 text-center"><div class="spinner-border text-primary"></div></div>';
 
-            const { data: aData } = await supabaseClient
-                .from('alunos')
-                .select('id, nome, ativo') 
-                .eq('projetos', projetoAtivoId)
-                .order('nome');
+            const { data: aData } = await supabaseClient.from('alunos').select('id, nome, ativo, projetos').order('nome');
+            const participantes = aData ? aData.filter(a => String(a.projetos || "").split(',').includes(projetoAtivoId)) : [];
 
-            listaDiv.innerHTML = aData && aData.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno neste projeto.</div>';
+            listaDiv.innerHTML = participantes.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno neste projeto.</div>';
             
-            if (aData) {
-                aData.forEach(aluno => {
-                    // LÓGICA PARA BOOLEANOS (true/false)
-                    // Se o valor for estritamente false, ele marca como inativo
-                    const isInativo = aluno.ativo === false;
-                    const classeDestaque = isInativo ? 'aluno-inativo' : '';
+            participantes.forEach(aluno => {
+                const isInativo = aluno.ativo === false;
+                const totalProjetos = String(aluno.projetos || "").split(',').filter(p => p !== "").length;
 
-                    listaDiv.innerHTML += `
-                        <div class="student-item" onclick="window.location.href='editar_aluno.html?id=${aluno.id}'">
-                            <span class="${classeDestaque}">
-                                <strong>ID ${aluno.id}</strong> - ${aluno.nome}
-                                ${isInativo ? '<span class="badge-inativo">Inativo</span>' : ''}
-                            </span>
-                            <div class="d-flex align-items-center">
-                                <button class="btn btn-sm btn-outline-danger border-0 me-3" onclick="removerDoProjeto(event, '${aluno.id}')"><i class="fas fa-times"></i></button>
-                                <i class="fas fa-chevron-right text-muted small"></i>
-                            </div>
-                        </div>`;
-                });
+                listaDiv.innerHTML += `
+                    <div class="student-item" onclick="window.location.href='editar_aluno.html?id=${aluno.id}'">
+                        <span class="${isInativo ? 'aluno-inativo' : ''}">
+                            <strong>ID ${aluno.id}</strong> - ${aluno.nome}
+                            ${isInativo ? '<span class="badge-inativo">Inativo</span>' : ''}
+                            ${totalProjetos > 1 ? '<span class="badge-multiplo">Multi-projeto</span>' : ''}
+                        </span>
+                        <button class="btn btn-sm btn-outline-danger border-0" onclick="removerApenasDesteProjeto(event, '${aluno.id}', '${aluno.projetos}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>`;
+            });
+        }
+
+        async function vincularComOpcoes() {
+            const idAluno = document.getElementById('inputIdsAlunos').value.trim();
+            if (!idAluno) return alert("Digite o ID do aluno.");
+
+            // 1. Verificar se o aluno existe e quais projetos ele tem
+            const { data: aluno, error } = await supabaseClient.from('alunos').select('nome, projetos').eq('id', idAluno).single();
+            
+            if (error || !aluno) return alert("Aluno não encontrado.");
+
+            let listaAtual = aluno.projetos ? String(aluno.projetos).split(',').filter(x => x !== "") : [];
+
+            // Se o aluno já estiver NESTE projeto
+            if (listaAtual.includes(projetoAtivoId)) {
+                return alert("Este aluno já participa deste projeto.");
+            }
+
+            // Se o aluno já participa de OUTRO projeto
+            if (listaAtual.length > 0) {
+                const nomesAtuais = listaAtual.map(id => nomesDosProjetos[id] || id).join(', ');
+                const msg = `O aluno ${aluno.nome} já participa de: [${nomesAtuais}].\n\n` +
+                            `Deseja MANTER em ambos os projetos?\n` +
+                            `Clique em OK para MANTER em ambos.\n` +
+                            `Clique em CANCELAR para MUDAR (remover dos outros e deixar apenas neste).`;
+
+                if (confirm(msg)) {
+                    // MANTER EM AMBOS
+                    listaAtual.push(projetoAtivoId);
+                } else {
+                    // MUDAR DE PROJETO (apenas o novo)
+                    listaAtual = [projetoAtivoId];
+                }
+            } else {
+                // Se não tem nenhum projeto, apenas adiciona
+                listaAtual.push(projetoAtivoId);
+            }
+
+            // Gravar no Banco
+            const { error: updError } = await supabaseClient.from('alunos').update({ projetos: listaAtual.join(',') }).eq('id', idAluno);
+
+            if (!updError) {
+                document.getElementById('inputIdsAlunos').value = '';
+                carregarContagens();
+                atualizarListaAlunos();
+                alert("Vínculo atualizado com sucesso!");
             }
         }
 
-        async function vincularAlunosPorId() {
-            const input = document.getElementById('inputIdsAlunos');
-            const status = document.getElementById('statusVinculo');
-            const ids = input.value.split(',').map(id => id.trim()).filter(id => id !== "" && !isNaN(id));
-            if (ids.length === 0) return alert("Digite IDs válidos.");
-            status.style.display = 'block';
-            status.innerText = "Sincronizando...";
-            const { error } = await supabaseClient.from('alunos').update({ projetos: projetoAtivoId }).in('id', ids);
-            if (!error) {
-                input.value = '';
-                await carregarContagens();
-                await atualizarListaAlunos();
-                status.innerText = "Sucesso!";
-            }
-        }
-
-        async function removerDoProjeto(event, id) {
+        async function removerApenasDesteProjeto(event, idAluno, projetosAtuais) {
             event.stopPropagation();
-            if(!confirm("Remover o aluno ID " + id + " deste projeto?")) return;
-            await supabaseClient.from('alunos').update({ projetos: null }).eq('id', id);
-            await carregarContagens();
-            await atualizarListaAlunos();
+            if(!confirm("Remover este aluno apenas deste projeto?")) return;
+
+            let lista = String(projetosAtuais).split(',').filter(x => x !== "");
+            let novaLista = lista.filter(p => p !== projetoAtivoId);
+
+            await supabaseClient.from('alunos').update({ 
+                projetos: novaLista.length > 0 ? novaLista.join(',') : null 
+            }).eq('id', idAluno);
+
+            carregarContagens();
+            atualizarListaAlunos();
         }
 
         function fecharLista() { document.getElementById('containerAlunos').style.display = 'none'; }
@@ -192,5 +209,3 @@
     </script>
 </body>
 </html>
-
-
