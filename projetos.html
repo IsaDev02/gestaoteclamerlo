@@ -3,70 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Projetos | Centro Social Irmã Tecla Merlo</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Projetos | Centro Social</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --bg-body: #f8fafc; --sidebar-bg: #1e293b; --primary: #3b82f6; }
-        body { background-color: var(--bg-body); font-family: 'Inter', sans-serif; color: #1e293b; }
-        .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar-bg); padding: 20px 0; z-index: 100;}
+        :root { --bg: #f8fafc; --sidebar: #1e293b; --primary: #3b82f6; }
+        body { background: var(--bg); font-family: 'Inter', sans-serif; }
+        .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar); padding: 20px 0; }
         .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; text-decoration: none; display: block; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.05); }
+        .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
         .main-content { margin-left: 240px; padding: 40px; }
-        .project-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.3s ease; display: flex; justify-content: space-between; align-items: center; }
-        .project-card:hover { transform: translateY(-3px); border-color: var(--primary); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-        .count-circle { background: #eff6ff; color: var(--primary); width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; }
-        .student-list-container { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 30px; display: none; overflow: hidden; }
-        .student-item { padding: 12px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
-        .student-item:hover { background: #f0f7ff; }
-        .insert-section { background: #f1f5f9; padding: 20px; border-bottom: 1px solid #e2e8f0; }
-        .aluno-inativo { color: #dc3545 !important; font-weight: 600; }
-        .badge-inativo { font-size: 0.65rem; background: #fee2e2; color: #dc3545; padding: 2px 6px; border-radius: 4px; margin-left: 8px; text-transform: uppercase; }
-        .badge-multiplo { font-size: 0.65rem; background: #e0e7ff; color: #4338ca; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
+        .project-card { background: #fff; border-radius: 12px; padding: 20px; cursor: pointer; border: 1px solid #e2e8f0; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .project-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .count-circle { background: #eff6ff; color: var(--primary); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .student-list-container { background: #fff; border-radius: 12px; margin-top: 25px; display: none; border: 1px solid #e2e8f0; }
+        .student-item { padding: 12px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+        .aluno-inativo { color: #dc3545; font-weight: 600; }
     </style>
 </head>
 <body>
 
     <aside class="sidebar">
-        <div class="px-4 mb-5 text-white fw-bold"><h5><i class="fas fa-graduation-cap me-2"></i>Centro Social</h5></div>
         <nav class="nav flex-column">
-            <a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
-            <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
-            <a class="nav-link active" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
-            <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
-            <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
+            <a class="nav-link" href="dashboard.html">Dashboard</a>
+            <a class="nav-link active" href="projetos.html">Projetos</a>
+            <a class="nav-link" href="lista_geral.html">Lista Geral</a>
         </nav>
     </aside>
 
     <main class="main-content">
-        <header class="mb-5">
-            <h3 class="fw-bold mb-1">Gerenciamento de Projetos</h3>
-            <p class="text-muted small">Clique em um projeto para ver a lista de alunos.</p>
-        </header>
-
-        <div class="row g-3" id="gradeProjetos">
-            <div class="text-center p-5"><div class="spinner-border text-primary"></div></div>
-        </div>
+        <h3 class="fw-bold mb-4">Gerenciamento de Projetos</h3>
+        <div class="row g-3" id="gradeProjetos"></div>
 
         <div class="student-list-container shadow-sm" id="containerAlunos">
-            <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-white">
-                <div>
-                    <h5 class="fw-bold mb-0 text-uppercase" id="tituloProjetoSelecionado">---</h5>
-                    <small class="text-primary fw-bold">LISTA DE ALUNOS VINCULADOS</small>
-                </div>
-                <button class="btn btn-close btn-sm" onclick="fecharLista()"></button>
+            <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0" id="tituloProjetoSelecionado">---</h5>
+                <button class="btn-close" onclick="document.getElementById('containerAlunos').style.display='none'"></button>
             </div>
-
-            <div class="insert-section">
-                <label class="form-label small fw-bold text-muted">VINCULAR NOVO ALUNO (DIGITE O ID)</label>
+            <div class="p-3 bg-light border-bottom">
                 <div class="input-group">
-                    <span class="input-group-text bg-white"><i class="fas fa-id-card text-primary"></i></span>
-                    <input type="text" id="inputIdsAlunos" class="form-control" placeholder="Ex: 123">
-                    <button class="btn btn-primary fw-bold" onclick="vincularComOpcoes()">Vincular</button>
+                    <input type="text" id="idInput" class="form-control" placeholder="ID do Aluno">
+                    <button class="btn btn-primary" onclick="vincular()">Vincular</button>
                 </div>
             </div>
-
             <div id="listaAlunos"></div>
         </div>
     </main>
@@ -75,145 +55,73 @@
     <script>
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const nomesDosProjetos = {
-            "1": "Adolescer para Crescer", "2": "Criança Certeza", "3": "Sempre Criança",
-            "4": "Valorizando a Infância", "5": "Clube de Mães", "6": "Animar e Celebrar"
-        };
+        const PROJETOS = {"1": "Adolescer", "2": "Criança Certeza", "3": "Sempre Criança", "4": "Valorizando", "5": "Mães", "6": "Animar"};
+        let projetoAtual = null;
 
-        let projetoAtivoId = null;
-
-        // Função auxiliar para transformar qualquer valor da coluna projetos em uma lista limpa
-        function formatarListaProjetos(valor) {
-            if (!valor) return [];
-            return String(valor).split(',').map(s => s.trim()).filter(s => s !== "");
-        }
-
-        async function carregarContagens() {
+        async function carregar() {
+            const { data: alunos } = await sb.from('alunos').select('projetos');
             const grade = document.getElementById('gradeProjetos');
-            const { data: todosAlunos, error } = await supabaseClient.from('alunos').select('projetos');
-            
-            if (error) { console.error("Erro contagem:", error); return; }
-
             grade.innerHTML = '';
-            Object.keys(nomesDosProjetos).forEach(projId => {
-                const total = todosAlunos ? todosAlunos.filter(a => 
-                    formatarListaProjetos(a.projetos).includes(String(projId))
-                ).length : 0;
-
+            
+            Object.keys(PROJETOS).forEach(id => {
+                const total = alunos ? alunos.filter(a => String(a.projetos || "").split(',').includes(id)).length : 0;
                 grade.innerHTML += `
                     <div class="col-md-4">
-                        <div class="project-card shadow-sm" onclick="abrirProjeto('${projId}', '${nomesDosProjetos[projId]}')">
-                            <div>
-                                <h6 class="fw-bold mb-0">${nomesDosProjetos[projId]}</h6>
-                                <small class="text-muted">ID #${projId}</small>
-                            </div>
+                        <div class="project-card" onclick="abrir('${id}')">
+                            <div><h6 class="fw-bold mb-0">${PROJETOS[id]}</h6><small class="text-muted">ID ${id}</small></div>
                             <div class="count-circle">${total}</div>
                         </div>
                     </div>`;
             });
         }
 
-        async function abrirProjeto(id, nome) {
-            projetoAtivoId = String(id);
+        async function abrir(id) {
+            projetoAtual = id;
             document.getElementById('containerAlunos').style.display = 'block';
-            document.getElementById('tituloProjetoSelecionado').innerText = nome;
-            atualizarListaAlunos();
+            document.getElementById('tituloProjetoSelecionado').innerText = PROJETOS[id].toUpperCase();
+            listar();
         }
 
-        async function atualizarListaAlunos() {
+        async function listar() {
             const listaDiv = document.getElementById('listaAlunos');
-            listaDiv.innerHTML = '<div class="p-4 text-center"><div class="spinner-border text-primary"></div></div>';
-
-            const { data: aData, error } = await supabaseClient.from('alunos').select('id, nome, ativo, projetos').order('nome');
-
-            if (error) {
-                listaDiv.innerHTML = '<div class="p-4 text-center text-danger">Erro ao carregar alunos.</div>';
-                return;
-            }
-
-            const participantes = aData.filter(aluno => 
-                formatarListaProjetos(aluno.projetos).includes(projetoAtivoId)
-            );
-
-            listaDiv.innerHTML = participantes.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno neste projeto.</div>';
+            const { data: alunos } = await sb.from('alunos').select('*').order('nome');
+            const filtrados = alunos ? alunos.filter(a => String(a.projetos || "").split(',').includes(projetoAtual)) : [];
             
-            participantes.forEach(aluno => {
-                const isInativo = aluno.ativo === false;
-                const totalProjetos = formatarListaProjetos(aluno.projetos).length;
-
+            listaDiv.innerHTML = filtrados.length ? '' : '<p class="p-4 text-center">Vazio.</p>';
+            filtrados.forEach(a => {
                 listaDiv.innerHTML += `
-                    <div class="student-item" onclick="window.location.href='editar_aluno.html?id=${aluno.id}'">
-                        <span class="${isInativo ? 'aluno-inativo' : ''}">
-                            <strong>ID ${aluno.id}</strong> - ${aluno.nome}
-                            ${isInativo ? '<span class="badge-inativo">Inativo</span>' : ''}
-                            ${totalProjetos > 1 ? '<span class="badge-multiplo">Multi-projeto</span>' : ''}
-                        </span>
-                        <div class="d-flex align-items-center">
-                            <button class="btn btn-sm btn-outline-danger border-0 me-2" onclick="removerApenasDesteProjeto(event, '${aluno.id}', '${aluno.projetos}')">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                            <i class="fas fa-chevron-right text-muted small"></i>
-                        </div>
+                    <div class="student-item">
+                        <span class="${a.ativo === false ? 'aluno-inativo' : ''}">ID ${a.id} - ${a.nome}</span>
+                        <button class="btn btn-sm btn-danger" onclick="remover('${a.id}', '${a.projetos}')">Remover</button>
                     </div>`;
             });
         }
 
-        async function vincularComOpcoes() {
-            const idInput = document.getElementById('inputIdsAlunos');
-            const idAluno = idInput.value.trim();
-            if (!idAluno) return alert("Digite o ID do aluno.");
+        async function vincular() {
+            const id = document.getElementById('idInput').value;
+            const { data: a } = await sb.from('alunos').select('projetos').eq('id', id).single();
+            if (!a) return alert("Não achou.");
 
-            const { data: aluno, error } = await supabaseClient.from('alunos').select('nome, projetos').eq('id', idAluno).single();
-            
-            if (error || !aluno) return alert("Aluno não encontrado.");
+            let p = String(a.projetos || "").split(',').filter(x => x);
+            if (p.includes(projetoAtual)) return alert("Já está aqui.");
 
-            let listaAtual = formatarListaProjetos(aluno.projetos);
+            if (p.length > 0 && confirm("Manter nos dois? (OK = Sim / Cancelar = Mudar)")) {
+                p.push(projetoAtual);
+            } else { p = [projetoAtual]; }
 
-            if (listaAtual.includes(projetoAtivoId)) {
-                return alert("O aluno já está neste projeto.");
-            }
-
-            if (listaAtual.length > 0) {
-                const confirmacao = confirm(`O aluno ${aluno.nome} já está em outro projeto.\n\nDeseja MANTER EM AMBOS os projetos?\n(Clique em Cancelar para remover dos outros e deixar apenas neste)`);
-                if (confirmacao) {
-                    listaAtual.push(projetoAtivoId);
-                } else {
-                    listaAtual = [projetoAtivoId];
-                }
-            } else {
-                listaAtual.push(projetoAtivoId);
-            }
-
-            const { error: updError } = await supabaseClient.from('alunos').update({ projetos: listaAtual.join(',') }).eq('id', idAluno);
-
-            if (!updError) {
-                idInput.value = '';
-                await carregarContagens();
-                await atualizarListaAlunos();
-            } else {
-                alert("Erro ao salvar: Verifique se a coluna 'projetos' no Supabase permite texto.");
-            }
+            await sb.from('alunos').update({ projetos: p.join(',') }).eq('id', id);
+            carregar(); listar();
         }
 
-        async function removerApenasDesteProjeto(event, idAluno, projetosAtuais) {
-            event.stopPropagation();
-            if(!confirm("Remover este aluno deste projeto?")) return;
-
-            let lista = formatarListaProjetos(projetosAtuais);
-            let novaLista = lista.filter(p => p !== projetoAtivoId);
-
-            await supabaseClient.from('alunos').update({ 
-                projetos: novaLista.length > 0 ? novaLista.join(',') : null 
-            }).eq('id', idAluno);
-
-            await carregarContagens();
-            await atualizarListaAlunos();
+        async function remover(id, atual) {
+            let p = String(atual).split(',').filter(x => x !== projetoAtual);
+            await sb.from('alunos').update({ projetos: p.length ? p.join(',') : null }).eq('id', id);
+            carregar(); listar();
         }
 
-        function fecharLista() { document.getElementById('containerAlunos').style.display = 'none'; }
-        window.onload = carregarContagens;
+        window.onload = carregar;
     </script>
 </body>
 </html>
