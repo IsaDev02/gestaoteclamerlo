@@ -153,7 +153,9 @@
                 let htmlFinal = '';
                 data.forEach(aluno => {
                     const urlFoto = (aluno.foto && aluno.foto.trim() !== "") ? aluno.foto.trim() : FOTO_PADRAO;
-                    const nomeProjeto = nomesProjetos[aluno.projetos] || 'Não definido';
+                    const nomeProjeto = aluno.projetos
+                        ? aluno.projetos.split(',').map(id => nomesProjetos[id.trim()] || id.trim()).join(', ')
+                        : 'Não definido';
 
                     htmlFinal += `
                         <tr>

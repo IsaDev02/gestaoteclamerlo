@@ -158,7 +158,18 @@
                 <div class="section-title">Projeto e Turmas</div>
                 <div class="row g-3">
                     <div class="col-md-4"><label class="form-label">Data Entrada no Projeto</label><input type="date" id="data_entrada_projeto" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Projetos Atuais</label><input type="text" id="projetos" class="form-control"></div>
+                    <div class="col-md-4">
+                        <label class="form-label">Projetos Atuais</label>
+                        <select id="projetos" class="form-select" multiple size="6">
+                            <option value="1">Adolescer para Crescer</option>
+                            <option value="2">Criança Certeza</option>
+                            <option value="3">Sempre Criança</option>
+                            <option value="4">Valorizando a Infância</option>
+                            <option value="5">Clube de Mães</option>
+                            <option value="6">Animar e Celebrar</option>
+                        </select>
+                        <small class="text-muted">Ctrl+clique para múltiplos</small>
+                    </div>
                     <div class="col-md-4"><label class="form-label">Turmas</label><input type="text" id="turmas" class="form-control"></div>
                 </div>
             </div>
@@ -228,13 +239,20 @@
                     'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
                     'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo', 
                     'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae', 
-                    'projetos', 'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
+                    'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
                     'rg_mae', 'cpf_mae', 'observacoes' // Adicionado observações
                 ];
 
                 colunas.forEach(col => {
                     const el = document.getElementById(col);
                     if (el) el.value = a[col] || '';
+                });
+
+                // Tratamento especial para o multi-select de projetos
+                const selectProjetos = document.getElementById('projetos');
+                const projetosIds = a.projetos ? a.projetos.split(',').map(p => p.trim()) : [];
+                Array.from(selectProjetos.options).forEach(opt => {
+                    opt.selected = projetosIds.includes(opt.value);
                 });
 
                 // Lógica especial para o Switch Ativo (Checkbox)
@@ -266,7 +284,7 @@
                 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
                 'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo', 
                 'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae', 
-                'projetos', 'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
+                'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
                 'rg_mae', 'cpf_mae', 'observacoes'
             ];
             
@@ -276,6 +294,11 @@
                     dadosA[col] = el.value === "" ? null : el.value;
                 }
             });
+
+            // Tratamento especial para o multi-select de projetos
+            const selectProjetos = document.getElementById('projetos');
+            const selectedIds = Array.from(selectProjetos.selectedOptions).map(opt => opt.value);
+            dadosA['projetos'] = selectedIds.length > 0 ? selectedIds.join(',') : null;
 
             // Captura o valor do Switch de Ativo
             dadosA['ativo'] = document.getElementById('ativo').checked;

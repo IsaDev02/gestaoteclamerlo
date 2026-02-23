@@ -196,43 +196,47 @@
 
             const grade = document.getElementById('gradeProjetos');
 
-            const promessas = Object.keys(nomesDosProjetos).map(async (id) => {
+            const { data: todosAlunos } = await supabaseClient.from('alunos').select('id, projetos');
 
-                const { count } = await supabaseClient
+            const contagens = {};
 
-                    .from('alunos')
+            Object.keys(nomesDosProjetos).forEach(id => { contagens[id] = 0; });
 
-                    .select('*', { count: 'exact', head: true })
+            if (todosAlunos) {
 
-                    .eq('projetos', id);
+                todosAlunos.forEach(aluno => {
 
-                return { id, total: count || 0 };
+                    if (!aluno.projetos) return;
 
-            });
+                    aluno.projetos.split(',').map(p => p.trim()).forEach(pid => {
 
+                        if (contagens.hasOwnProperty(pid)) contagens[pid]++;
 
+                    });
 
-            const resultados = await Promise.all(promessas);
+                });
+
+            }
 
             grade.innerHTML = '';
 
-            resultados.forEach(res => {
+            Object.keys(nomesDosProjetos).forEach(id => {
 
                 grade.innerHTML += `
 
                     <div class="col-md-4">
 
-                        <div class="project-card shadow-sm" onclick="abrirProjeto('${res.id}', '${nomesDosProjetos[res.id]}')">
+                        <div class="project-card shadow-sm" onclick="abrirProjeto('${id}', '${nomesDosProjetos[id]}')">
 
                             <div>
 
-                                <h6 class="fw-bold mb-0">${nomesDosProjetos[res.id]}</h6>
+                                <h6 class="fw-bold mb-0">${nomesDosProjetos[id]}</h6>
 
-                                <small class="text-muted">ID #${res.id}</small>
+                                <small class="text-muted">ID #${id}</small>
 
                             </div>
 
-                            <div class="count-circle">${res.total}</div>
+                            <div class="count-circle">${contagens[id]}</div>
 
                         </div>
 
@@ -268,25 +272,30 @@
 
 
 
-            const { data: aData } = await supabaseClient
+            const { data: todosAlunos } = await supabaseClient
 
                 .from('alunos')
 
-                .select('id, nome, ativo') 
-
-                .eq('projetos', projetoAtivoId)
+                .select('id, nome, ativo, projetos')
 
                 .order('nome');
 
+            const idStr = String(projetoAtivoId);
+
+            const aData = todosAlunos ? todosAlunos.filter(aluno => {
+
+                if (!aluno.projetos) return false;
+
+                return aluno.projetos.split(',').map(p => p.trim()).includes(idStr);
+
+            }) : [];
 
 
-            listaDiv.innerHTML = aData && aData.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno neste projeto.</div>';
+            listaDiv.innerHTML = aData.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno neste projeto.</div>';
 
             
 
-            if (aData) {
-
-                aData.forEach(aluno => {
+            aData.forEach(aluno => {
 
                     // LÓGICA PARA BOOLEANOS (true/false)
 
@@ -320,7 +329,27 @@
 
                         </div>`;
 
-                });
+            });
+
+        }
+
+
+
+        function gerenciarProjetos(projetosAtual, idAlvo, acao) {
+
+            const lista = projetosAtual ? projetosAtual.split(',').map(p => p.trim()).filter(p => p !== '') : [];
+
+            if (acao === 'adicionar') {
+
+                if (!lista.includes(String(idAlvo))) lista.push(String(idAlvo));
+
+                return lista.join(',');
+
+            } else {
+
+                const resultado = lista.filter(p => p !== String(idAlvo)).join(',');
+
+                return resultado || null;
 
             }
 
@@ -342,19 +371,39 @@
 
             status.innerText = "Sincronizando...";
 
-            const { error } = await supabaseClient.from('alunos').update({ projetos: projetoAtivoId }).in('id', ids);
+            const { data: alunosAtuais } = await supabaseClient.from('alunos').select('id, projetos').in('id', ids);
 
-            if (!error) {
+            if (alunosAtuais) {
 
-                input.value = '';
+                const updates = alunosAtuais.map(aluno => {
 
-                await carregarContagens();
+                    const novosProjetos = gerenciarProjetos(aluno.projetos, projetoAtivoId, 'adicionar');
 
-                await atualizarListaAlunos();
+                    return supabaseClient.from('alunos').update({ projetos: novosProjetos }).eq('id', aluno.id);
 
-                status.innerText = "Sucesso!";
+                });
+
+                const resultados = await Promise.all(updates);
+
+                const erros = resultados.filter(r => r.error);
+
+                if (erros.length > 0) {
+
+                    status.innerText = "Erro ao vincular alguns alunos.";
+
+                    return;
+
+                }
 
             }
+
+            input.value = '';
+
+            await carregarContagens();
+
+            await atualizarListaAlunos();
+
+            status.innerText = "Sucesso!";
 
         }
 
@@ -366,7 +415,11 @@
 
             if(!confirm("Remover o aluno ID " + id + " deste projeto?")) return;
 
-            await supabaseClient.from('alunos').update({ projetos: null }).eq('id', id);
+            const { data: aluno } = await supabaseClient.from('alunos').select('projetos').eq('id', id).single();
+
+            const novosProjetos = gerenciarProjetos(aluno ? aluno.projetos : null, projetoAtivoId, 'remover');
+
+            await supabaseClient.from('alunos').update({ projetos: novosProjetos }).eq('id', id);
 
             await carregarContagens();
 
