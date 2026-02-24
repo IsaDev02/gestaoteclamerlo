@@ -153,9 +153,19 @@
                 let htmlFinal = '';
                 data.forEach(aluno => {
                     const urlFoto = (aluno.foto && aluno.foto.trim() !== "") ? aluno.foto.trim() : FOTO_PADRAO;
-                    const nomeProjeto = aluno.projetos
-                        ? aluno.projetos.split(',').map(id => nomesProjetos[id.trim()] || id.trim()).join(', ')
-                        : 'Não definido';
+                    const nomeProjeto = (() => {
+                        if (!aluno.projetos) return 'Não definido';
+                        // Se for array (ex: ["1", "2"])
+                        if (Array.isArray(aluno.projetos)) {
+                            return aluno.projetos.map(id => nomesProjetos[String(id).trim()] || String(id).trim()).join(', ');
+                        }
+                        // Se for string (ex: "1,2")
+                        if (typeof aluno.projetos === 'string') {
+                            return aluno.projetos.split(',').map(id => nomesProjetos[id.trim()] || id.trim()).join(', ');
+                        }
+                        // Se for número ou outro tipo
+                        return nomesProjetos[String(aluno.projetos)] || String(aluno.projetos);
+                    })();
 
                     htmlFinal += `
                         <tr>
