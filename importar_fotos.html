@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Importar Fotos dos Alunos</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light p-4">
+<div class="container" style="max-width:700px">
+    <h4 class="mb-4">📸 Importar Fotos dos Alunos em Lote</h4>
+
+    <div class="alert alert-info">
+        <strong>Como usar:</strong><br>
+        1. Selecione <strong>todas as fotos</strong> de todas as subpastas (A, B, C...) de uma vez.<br>
+        2. Os arquivos devem ter o nome no formato: <code>00003 - NOME DO ALUNO.bmp</code><br>
+        3. Clique em <strong>Iniciar Upload</strong>.
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label fw-bold">Selecionar todas as fotos:</label>
+        <input type="file" id="inputFotos" class="form-control" accept="image/*" multiple>
+    </div>
+
+    <button class="btn btn-primary fw-bold w-100 mb-3" onclick="iniciarUpload()">🚀 Iniciar Upload</button>
+
+    <div id="progressArea"></div>
+    <div id="logArea" class="mt-3" style="max-height:400px; overflow-y:auto; font-size:0.85rem;"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const BUCKET = 'fotos-alunos';
+
+    async function iniciarUpload() {
+        const input = document.getElementById('inputFotos');
+        const files = Array.from(input.files);
+        const progressArea = document.getElementById('progressArea');
+        const logArea = document.getElementById('logArea');
+
+        if (files.length === 0) {
+            alert('Selecione pelo menos um arquivo!');
+            return;
+        }
+
+        logArea.innerHTML = '';
+        progressArea.innerHTML = `
+            <div class="progress mb-2">
+                <div id="barraProgresso" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width:0%">0%</div>
+            </div>
+            <p id="statusTexto" class="text-muted small">Processando 0 de ${files.length}...</p>`;
+
+        let sucesso = 0, erro = 0, naoEncontrado = 0;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const nomeArquivo = file.name;
+            // Aceita: "00003 - ALAN BERNARDO DA SILVA.bmp"
+            // Captura os dígitos iniciais (com zeros à esquerda) antes do " - "
+            const match = nomeArquivo.match(/^(\d+)\s*-\s*.+\.(\w+)$/i);
+
+            if (!match) {
+                log(logArea, `⚠️ IGNORADO (nome inválido): ${nomeArquivo}`, 'text-warning');
+                naoEncontrado++;
+                atualizarProgresso(i, files.length);
+                continue;
+            }
+
+            // parseInt remove os zeros à esquerda: "00003" → 3
+            const alunoId = parseInt(match[1], 10);
+            const extensao = match[2].toLowerCase();
+
+            // Converte .bmp para .png se necessário (navegadores lidam melhor)
+            let fileParaUpload = file;
+            let extensaoFinal = extensao;
+
+            if (extensao === 'bmp') {
+                // Converte BMP → PNG via canvas para melhor compatibilidade
+                fileParaUpload = await converterBmpParaPng(file);
+                extensaoFinal = 'png';
+            }
+
+            const caminhoStorage = `${alunoId}.${extensaoFinal}`; // Ex: "3.png"
+
+            // 1. Faz upload para o Supabase Storage
+            const { error: uploadError } = await supabaseClient.storage
+                .from(BUCKET)
+                .upload(caminhoStorage, fileParaUpload, {
+                    upsert: true,
+                    contentType: `image/${extensaoFinal}`
+                });
+
+            if (uploadError) {
+                log(logArea, `❌ ERRO no upload (ID ${alunoId} | ${nomeArquivo}): ${uploadError.message}`, 'text-danger');
+                erro++;
+            } else {
+                // 2. Pega a URL pública
+                const { data: urlData } = supabaseClient.storage
+                    .from(BUCKET)
+                    .getPublicUrl(caminhoStorage);
+
+                const urlPublica = urlData.publicUrl;
+
+                // 3. Atualiza a coluna 'foto' na tabela 'alunos'
+                const { error: updateError } = await supabaseClient
+                    .from('alunos')
+                    .update({ foto: urlPublica })
+                    .eq('id', alunoId);
+
+                if (updateError) {
+                    log(logArea, `❌ ERRO ao atualizar BD (ID ${alunoId}): ${updateError.message}`, 'text-danger');
+                    erro++;
+                } else {
+                    log(logArea, `✅ OK: ID ${alunoId} — ${nomeArquivo}`, 'text-success');
+                    sucesso++;
+                }
+            }
+
+            atualizarProgresso(i, files.length);
+        }
+
+        // Resumo final
+        const barra = document.getElementById('barraProgresso');
+        barra.classList.remove('progress-bar-animated');
+        barra.classList.add(erro > 0 ? 'bg-warning' : 'bg-success');
+        document.getElementById('statusTexto').innerHTML =
+            `<strong>Concluído!</strong> &nbsp; ✅ <strong>${sucesso}</strong> enviados &nbsp; | &nbsp; ❌ <strong>${erro}</strong> erros &nbsp; | &nbsp; ⚠️ <strong>${naoEncontrado}</strong> ignorados`;
+    }
+
+    // Converte arquivo BMP para PNG usando canvas
+    function converterBmpParaPng(file) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                canvas.getContext('2d').drawImage(img, 0, 0);
+                canvas.toBlob((blob) => {
+                    URL.revokeObjectURL(url);
+                    resolve(new File([blob], file.name.replace(/\.bmp$/i, '.png'), { type: 'image/png' }));
+                }, 'image/png');
+            };
+            img.src = url;
+        });
+    }
+
+    function atualizarProgresso(i, total) {
+        const pct = Math.round(((i + 1) / total) * 100);
+        const barra = document.getElementById('barraProgresso');
+        barra.style.width = pct + '%';
+        barra.innerText = pct + '%';
+        document.getElementById('statusTexto').innerText = `Processando ${i + 1} de ${total}...`;
+    }
+
+    function log(container, mensagem, classe) {
+        const p = document.createElement('p');
+        p.className = classe + ' mb-1';
+        p.innerText = mensagem;
+        container.appendChild(p);
+        container.scrollTop = container.scrollHeight;
+    }
+</script>
+</body>
+</html>
