@@ -1,7 +1,7 @@
 {
-  "name": "whatsapp-evolution-api",
-  "version": "1.0.0",
-  "description": "Servidor para envio de mensagens via whatsapp-web.js (LocalAuth)",
+  "name": "whatsapp-local-server",
+  "version": "2.0.0",
+  "description": "Servidor local WhatsApp para envio de mensagens em massa via whatsapp-web.js",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -14,9 +14,12 @@
     "express-rate-limit": "^6.7.0",
     "helmet": "^6.0.1",
     "qrcode": "^1.5.1",
-    "whatsapp-web.js": "^1.20.0"
+    "whatsapp-web.js": "^1.23.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   }
 }

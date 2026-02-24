@@ -1,13 +1,14 @@
 /**
  * server/server.js
- * API para enviar mensagens via whatsapp-web.js (LocalAuth)
+ * Servidor local WhatsApp para envio de mensagens em massa via whatsapp-web.js
+ * Compatível com o formato da Evolution API usado pelo enviar_mensagens.html
  *
  * Execução:
- *  - criar .env com API_KEY, PORT etc (veja .env.example)
+ *  - criar .env com API_KEY, INSTANCE_NAME, PORT etc (veja .env.example)
  *  - npm install
  *  - npm start
  *
- * Observação: sessão é persistida em ./whatsapp-session (LocalAuth).
+ * Sessão persistida em disco via LocalAuth — escaneie o QR apenas uma vez.
  */
 require('dotenv').config();
 const express = require('express');
@@ -21,29 +22,31 @@ const app = express();
 app.use(helmet());
 app.use(express.json({ limit: '200kb' }));
 
-// CORS - ajuste origin conforme sua aplicação
+// CORS
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*'
 }));
 
-// Rate limiting básico para endpoint /send
+// Rate limiting no endpoint de envio de mensagem
 const sendLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minuto
-  max: parseInt(process.env.RATE_LIMIT_MAX || '30', 10), // max mensagens por minuto por IP
+  windowMs: 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX || '30', 10),
   message: { error: 'Rate limit excedido' }
 });
-app.use('/send', sendLimiter);
+app.use('/message', sendLimiter);
 
 // Config
 const API_KEY = process.env.API_KEY || '';
+const INSTANCE_NAME = process.env.INSTANCE_NAME || 'CentroSocial';
 const PORT = parseInt(process.env.PORT || '3333', 10);
-const MESSAGE_DELAY_MS = parseInt(process.env.MESSAGE_DELAY_MS || '800', 10); // atraso entre envios
+const MESSAGE_DELAY_MS = parseInt(process.env.MESSAGE_DELAY_MS || '2000', 10);
+const DEFAULT_COUNTRY_CODE = process.env.DEFAULT_COUNTRY_CODE || '55';
 
-// Cliente WhatsApp (salva sessão em disk via LocalAuth)
+// Cliente WhatsApp (salva sessão em disco via LocalAuth)
 const client = new Client({
   authStrategy: new LocalAuth({ clientId: 'gestaoweb' }),
   puppeteer: {
-    headless: process.env.PUPPETEER_HEADLESS !== 'false', // default true
+    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -57,16 +60,15 @@ let isReady = false;
 
 client.on('qr', async (qr) => {
   try {
-    // gera dataURL e guarda para servir via endpoint GET /qr
     lastQrDataUrl = await qrcode.toDataURL(qr);
-    console.log('QR code gerado (use /qr para visualizar)');
+    console.log('QR code gerado. Acesse GET /qr ou use o botão "Conectar WhatsApp" no sistema.');
   } catch (err) {
     console.error('Erro gerando QR:', err);
   }
 });
 
 client.on('ready', () => {
-  console.log('WhatsApp client pronto.');
+  console.log('WhatsApp conectado e pronto para envio.');
   isReady = true;
   lastQrDataUrl = null;
 });
@@ -77,7 +79,7 @@ client.on('auth_failure', (msg) => {
 });
 
 client.on('disconnected', (reason) => {
-  console.log('Desconectado:', reason);
+  console.log('WhatsApp desconectado:', reason);
   isReady = false;
 });
 
@@ -85,8 +87,12 @@ client.initialize();
 
 // Helpers
 function ensureApiKey(req, res) {
-  const key = req.headers['x-api-key'] || req.headers['authorization']?.replace(/^Bearer\s+/i, '');
-  if (!key || key !== API_KEY) {
+  if (!API_KEY) {
+    res.status(500).json({ error: 'API_KEY não configurada no servidor. Defina no arquivo .env.' });
+    return false;
+  }
+  const key = req.headers['apikey'] || req.headers['x-api-key'] || req.headers['authorization']?.replace(/^Bearer\s+/i, '');
+  if (key !== API_KEY) {
     res.status(401).json({ error: 'Unauthorized' });
     return false;
   }
@@ -97,15 +103,14 @@ function normalizeNumber(raw) {
   if (!raw) return '';
   let digits = String(raw).replace(/\D/g, '');
   if (!digits) return '';
-  // se não tiver DDI e existir DEFAULT_COUNTRY_CODE, prefixa
-  const DEFAULT_COUNTRY_CODE = process.env.DEFAULT_COUNTRY_CODE || '55';
   if (DEFAULT_COUNTRY_CODE && !digits.startsWith(DEFAULT_COUNTRY_CODE) && digits.length <= 11) {
     digits = DEFAULT_COUNTRY_CODE + digits;
   }
   return digits;
 }
 
-// Endpoints
+// ── Endpoints ──────────────────────────────────────────────
+
 app.get('/', (req, res) => {
   res.json({ status: 'ok', ready: isReady });
 });
@@ -114,75 +119,74 @@ app.get('/status', (req, res) => {
   res.json({ ready: isReady });
 });
 
-// retorna dataURL (base64 png) do QR para exibir no frontend / admin
+// Retorna dataURL do QR para exibir no modal do frontend
 app.get('/qr', (req, res) => {
   if (isReady) return res.status(400).json({ error: 'Already authenticated' });
-  if (!lastQrDataUrl) return res.status(404).json({ error: 'QR not available. Wait for client to emit QR.' });
+  if (!lastQrDataUrl) return res.status(404).json({ error: 'QR não disponível. Aguarde alguns segundos.' });
   res.json({ qr: lastQrDataUrl });
 });
 
-// POST /send
-// body: { numbers: ["5511999999999", ...] , message: "texto com {nome} opcional", delayMs: 800 (opcional) }
-// header: x-api-key: <API_KEY>
-app.post('/send', async (req, res) => {
+// POST /instance/create — inicializa/retorna instância
+// body: { instanceName, token, qrcode }
+app.post('/instance/create', (req, res) => {
   if (!ensureApiKey(req, res)) return;
-
-  if (!isReady) return res.status(500).json({ error: 'WhatsApp client not ready' });
-
-  const { numbers, message, delayMs } = req.body;
-  if (!Array.isArray(numbers) || numbers.length === 0) {
-    return res.status(400).json({ error: 'numbers array required' });
+  const instanceName = req.body?.instanceName || INSTANCE_NAME;
+  if (isReady) {
+    return res.json({ instance: { instanceName }, hash: { apikey: API_KEY } });
   }
-  if (!message || typeof message !== 'string') {
-    return res.status(400).json({ error: 'message required' });
-  }
-
-  const delay = Number.isFinite(delayMs) ? parseInt(delayMs, 10) : MESSAGE_DELAY_MS;
-
-  const results = [];
-  for (const raw of numbers) {
-    const normalized = normalizeNumber(raw);
-    if (!normalized) {
-      results.push({ to: raw, status: 'invalid_number' });
-      continue;
-    }
-    const chatId = `${normalized}@c.us`;
-
-    try {
-      // Envia mensagem de texto simples
-      const sent = await client.sendMessage(chatId, message);
-      results.push({ to: normalized, status: 'sent', id: sent.id._serialized || null });
-    } catch (err) {
-      console.error('Erro ao enviar para', normalized, err);
-      results.push({ to: normalized, status: 'error', error: err.message });
-    }
-
-    // delay entre envios para evitar ritmo muito rápido
-    await new Promise(r => setTimeout(r, delay));
-  }
-
-  res.json({ results });
+  res.json({
+    instance: { instanceName },
+    qrcode: { base64: lastQrDataUrl || null }
+  });
 });
 
-// Opcional: uma rota para enviar uma única mensagem (facilita testes)
-app.post('/sendOne', async (req, res) => {
+// GET /instance/connect/:instance — retorna QR ou estado conectado
+app.get('/instance/connect/:instance', (req, res) => {
   if (!ensureApiKey(req, res)) return;
-  if (!isReady) return res.status(500).json({ error: 'WhatsApp client not ready' });
+  if (isReady) {
+    return res.json({ instance: { state: 'open' } });
+  }
+  if (!lastQrDataUrl) {
+    return res.status(202).json({ message: 'Aguardando QR. Tente novamente em alguns segundos.' });
+  }
+  res.json({ base64: lastQrDataUrl, code: 'qr' });
+});
 
-  const { number, message } = req.body;
-  if (!number || !message) return res.status(400).json({ error: 'number and message required' });
+// POST /message/sendText/:instance — envia mensagem (formato Evolution API)
+// header: apikey
+// body: { number, textMessage: { text } }
+app.post('/message/sendText/:instance', async (req, res) => {
+  if (!ensureApiKey(req, res)) return;
+
+  if (!isReady) {
+    return res.status(503).json({ error: 'WhatsApp não está conectado. Escaneie o QR primeiro.' });
+  }
+
+  const { number, textMessage } = req.body || {};
+  const text = textMessage?.text;
+
+  if (!number || !text) {
+    return res.status(400).json({ error: 'Campos obrigatórios: number e textMessage.text' });
+  }
 
   const normalized = normalizeNumber(number);
-  if (!normalized) return res.status(400).json({ error: 'invalid number' });
+  if (!normalized) {
+    return res.status(400).json({ error: 'Número inválido' });
+  }
+
+  const chatId = `${normalized}@c.us`;
 
   try {
-    const sent = await client.sendMessage(`${normalized}@c.us`, message);
-    res.json({ to: normalized, status: 'sent', id: sent.id._serialized || null });
+    const sent = await client.sendMessage(chatId, text);
+    await new Promise(r => setTimeout(r, MESSAGE_DELAY_MS));
+    res.json({ key: { id: sent.id._serialized || null }, status: 'PENDING' });
   } catch (err) {
+    console.error('Erro ao enviar mensagem para', normalized, err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server rodando na porta ${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Acesse http://localhost:${PORT}/status para verificar o estado`);
 });
