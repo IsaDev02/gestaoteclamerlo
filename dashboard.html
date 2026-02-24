@@ -96,8 +96,8 @@
         <div class="row g-4 mb-5">
             <div class="col-md-3">
                 <div class="stat-card border-blue shadow-sm">
-                    <div class="stat-label">Base Histórica</div>
-                    <div class="stat-value" id="totalAlunos">0</div>
+                    <div class="stat-label">Último ID</div>
+                    <div class="stat-value" id="ultimoId">0</div>
                 </div>
             </div>
             <div class="col-md-3">
@@ -162,6 +162,16 @@
 
         async function fetchDashboardData() {
             document.getElementById('loader').classList.remove('d-none');
+
+            // Busca o último ID cadastrado (query leve, apenas 1 registro)
+            const { data: ultimoAluno } = await supabaseClient
+                .from('alunos')
+                .select('id')
+                .order('id', { ascending: false })
+                .limit(1)
+                .single();
+
+            document.getElementById('ultimoId').innerText = ultimoAluno ? ultimoAluno.id : '—';
             
             let todosAlunos = [];
             let inicio = 0;
@@ -192,10 +202,9 @@
             const listaAtivos = todosAlunos.filter(a => {
                 const s = String(a.ativo || "").trim().toLowerCase();
                 return ['sim', 'true', 'ativo', '1', 's'].includes(s);
-            });
+            })
 
             // Atualizar os cards numéricos
-            document.getElementById('totalAlunos').innerText = todosAlunos.length;
             document.getElementById('totalAtivos').innerText = listaAtivos.length;
             
             const masc = listaAtivos.filter(a => String(a.genero || "").trim().toUpperCase().startsWith('M')).length;
