@@ -125,23 +125,58 @@
             </div>
 
             <div id="aba-familia" class="tab-content">
+                <!-- DADOS DA MÃE -->
                 <div class="section-title">Dados Maternos</div>
-                <div class="row g-3 mb-4">
+                <div class="row g-3 mb-2">
                     <div class="col-md-6"><label class="form-label">Nome da Mãe</label><input type="text" id="nome_mae" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label">Situação</label>
+                        <select id="situacao_mae" class="form-select">
+                            <option value="PRESENTE">PRESENTE</option>
+                            <option value="AUSENTE">AUSENTE</option>
+                            <option value="FALECIDA">FALECIDA</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4"><label class="form-label">Telefone Mãe</label><input type="text" id="tel_mae" class="form-control"></div>
+                </div>
+                <div class="row g-3 mb-4">
                     <div class="col-md-3"><label class="form-label">CPF Mãe</label><input type="text" id="cpf_mae" class="form-control"></div>
                     <div class="col-md-3"><label class="form-label">RG Mãe</label><input type="text" id="rg_mae" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Tel. Mãe</label><input type="text" id="tel_mae" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Profissão Mãe</label><input type="text" id="prof_mae" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Salário Mãe</label><input type="text" id="sal_mae" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">Profissão Mãe</label><input type="text" id="prof_mae" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">Salário Mãe</label><input type="text" id="sal_mae" class="form-control"></div>
                 </div>
+
+                <!-- DADOS DO PAI -->
                 <div class="section-title">Dados Paternos</div>
-                <div class="row g-3">
+                <div class="row g-3 mb-2">
                     <div class="col-md-6"><label class="form-label">Nome do Pai</label><input type="text" id="nome_pai" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label">Situação</label>
+                        <select id="situacao_pai" class="form-select">
+                            <option value="PRESENTE">PRESENTE</option>
+                            <option value="AUSENTE">AUSENTE</option>
+                            <option value="FALECIDO">FALECIDO</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4"><label class="form-label">Telefone Pai</label><input type="text" id="tel_pai" class="form-control"></div>
+                </div>
+                <div class="row g-3 mb-4">
                     <div class="col-md-3"><label class="form-label">CPF Pai</label><input type="text" id="cpf_pai" class="form-control"></div>
                     <div class="col-md-3"><label class="form-label">RG Pai</label><input type="text" id="rg_pai" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Tel. Pai</label><input type="text" id="tel_pai" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Profissão Pai</label><input type="text" id="prof_pai" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Salário Pai</label><input type="text" id="sal_pai" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">Profissão Pai</label><input type="text" id="prof_pai" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">Salário Pai</label><input type="text" id="sal_pai" class="form-control"></div>
+                </div>
+
+                <!-- OUTRO PARENTE -->
+                <div class="section-title">Outro Parente / Responsável</div>
+                <div class="row g-3 mb-2">
+                    <div class="col-md-4"><label class="form-label">Nome</label><input type="text" id="nome_outro" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label">Parentesco</label><input type="text" id="parentesco_outro" class="form-control" placeholder="Ex: Avó, Tio"></div>
+                    <div class="col-md-3"><label class="form-label">Profissão</label><input type="text" id="profissao_outro" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">Salário</label><input type="text" id="salario_outro" class="form-control"></div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4"><label class="form-label">Telefone</label><input type="text" id="tel_outro" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">CPF</label><input type="text" id="cpf_outro" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label">RG</label><input type="text" id="rg_outro" class="form-control"></div>
                 </div>
             </div>
 
@@ -232,31 +267,45 @@
                 const colunas = [
                     'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logradouro',
                     'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
-                    'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo',
-                    'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae',
-                    'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai',
-                    'rg_mae', 'cpf_mae', 'observacoes'
+                    'nome_pai', 'situacao_pai', 'tel_pai', 'cpf_pai', 'rg_pai', 'prof_pai', 'sal_pai',
+                    'nome_mae', 'situacao_mae', 'tel_mae', 'cpf_mae', 'rg_mae', 'prof_mae', 'sal_mae',
+                    'nome_outro', 'parentesco_outro', 'profissao_outro', 'salario_outro', 'tel_outro', 'cpf_outro', 'rg_outro',
+                    'foto', 'escola', 'periodo', 'serie', 'doc_aluno', 
+                    'turmas', 'data_entrada_projeto', 'observacoes'
                 ];
 
                 colunas.forEach(col => {
                     const el = document.getElementById(col);
+                    // O campo no HTML da tela de edição é "sal_mae", mas no cadastro foi "salario_mae" (e salaraio_outro). 
+                    // Estou mapeando direto com o nome do ID que coloquei no form.
+                    // Para o outro parente, estou pegando com fallback caso o supabase tenha retornado nulo
                     if (el) el.value = a[col] || '';
                 });
+
+                // Tratamento especial para o campo "salaraio_outro" que está escrito errado no banco, 
+                // mas na tela mapeamos o ID como salario_outro
+                if (document.getElementById('salario_outro') && a.salaraio_outro) {
+                    document.getElementById('salario_outro').value = a.salaraio_outro;
+                }
 
                 // Tratamento especial para o multi-select de projetos
                 const selectProjetos = document.getElementById('projetos');
                 
-                // CORREÇÃO: Usa String(a.projetos) para evitar erro caso o supabase retorne Array ou Número em vez de Texto
-                const projetosIds = a.projetos ? String(a.projetos).split(',').map(p => p.trim()) : [];
+                let projetosIds = [];
+                if (Array.isArray(a.projetos)) {
+                    projetosIds = a.projetos.map(String);
+                } else if (a.projetos) {
+                    projetosIds = String(a.projetos).split(',').map(p => p.trim());
+                }
                 
                 Array.from(selectProjetos.options).forEach(opt => {
                     opt.selected = projetosIds.includes(opt.value);
                 });
 
-                // ✅ CORREÇÃO do STATUS: Verifica de forma robusta o boolean true ou false
+                // Verifica o status Ativo de forma robusta
                 const swAtivo = document.getElementById('ativo');
                 swAtivo.checked = (a.ativo === true || String(a.ativo).toLowerCase() === 'true' || a.ativo === 1 || a.ativo === '1' || a.ativo === 't');
-                atualizarLabelStatus(); // ← atualiza o texto ATIVO/INATIVO na tela
+                atualizarLabelStatus(); 
 
                 if (a.foto) document.getElementById('img_preview').src = a.foto;
             }
@@ -280,10 +329,11 @@
             const colunas = [
                 'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logradouro',
                 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
-                'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo',
-                'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae',
-                'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai',
-                'rg_mae', 'cpf_mae', 'observacoes'
+                'nome_pai', 'situacao_pai', 'tel_pai', 'cpf_pai', 'rg_pai', 'prof_pai', 'sal_pai',
+                'nome_mae', 'situacao_mae', 'tel_mae', 'cpf_mae', 'rg_mae', 'prof_mae', 'sal_mae',
+                'nome_outro', 'parentesco_outro', 'profissao_outro', 'tel_outro', 'cpf_outro', 'rg_outro',
+                'foto', 'escola', 'periodo', 'serie', 'doc_aluno', 
+                'turmas', 'data_entrada_projeto', 'observacoes'
             ];
 
             colunas.forEach(col => {
@@ -293,10 +343,16 @@
                 }
             });
 
-            // Tratamento especial para o multi-select de projetos
+            // Tratamento especial para o salário do outro parente (nome errado no banco)
+            const salOutro = document.getElementById('salario_outro');
+            if (salOutro) {
+                dadosA['salaraio_outro'] = salOutro.value === "" ? null : salOutro.value;
+            }
+
+            // Tratamento do multi-select de projetos
             const selectProjetos = document.getElementById('projetos');
             const selectedIds = Array.from(selectProjetos.selectedOptions).map(opt => opt.value);
-            dadosA['projetos'] = selectedIds.length > 0 ? selectedIds.join(',') : null;
+            dadosA['projetos'] = selectedIds.length > 0 ? selectedIds : null;
 
             // Captura o valor do Switch de Ativo como boolean
             dadosA['ativo'] = document.getElementById('ativo').checked;
