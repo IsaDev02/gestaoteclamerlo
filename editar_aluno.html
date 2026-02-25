@@ -245,15 +245,18 @@
 
                 // Tratamento especial para o multi-select de projetos
                 const selectProjetos = document.getElementById('projetos');
-                const projetosIds = a.projetos ? a.projetos.split(',').map(p => p.trim()) : [];
+                
+                // CORREÇÃO: Usa String(a.projetos) para evitar erro caso o supabase retorne Array ou Número em vez de Texto
+                const projetosIds = a.projetos ? String(a.projetos).split(',').map(p => p.trim()) : [];
+                
                 Array.from(selectProjetos.options).forEach(opt => {
                     opt.selected = projetosIds.includes(opt.value);
                 });
 
-                // ✅ CORREÇÃO: lê o campo ativo diretamente como boolean do Supabase
+                // ✅ CORREÇÃO do STATUS: Verifica de forma robusta o boolean true ou false
                 const swAtivo = document.getElementById('ativo');
-                swAtivo.checked = (a.ativo === true || a.ativo === 'true' || a.ativo === 1 || a.ativo === '1');
-                atualizarLabelStatus(); // ← atualiza o texto ATIVO/INATIVO imediatamente
+                swAtivo.checked = (a.ativo === true || String(a.ativo).toLowerCase() === 'true' || a.ativo === 1 || a.ativo === '1' || a.ativo === 't');
+                atualizarLabelStatus(); // ← atualiza o texto ATIVO/INATIVO na tela
 
                 if (a.foto) document.getElementById('img_preview').src = a.foto;
             }
