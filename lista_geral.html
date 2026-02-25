@@ -189,9 +189,9 @@
                     query = query.eq('genero', filtroGenero);
                 }
 
-                // Filtro por projeto
+                // Filtro por projeto (coluna é array, usar .contains)
                 if (filtroProjeto !== "") {
-                    query = query.eq('projetos', filtroProjeto);
+                    query = query.contains('projetos', [filtroProjeto]);
                 }
 
                 const { data, error, count } = await query
@@ -293,7 +293,6 @@
         }
 
         function logout() {
-            // Adicione aqui sua lógica de logout se houver
             window.location.href = 'index.html';
         }
 
@@ -301,5 +300,3 @@
     </script>
 </body>
 </html>
-
-
