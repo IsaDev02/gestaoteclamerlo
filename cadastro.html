@@ -235,8 +235,8 @@
                 nome: document.getElementById('nome').value,
                 rg: document.getElementById('rg').value,
                 cpf: document.getElementById('cpf').value,
-                data_nascimento: document.getElementById('data_nasc').value,
-                idade: parseInt(document.getElementById('idade').value) || 0,
+                data_nascimento: document.getElementById('data_nasc').value || null, // Previne erro do postgres com texto vazio
+                idade: parseInt(document.getElementById('idade').value) || null,
                 whatsapp: document.getElementById('whatsapp').value,
                 cep: document.getElementById('cep').value,
                 rua: document.getElementById('rua').value,
@@ -270,23 +270,43 @@
             };
 
             try {
+                console.log("Tentando salvar:", dadosAluno);
+
                 // 1. Inserir Aluno
-                const { data: novoAluno, error: erroA } = await supabaseClient.from('alunos').insert([dadosAluno]).select().single();
+                const { data: novoAlunoData, error: erroA } = await supabaseClient.from('alunos').insert([dadosAluno]).select();
                 if (erroA) throw erroA;
 
-                // 2. Inserir Matrícula (Para Turmas e Novos Relatórios)
-                const { error: erroM } = await supabaseClient.from('matriculas').insert([{
+                const novoAluno = novoAlunoData && novoAlunoData.length > 0 ? novoAlunoData[0] : null;
+                if (!novoAluno) {
+                    throw new Error("O aluno foi salvo, mas o banco de dados não retornou o ID. Verifique se existe alguma política de RLS bloqueando a leitura.");
+                }
+
+                // 2. Inserir Matrícula
+                const dadosMatricula = {
                     aluno_id: novoAluno.id,
                     projeto_id: parseInt(projId),
-                    turma_id: turmaId ? parseInt(turmaId) : null,
                     data_matricula: new Date().toISOString().split('T')[0]
-                }]);
+                };
+                
+                if (turmaId) {
+                    dadosMatricula.turma_id = parseInt(turmaId);
+                }
+
+                const { error: erroM } = await supabaseClient.from('matriculas').insert([dadosMatricula]);
                 if (erroM) throw erroM;
 
                 alert("Cadastro realizado com sucesso!");
                 window.location.href = 'projetos.html';
+                
             } catch (e) {
-                alert("Erro: " + e.message);
+                console.error("Erro completo:", e);
+                
+                // Monta uma mensagem amigável e detalhada
+                let msg = e.message || JSON.stringify(e);
+                if (e.details) msg += `\nDetalhes: ${e.details}`;
+                if (e.hint) msg += `\nDica: ${e.hint}`;
+                
+                alert(`⚠️ ERRO AO SALVAR:\n\n${msg}\n\nAbra o console do navegador (F12) se precisar de mais detalhes técnicos.`);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = 'FINALIZAR E MATRICULAR';
