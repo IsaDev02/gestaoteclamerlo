@@ -25,8 +25,6 @@
         .tab-content.active { display: block; }
         .img-preview { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background: #f1f5f9; }
         .btn-salvar { padding: 10px 40px; font-weight: 700; border-radius: 8px; }
-        
-        /* Estilo para o Switch de Status no Topo */
         .status-badge-wrapper { background: #f1f5f9; padding: 10px 20px; border-radius: 10px; border: 1px solid #e2e8f0; }
         .form-check-input:checked { background-color: #10b981; border-color: #10b981; }
     </style>
@@ -44,7 +42,6 @@
             <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
             <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
             <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
-            
             <div class="mt-5 px-4">
                 <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
             </div>
@@ -80,7 +77,7 @@
         </ul>
 
         <form id="formEdicao" class="form-container">
-            
+
             <div id="aba-dados" class="tab-content active">
                 <div class="row g-4 align-items-center mb-4">
                     <div class="col-md-auto text-center">
@@ -182,7 +179,6 @@
                         <textarea id="observacoes" class="form-control" rows="4" placeholder="Digite aqui observações relevantes sobre o aluno..."></textarea>
                     </div>
                 </div>
-
                 <div class="section-title">Histórico de Projetos</div>
                 <div class="row g-3 mb-4">
                     <div class="col-md-12"><label class="form-label">Projeto Atual</label><input type="text" id="projeto_atual" class="form-control"></div>
@@ -219,7 +215,6 @@
             document.getElementById(link).classList.add('active');
         }
 
-        // Função para atualizar o texto do Status visualmente
         function atualizarLabelStatus() {
             const isChecked = document.getElementById('ativo').checked;
             const label = document.getElementById('label_status');
@@ -233,13 +228,13 @@
             const { data: a } = await supabaseClient.from('alunos').select('*').eq('id', alunoId).single();
             if (a) {
                 document.getElementById('nome_titulo').innerText = a.nome;
-                
+
                 const colunas = [
-                    'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logradouro', 
+                    'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logradouro',
                     'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
-                    'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo', 
-                    'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae', 
-                    'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
+                    'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo',
+                    'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae',
+                    'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai',
                     'rg_mae', 'cpf_mae', 'observacoes'
                 ];
 
@@ -255,12 +250,10 @@
                     opt.selected = projetosIds.includes(opt.value);
                 });
 
-                // Lógica especial para o Switch Ativo (Checkbox)
+                // ✅ CORREÇÃO: lê o campo ativo diretamente como boolean do Supabase
                 const swAtivo = document.getElementById('ativo');
-                const ativoVal = String(a.ativo ?? "").trim().toLowerCase();
-                // Considera INATIVO apenas quando explicitamente marcado como falso/inativo
-                const inativoValues = ['false', '0', 'nao', 'não', 'inativo', 'n', 'no'];
-                swAtivo.checked = (a.ativo === true || a.ativo === 'true' || a.ativo === 1 || a.ativo === '1');
+                swAtivo.checked = (a.ativo === true);
+                atualizarLabelStatus(); // ← atualiza o texto ATIVO/INATIVO imediatamente
 
                 if (a.foto) document.getElementById('img_preview').src = a.foto;
             }
@@ -282,14 +275,14 @@
 
             const dadosA = {};
             const colunas = [
-                'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logradouro', 
+                'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logradouro',
                 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
-                'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo', 
-                'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae', 
-                'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai', 
+                'nome_pai', 'tel_pai', 'nome_mae', 'tel_mae', 'foto', 'escola', 'periodo',
+                'serie', 'doc_aluno', 'prof_pai', 'sal_pai', 'prof_mae', 'sal_mae',
+                'turmas', 'data_entrada_projeto', 'rg_pai', 'cpf_pai',
                 'rg_mae', 'cpf_mae', 'observacoes'
             ];
-            
+
             colunas.forEach(col => {
                 const el = document.getElementById(col);
                 if (el) {
@@ -302,11 +295,11 @@
             const selectedIds = Array.from(selectProjetos.selectedOptions).map(opt => opt.value);
             dadosA['projetos'] = selectedIds.length > 0 ? selectedIds.join(',') : null;
 
-            // Captura o valor do Switch de Ativo
+            // Captura o valor do Switch de Ativo como boolean
             dadosA['ativo'] = document.getElementById('ativo').checked;
 
             const dadosH = { projeto_atual: document.getElementById('projeto_atual').value };
-            for(let i=1; i<=6; i++) {
+            for (let i = 1; i <= 6; i++) {
                 dadosH[`projeto_${i}`] = document.getElementById(`projeto_${i}`).value || null;
                 dadosH[`data_termino_${i}`] = document.getElementById(`data_termino_${i}`).value || null;
             }
@@ -330,17 +323,17 @@
         }
 
         function calcularIdade(nasc) {
-            if(!nasc) return;
+            if (!nasc) return;
             const idade = Math.floor((new Date() - new Date(nasc)) / 31557600000);
             document.getElementById('idade').value = idade;
         }
 
         async function buscarEndereco(cep) {
             const v = cep.replace(/\D/g, '');
-            if(v.length === 8) {
+            if (v.length === 8) {
                 const r = await fetch(`https://viacep.com.br/ws/${v}/json/`);
                 const d = await r.json();
-                if(!d.erro) {
+                if (!d.erro) {
                     document.getElementById('logradouro').value = d.logradouro;
                     document.getElementById('bairro').value = d.bairro;
                     document.getElementById('cidade').value = d.localidade;
