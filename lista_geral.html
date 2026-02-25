@@ -53,12 +53,56 @@
         </div>
 
         <div class="table-container">
-            <div class="row mb-4">
-                <div class="col-md-6">
+            <div class="row mb-4 g-2 align-items-end">
+                <!-- Barra de busca (col-md-4) -->
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">PESQUISAR</label>
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" id="filtro_geral" class="form-control border-start-0" placeholder="Pesquisar por Nome ou ID do aluno..." onkeyup="buscarAlunos()">
+                        <input type="text" id="filtro_geral" class="form-control border-start-0" placeholder="Nome ou ID do aluno..." onkeyup="aplicarFiltros()">
                     </div>
+                </div>
+
+                <!-- Filtro Status (col-md-2) -->
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">STATUS</label>
+                    <select class="form-select" id="filtro_ativo" onchange="aplicarFiltros()">
+                        <option value="">Todos</option>
+                        <option value="true">Somente Ativos</option>
+                        <option value="false">Somente Inativos</option>
+                    </select>
+                </div>
+
+                <!-- Filtro Sexo (col-md-2) -->
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">SEXO</label>
+                    <select class="form-select" id="filtro_genero" onchange="aplicarFiltros()">
+                        <option value="">Todos</option>
+                        <option value="MASCULINO">Masculino</option>
+                        <option value="FEMININO">Feminino</option>
+                    </select>
+                </div>
+
+                <!-- Filtro Projeto (col-md-3) -->
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted">PROJETO</label>
+                    <select class="form-select" id="filtro_projeto" onchange="aplicarFiltros()">
+                        <option value="">Todos os Projetos</option>
+                        <option value="1">Adolescer para Crescer</option>
+                        <option value="2">Criança Certeza</option>
+                        <option value="3">Sempre Criança</option>
+                        <option value="4">Valorizando a Infância</option>
+                        <option value="5">Clube de Mães</option>
+                        <option value="6">Animar e Celebrar</option>
+                    </select>
+                </div>
+
+                <!-- Botão Limpar Filtros (col-md-1) -->
+                <div class="col-md-1">
+                    <label class="form-label small fw-bold text-muted d-block">&nbsp;</label>
+                    <button class="btn btn-outline-secondary w-100" onclick="limparFiltros()" title="Limpar filtros">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
             </div>
 
@@ -109,6 +153,9 @@
         let paginaAtual = 0;
         const itensPorPagina = 10;
         let buscaTermo = "";
+        let filtroAtivo = "";    // "" = todos, "true" = ativos, "false" = inativos
+        let filtroGenero = "";   // "" = todos, "MASCULINO", "FEMININO"
+        let filtroProjeto = "";  // "" = todos, "1" a "6"
 
         async function carregarAlunos() {
             const corpoTabela = document.getElementById('corpo_tabela');
@@ -120,7 +167,7 @@
 
                 let query = supabaseClient
                     .from('alunos')
-                    .select('id, foto, nome, projetos', { count: 'exact' });
+                    .select('id, foto, nome, projetos, genero, ativo', { count: 'exact' });
 
                 // LÓGICA DE BUSCA: Por ID (se for número) ou Nome
                 if (buscaTermo) {
@@ -130,6 +177,21 @@
                     } else {
                         query = query.ilike('nome', `%${buscaTermo}%`);
                     }
+                }
+
+                // Filtro por status ativo
+                if (filtroAtivo !== "") {
+                    query = query.eq('ativo', filtroAtivo === "true");
+                }
+
+                // Filtro por gênero
+                if (filtroGenero !== "") {
+                    query = query.eq('genero', filtroGenero);
+                }
+
+                // Filtro por projeto
+                if (filtroProjeto !== "") {
+                    query = query.eq('projetos', filtroProjeto);
                 }
 
                 const { data, error, count } = await query
@@ -146,7 +208,7 @@
                 document.getElementById('item_proximo').classList.toggle('disabled', (to + 1) >= count);
 
                 if (!data || data.length === 0) {
-                    corpoTabela.innerHTML = '<tr><td colspan="5" class="text-center py-4">Nenhum resultado para sua busca.</td></tr>';
+                    corpoTabela.innerHTML = '<tr><td colspan="5" class="text-center py-4">Nenhum resultado para os filtros selecionados.</td></tr>';
                     return;
                 }
 
@@ -167,6 +229,10 @@
                         return nomesProjetos[String(aluno.projetos)] || String(aluno.projetos);
                     })();
 
+                    const badgeAtivo = aluno.ativo
+                        ? `<span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size:0.7rem;">Ativo</span>`
+                        : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1" style="font-size:0.7rem;">Inativo</span>`;
+
                     htmlFinal += `
                         <tr>
                             <td><span class="badge-id">#${aluno.id}</span></td>
@@ -175,7 +241,7 @@
                                      class="img-aluno shadow-sm" 
                                      onerror="this.onerror=null;this.src='${FOTO_PADRAO}';">
                             </td>
-                            <td class="fw-bold text-dark">${aluno.nome || 'Sem Nome'}</td>
+                            <td class="fw-bold text-dark">${aluno.nome || 'Sem Nome'} ${badgeAtivo}</td>
                             <td><span class="projeto-tag">${nomeProjeto}</span></td>
                             <td class="text-center">
                                 <a href="editar_aluno.html?id=${aluno.id}" class="btn btn-outline-primary btn-sm border-0" title="Editar Aluno">
@@ -200,10 +266,30 @@
             window.scrollTo(0, 0);
         }
 
-        function buscarAlunos() {
+        function aplicarFiltros() {
             buscaTermo = document.getElementById('filtro_geral').value.trim();
-            paginaAtual = 0; 
+            filtroAtivo = document.getElementById('filtro_ativo').value;
+            filtroGenero = document.getElementById('filtro_genero').value;
+            filtroProjeto = document.getElementById('filtro_projeto').value;
+            paginaAtual = 0;
             carregarAlunos();
+        }
+
+        function limparFiltros() {
+            document.getElementById('filtro_geral').value = '';
+            document.getElementById('filtro_ativo').value = '';
+            document.getElementById('filtro_genero').value = '';
+            document.getElementById('filtro_projeto').value = '';
+            buscaTermo = '';
+            filtroAtivo = '';
+            filtroGenero = '';
+            filtroProjeto = '';
+            paginaAtual = 0;
+            carregarAlunos();
+        }
+
+        function buscarAlunos() {
+            aplicarFiltros();
         }
 
         function logout() {
