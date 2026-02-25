@@ -252,7 +252,7 @@
 
                 // ✅ CORREÇÃO: lê o campo ativo diretamente como boolean do Supabase
                 const swAtivo = document.getElementById('ativo');
-                swAtivo.checked = (a.ativo === true);
+                swAtivo.checked = (a.ativo === true || a.ativo === 'true' || a.ativo === 1 || a.ativo === '1');
                 atualizarLabelStatus(); // ← atualiza o texto ATIVO/INATIVO imediatamente
 
                 if (a.foto) document.getElementById('img_preview').src = a.foto;
