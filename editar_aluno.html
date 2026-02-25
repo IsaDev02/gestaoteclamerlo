@@ -260,8 +260,7 @@
                 const ativoVal = String(a.ativo ?? "").trim().toLowerCase();
                 // Considera INATIVO apenas quando explicitamente marcado como falso/inativo
                 const inativoValues = ['false', '0', 'nao', 'não', 'inativo', 'n', 'no'];
-                swAtivo.checked = !inativoValues.includes(ativoVal);
-                atualizarLabelStatus();
+                swAtivo.checked = (a.ativo === true || a.ativo === 'true' || a.ativo === 1 || a.ativo === '1');
 
                 if (a.foto) document.getElementById('img_preview').src = a.foto;
             }
