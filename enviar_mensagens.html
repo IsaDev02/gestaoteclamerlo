@@ -142,9 +142,12 @@
     <div class="modal fade" id="modalQR" tabindex="-1">
         <div class="modal-dialog modal-sm modal-dialog-centered">
             <div class="modal-content text-center p-4">
-                <h6 class="fw-bold">Conectar Servidor</h6>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold mb-0">Conectar Servidor</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
                 <div id="areaQR" class="my-3"><div class="spinner-border text-primary"></div></div>
-                <p class="small text-muted">Escaneie o código com seu WhatsApp para ativar o envio automático.</p>
+                <p class="small text-muted" id="qrInstrucao">Escaneie o código com seu WhatsApp para ativar o envio automático.</p>
             </div>
         </div>
     </div>
@@ -164,6 +167,7 @@
         const INSTANCE = "CentroSocial";         // Deve ser igual ao INSTANCE_NAME do .env
 
         let listaDestinatarios = [];
+        let qrPollInterval = null;
 
         function alternarFiltros(tipo) {
             document.getElementById('campoAluno').style.display = tipo === 'aluno' ? 'block' : 'none';
@@ -255,27 +259,49 @@
         }
 
         async function abrirModalConexao() {
-            const modal = new bootstrap.Modal(document.getElementById('modalQR'));
+            const modalEl = document.getElementById('modalQR');
+            const modal = new bootstrap.Modal(modalEl);
+            document.getElementById('areaQR').innerHTML = '<div class="spinner-border text-primary"></div>';
+            document.getElementById('qrInstrucao').textContent = 'Aguardando QR Code...';
             modal.show();
-            try {
-                await fetch(`${API_URL}/instance/create`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'apikey': API_KEY },
-                    body: JSON.stringify({ "instanceName": INSTANCE, "token": API_KEY, "qrcode": true })
-                });
-                
-                const res = await fetch(`${API_URL}/instance/connect/${INSTANCE}`, {
-                    headers: { 'apikey': API_KEY }
-                });
-                const data = await res.json();
-                if(data.code) {
-                    document.getElementById('areaQR').innerHTML = `<img src="${data.base64}" class="img-fluid">`;
-                } else {
-                    document.getElementById('areaQR').innerHTML = "<span class='text-success'>Conectado!</span>";
+
+            if (qrPollInterval) { clearInterval(qrPollInterval); qrPollInterval = null; }
+
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                if (qrPollInterval) { clearInterval(qrPollInterval); qrPollInterval = null; }
+            }, { once: true });
+
+            async function fetchQR() {
+                try {
+                    const res = await fetch(`${API_URL}/instance/connect/${INSTANCE}`, {
+                        headers: { 'apikey': API_KEY }
+                    });
+                    const data = await res.json();
+                    if (res.status === 202) {
+                        document.getElementById('areaQR').innerHTML = '<div class="spinner-border text-primary"></div>';
+                        document.getElementById('qrInstrucao').textContent = 'Gerando QR Code, aguarde...';
+                        return;
+                    }
+                    if (data.code === 'qr' && data.base64) {
+                        document.getElementById('areaQR').innerHTML = `<img src="${data.base64}" class="img-fluid" style="max-width:260px;">`;
+                        document.getElementById('qrInstrucao').textContent = 'Escaneie o código com seu WhatsApp para ativar o envio automático.';
+                    } else if (data.instance?.state === 'open') {
+                        if (qrPollInterval) { clearInterval(qrPollInterval); qrPollInterval = null; }
+                        document.getElementById('areaQR').innerHTML = '<span class="text-success fw-bold"><i class="fas fa-check-circle fa-2x"></i><br>Conectado!</span>';
+                        document.getElementById('qrInstrucao').textContent = 'WhatsApp conectado com sucesso.';
+                    } else {
+                        document.getElementById('areaQR').innerHTML = '<div class="spinner-border text-primary"></div>';
+                        document.getElementById('qrInstrucao').textContent = 'Aguardando QR Code...';
+                    }
+                } catch (e) {
+                    if (qrPollInterval) { clearInterval(qrPollInterval); qrPollInterval = null; }
+                    document.getElementById('areaQR').innerHTML = `<div class="text-danger"><i class="fas fa-exclamation-triangle fa-2x"></i><p class="mt-2 small">Servidor offline ou inacessível.</p><button class="btn btn-sm btn-outline-primary mt-1" onclick="abrirModalConexao()">Tentar novamente</button></div>`;
+                    document.getElementById('qrInstrucao').textContent = 'Verifique se o servidor local está em execução.';
                 }
-            } catch (e) {
-                document.getElementById('areaQR').innerHTML = "Erro ao conectar ao servidor.";
             }
+
+            await fetchQR();
+            qrPollInterval = setInterval(fetchQR, 4000);
         }
     </script>
 </body>

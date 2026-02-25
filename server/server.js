@@ -60,7 +60,12 @@ let isReady = false;
 
 client.on('qr', async (qr) => {
   try {
-    lastQrDataUrl = await qrcode.toDataURL(qr);
+    lastQrDataUrl = await qrcode.toDataURL(qr, {
+      errorCorrectionLevel: 'M',
+      type: 'image/png',
+      margin: 2,
+      width: 300
+    });
     console.log('QR code gerado. Acesse GET /qr ou use o botão "Conectar WhatsApp" no sistema.');
   } catch (err) {
     console.error('Erro gerando QR:', err);
@@ -81,6 +86,7 @@ client.on('auth_failure', (msg) => {
 client.on('disconnected', (reason) => {
   console.log('WhatsApp desconectado:', reason);
   isReady = false;
+  lastQrDataUrl = null;
 });
 
 client.initialize();
