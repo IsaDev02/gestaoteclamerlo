@@ -235,13 +235,13 @@
                 nome: document.getElementById('nome').value,
                 rg: document.getElementById('rg').value,
                 cpf: document.getElementById('cpf').value,
-                data_nascimento: document.getElementById('data_nasc').value || null, // Previne erro do postgres com texto vazio
+                data_nascimento: document.getElementById('data_nasc').value || null,
                 idade: parseInt(document.getElementById('idade').value) || null,
                 whatsapp: document.getElementById('whatsapp').value,
                 cep: document.getElementById('cep').value,
                 rua: document.getElementById('rua').value,
                 numero: document.getElementById('numero').value,
-                Complemento: document.getElementById('complemento').value,
+                complemento: document.getElementById('complemento').value, // <--- CORRIGIDO AQUI (tudo minúsculo)
                 bairro: document.getElementById('bairro').value,
                 cidade: document.getElementById('cidade').value,
                 nome_mae: document.getElementById('nome_mae').value,
@@ -258,7 +258,7 @@
                 salario_pai: document.getElementById('salario_pai').value,
                 cpf_pai: document.getElementById('cpf_pai').value,
                 rg_pai: document.getElementById('rg_pai').value,
-                Nome_outro: document.getElementById('nome_outro').value,
+                Nome_outro: document.getElementById('nome_outro').value, 
                 parentesco_outro: document.getElementById('parentesco_outro').value,
                 profissao_outro: document.getElementById('profissao_outro').value,
                 salaraio_outro: document.getElementById('salario_outro').value,
@@ -301,7 +301,6 @@
             } catch (e) {
                 console.error("Erro completo:", e);
                 
-                // Monta uma mensagem amigável e detalhada
                 let msg = e.message || JSON.stringify(e);
                 if (e.details) msg += `\nDetalhes: ${e.details}`;
                 if (e.hint) msg += `\nDica: ${e.hint}`;
