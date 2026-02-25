@@ -276,16 +276,16 @@
 
                 colunas.forEach(col => {
                     const el = document.getElementById(col);
-                    // O campo no HTML da tela de edição é "sal_mae", mas no cadastro foi "salario_mae" (e salaraio_outro). 
+                    // O campo no HTML da tela de edição é "sal_mae", mas no cadastro foi "salario_mae" (e salario_outro). 
                     // Estou mapeando direto com o nome do ID que coloquei no form.
                     // Para o outro parente, estou pegando com fallback caso o supabase tenha retornado nulo
                     if (el) el.value = a[col] || '';
                 });
 
-                // Tratamento especial para o campo "salaraio_outro" que está escrito errado no banco, 
+                // Tratamento especial para o campo "salario_outro" que está escrito errado no banco, 
                 // mas na tela mapeamos o ID como salario_outro
-                if (document.getElementById('salario_outro') && a.salaraio_outro) {
-                    document.getElementById('salario_outro').value = a.salaraio_outro;
+                if (document.getElementById('salario_outro') && a.salario_outro) {
+                    document.getElementById('salario_outro').value = a.salario_outro;
                 }
 
                 // Tratamento especial para o multi-select de projetos
@@ -346,7 +346,7 @@
             // Tratamento especial para o salário do outro parente (nome errado no banco)
             const salOutro = document.getElementById('salario_outro');
             if (salOutro) {
-                dadosA['salaraio_outro'] = salOutro.value === "" ? null : salOutro.value;
+                dadosA['salario_outro'] = salOutro.value === "" ? null : salOutro.value;
             }
 
             // Tratamento do multi-select de projetos
