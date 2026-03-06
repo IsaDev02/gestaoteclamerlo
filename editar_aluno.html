@@ -99,6 +99,17 @@
                                     <option value="Outro">Outro</option>
                                 </select>
                             </div>
+                            <div class="col-md-3">
+                              <label class="form-label">Etnia</label>
+                              <select id="etnia" class="form-select">
+                                <option value="">Selecione</option>
+                                <option value="Amarelo">Amarelo</option>
+                                <option value="Branco">Branco</option>
+                                <option value="Negro">Negro</option>
+                                <option value="Indígena">Indígena</option>
+                                <option value="Pardo">Pardo</option>
+                              </select>
+                            </div>
                             <div class="col-md-3"><label class="form-label">WhatsApp</label><input type="text" id="whatsapp" class="form-control"></div>
                         </div>
                     </div>
@@ -225,6 +236,9 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- SUPABASE: Execute no SQL Editor do Supabase para adicionar a coluna etnia:
+         ALTER TABLE alunos ADD COLUMN etnia text;
+    -->
     <script>
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
@@ -265,7 +279,7 @@
                 document.getElementById('nome_titulo').innerText = a.nome;
 
                 const colunas = [
-                    'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logradouro',
+                    'nome', 'data_nascimento', 'idade', 'genero', 'etnia', 'cpf', 'rg', 'cep', 'logradouro',
                     'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
                     'nome_pai', 'situacao_pai', 'tel_pai', 'cpf_pai', 'rg_pai', 'prof_pai', 'sal_pai',
                     'nome_mae', 'situacao_mae', 'tel_mae', 'cpf_mae', 'rg_mae', 'prof_mae', 'sal_mae',
@@ -327,7 +341,7 @@
 
             const dadosA = {};
             const colunas = [
-                'nome', 'data_nascimento', 'idade', 'genero', 'cpf', 'rg', 'cep', 'logradouro',
+                'nome', 'data_nascimento', 'idade', 'genero', 'etnia', 'cpf', 'rg', 'cep', 'logradouro',
                 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
                 'nome_pai', 'situacao_pai', 'tel_pai', 'cpf_pai', 'rg_pai', 'prof_pai', 'sal_pai',
                 'nome_mae', 'situacao_mae', 'tel_mae', 'cpf_mae', 'rg_mae', 'prof_mae', 'sal_mae',
