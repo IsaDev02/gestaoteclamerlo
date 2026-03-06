@@ -94,6 +94,7 @@
                             <div class="col-md-2"><label class="form-label">Idade</label><input type="text" id="idade" class="form-control bg-light text-center" readonly></div>
                             <div class="col-md-3"><label class="form-label">Gênero</label>
                                 <select id="genero" class="form-select">
+                                    <option value="">Selecione</option>
                                     <option value="Masculino">Masculino</option>
                                     <option value="Feminino">Feminino</option>
                                     <option value="Outro">Outro</option>
@@ -294,6 +295,12 @@
                     // Estou mapeando direto com o nome do ID que coloquei no form.
                     // Para o outro parente, estou pegando com fallback caso o supabase tenha retornado nulo
                     if (el) el.value = a[col] || '';
+                });
+
+                // Tratamento especial para selects: genero e etnia
+                ['genero', 'etnia'].forEach(col => {
+                    const el = document.getElementById(col);
+                    if (el && a[col]) el.value = a[col];
                 });
 
                 // Tratamento especial para o campo "salario_outro" que está escrito errado no banco, 
