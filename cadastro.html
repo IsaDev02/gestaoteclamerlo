@@ -56,6 +56,17 @@
                     <div class="col-md-2"><label class="form-label">Nascimento</label><input type="date" id="data_nasc" class="form-control" onchange="calcularIdade(this.value)"></div>
                     <div class="col-md-1"><label class="form-label">Idade</label><input type="text" id="idade" class="form-control age-display" readonly></div>
                     <div class="col-md-3"><label class="form-label">WhatsApp (Aluno)</label><input type="text" id="whatsapp" class="form-control mascara-fone"></div>
+                    <div class="col-md-2">
+                      <label class="form-label">Etnia</label>
+                      <select id="etnia" class="form-select">
+                        <option value="">Selecione</option>
+                        <option value="Amarelo">Amarelo</option>
+                        <option value="Branco">Branco</option>
+                        <option value="Negro">Negro</option>
+                        <option value="Indígena">Indígena</option>
+                        <option value="Pardo">Pardo</option>
+                      </select>
+                    </div>
                 </div>
             </div>
 
@@ -150,6 +161,9 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- SUPABASE: Execute no SQL Editor do Supabase para adicionar a coluna etnia:
+         ALTER TABLE alunos ADD COLUMN etnia text;
+    -->
     <script>
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
@@ -238,6 +252,7 @@
                 data_nascimento: document.getElementById('data_nasc').value || null,
                 idade: parseInt(document.getElementById('idade').value) || null,
                 whatsapp: document.getElementById('whatsapp').value,
+                etnia: document.getElementById('etnia').value || null,
                 cep: document.getElementById('cep').value,
                 rua: document.getElementById('rua').value,
                 numero: document.getElementById('numero').value,
