@@ -27,6 +27,20 @@
         .btn-salvar { padding: 10px 40px; font-weight: 700; border-radius: 8px; }
         .status-badge-wrapper { background: #f1f5f9; padding: 10px 20px; border-radius: 10px; border: 1px solid #e2e8f0; }
         .form-check-input:checked { background-color: #10b981; border-color: #10b981; }
+        .signature-canvas-edit {
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            background: #fff;
+            cursor: crosshair;
+            touch-action: none;
+            display: block;
+            width: 100%;
+            height: 150px;
+        }
+        .signature-canvas-edit.signing {
+            border-color: #3b82f6;
+            border-style: solid;
+        }
     </style>
 </head>
 <body>
@@ -190,6 +204,48 @@
                     <div class="col-md-4"><label class="form-label">CPF</label><input type="text" id="cpf_outro" class="form-control"></div>
                     <div class="col-md-4"><label class="form-label">RG</label><input type="text" id="rg_outro" class="form-control"></div>
                 </div>
+
+                <!-- ASSINATURAS DOS RESPONSÁVEIS -->
+                <div class="section-title"><i class="fas fa-signature me-1"></i> Assinaturas dos Responsáveis</div>
+                <p class="text-muted small mb-3"><i class="fas fa-info-circle me-1"></i> Para atualizar a assinatura, desenhe no campo abaixo. Deixe em branco para manter a assinatura atual.</p>
+                <div class="row g-4">
+                    <!-- Assinatura da Mãe -->
+                    <div class="col-md-6">
+                        <label class="form-label">Assinatura da Mãe / Responsável 1</label>
+                        <!-- Imagem atual (carregada do Supabase) -->
+                        <div id="preview_assinatura_mae" class="mb-2" style="display:none;">
+                            <p class="text-muted small mb-1">Assinatura atual:</p>
+                            <img id="img_assinatura_mae" src="" alt="Assinatura da Mãe"
+                                 style="max-width:100%; max-height:120px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; display:block;">
+                        </div>
+                        <!-- Canvas para nova assinatura -->
+                        <canvas id="canvas_assinatura_mae" class="signature-canvas-edit"></canvas>
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="limparAssinaturaEdit('mae')">
+                                <i class="fas fa-eraser me-1"></i> Limpar
+                            </button>
+                            <span class="text-muted small align-self-center">Assine acima para substituir</span>
+                        </div>
+                    </div>
+                    <!-- Assinatura do Pai -->
+                    <div class="col-md-6">
+                        <label class="form-label">Assinatura do Pai / Responsável 2</label>
+                        <!-- Imagem atual (carregada do Supabase) -->
+                        <div id="preview_assinatura_pai" class="mb-2" style="display:none;">
+                            <p class="text-muted small mb-1">Assinatura atual:</p>
+                            <img id="img_assinatura_pai" src="" alt="Assinatura do Pai"
+                                 style="max-width:100%; max-height:120px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; display:block;">
+                        </div>
+                        <!-- Canvas para nova assinatura -->
+                        <canvas id="canvas_assinatura_pai" class="signature-canvas-edit"></canvas>
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="limparAssinaturaEdit('pai')">
+                                <i class="fas fa-eraser me-1"></i> Limpar
+                            </button>
+                            <span class="text-muted small align-self-center">Assine acima para substituir</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div id="aba-institucional" class="tab-content">
@@ -329,6 +385,16 @@
                 atualizarLabelStatus(); 
 
                 if (a.foto) document.getElementById('img_preview').src = a.foto;
+
+                // Carregar assinaturas existentes
+                if (a.assinatura_mae_url) {
+                    document.getElementById('img_assinatura_mae').src = a.assinatura_mae_url;
+                    document.getElementById('preview_assinatura_mae').style.display = 'block';
+                }
+                if (a.assinatura_pai_url) {
+                    document.getElementById('img_assinatura_pai').src = a.assinatura_pai_url;
+                    document.getElementById('preview_assinatura_pai').style.display = 'block';
+                }
             }
 
             const { data: h } = await supabaseClient.from('historico_projetos').select('*').eq('aluno_id', alunoId).maybeSingle();
@@ -391,6 +457,42 @@
                 const { error: e2 } = await supabaseClient.from('historico_projetos').update(dadosH).eq('aluno_id', alunoId);
                 if (e2) throw e2;
 
+                // Upload de assinaturas (se houver novas)
+                const canvasMae = document.getElementById('canvas_assinatura_mae');
+                const canvasPai = document.getElementById('canvas_assinatura_pai');
+                const atualizacoesAssinatura = {};
+
+                if (canvasMae && !isCanvasBlankEdit(canvasMae)) {
+                    btn.innerText = "Enviando assinatura mãe...";
+                    const blob = await new Promise(resolve => canvasMae.toBlob(resolve, 'image/png'));
+                    const caminho = `assinatura_mae_${alunoId}.png`;
+                    const { error: errMae } = await supabaseClient.storage.from(BUCKET_ASSINATURAS).upload(caminho, blob, { upsert: true, contentType: 'image/png' });
+                    if (!errMae) {
+                        const { data: urlMae } = supabaseClient.storage.from(BUCKET_ASSINATURAS).getPublicUrl(caminho);
+                        atualizacoesAssinatura['assinatura_mae_url'] = urlMae.publicUrl;
+                    } else {
+                        console.warn('Erro ao salvar assinatura mãe:', errMae.message);
+                    }
+                }
+
+                if (canvasPai && !isCanvasBlankEdit(canvasPai)) {
+                    btn.innerText = "Enviando assinatura pai...";
+                    const blob = await new Promise(resolve => canvasPai.toBlob(resolve, 'image/png'));
+                    const caminho = `assinatura_pai_${alunoId}.png`;
+                    const { error: errPai } = await supabaseClient.storage.from(BUCKET_ASSINATURAS).upload(caminho, blob, { upsert: true, contentType: 'image/png' });
+                    if (!errPai) {
+                        const { data: urlPai } = supabaseClient.storage.from(BUCKET_ASSINATURAS).getPublicUrl(caminho);
+                        atualizacoesAssinatura['assinatura_pai_url'] = urlPai.publicUrl;
+                    } else {
+                        console.warn('Erro ao salvar assinatura pai:', errPai.message);
+                    }
+                }
+
+                if (Object.keys(atualizacoesAssinatura).length > 0) {
+                    const { error: errUrlAssin } = await supabaseClient.from('alunos').update(atualizacoesAssinatura).eq('id', alunoId);
+                    if (errUrlAssin) console.warn('Erro ao salvar URLs das assinaturas:', errUrlAssin.message);
+                }
+
                 alert("Alterações gravadas com sucesso!");
                 window.location.href = 'lista_geral.html';
             } catch (err) {
@@ -433,7 +535,84 @@
             }
         }
 
-        window.onload = carregarDados;
+        // ============================================================
+        // ASSINATURAS (EDITAR ALUNO)
+        // ============================================================
+        const BUCKET_ASSINATURAS = 'fotos-alunos';
+
+        function inicializarCanvasAssinaturaEdit(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            // Ajustar resolução para DPI
+            function ajustarResolucao() {
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#1e293b';
+            }
+            ajustarResolucao();
+
+            let desenhando = false;
+            let ultimoX = 0, ultimoY = 0;
+
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            }
+
+            canvas.addEventListener('pointerdown', (e) => {
+                canvas.setPointerCapture(e.pointerId);
+                desenhando = true;
+                const pos = getPos(e);
+                ultimoX = pos.x; ultimoY = pos.y;
+                canvas.classList.add('signing');
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, (e.pressure || 0.5) * 1.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#1e293b';
+                ctx.fill();
+            });
+
+            canvas.addEventListener('pointermove', (e) => {
+                if (!desenhando) return;
+                const pos = getPos(e);
+                const pressure = e.pressure > 0 ? e.pressure : 0.5;
+                ctx.beginPath();
+                ctx.moveTo(ultimoX, ultimoY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.lineWidth = pressure * 3;
+                ctx.stroke();
+                ultimoX = pos.x; ultimoY = pos.y;
+            });
+
+            canvas.addEventListener('pointerup', () => { desenhando = false; canvas.classList.remove('signing'); });
+            canvas.addEventListener('pointercancel', () => { desenhando = false; canvas.classList.remove('signing'); });
+        }
+
+        function limparAssinaturaEdit(tipo) {
+            const canvasId = tipo === 'mae' ? 'canvas_assinatura_mae' : 'canvas_assinatura_pai';
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function isCanvasBlankEdit(canvas) {
+            const blank = document.createElement('canvas');
+            blank.width = canvas.width;
+            blank.height = canvas.height;
+            return canvas.toDataURL() === blank.toDataURL();
+        }
+
+        window.onload = async function() {
+            await carregarDados();
+            inicializarCanvasAssinaturaEdit('canvas_assinatura_mae');
+            inicializarCanvasAssinaturaEdit('canvas_assinatura_pai');
+        };
     </script>
 </body>
 </html>
