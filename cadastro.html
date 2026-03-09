@@ -20,6 +20,7 @@
         .form-control, .form-select { border-radius: 8px; padding: 10px 12px; border: 1px solid #cbd5e1; font-size: 0.95rem; }
         .benefit-row { background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
         .age-display { background: #eff6ff; color: var(--primary); font-weight: 800; text-align: center; }
+        #videoCamera { border: 3px solid var(--primary); border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -47,6 +48,7 @@
         </header>
 
         <form id="formCadastro">
+            <!-- IDENTIFICAÇÃO -->
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-id-card me-2"></i> Identificação</div>
                 <div class="row g-3">
@@ -70,6 +72,48 @@
                 </div>
             </div>
 
+            <!-- FOTO DO ALUNO -->
+            <div class="form-card">
+                <div class="section-title"><i class="fas fa-camera me-2"></i> Foto do Aluno</div>
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-3 text-center">
+                        <img id="previewFoto"
+                             src="https://ui-avatars.com/api/?name=Aluno&background=e2e8f0&color=94a3b8&size=150&rounded=true"
+                             class="rounded-circle border border-3 border-light shadow"
+                             style="width:130px;height:130px;object-fit:cover;" alt="Foto do aluno">
+                    </div>
+                    <div class="col-md-9">
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="btn btn-outline-primary" onclick="abrirCamera()">
+                                <i class="fas fa-camera me-1"></i> Tirar Foto
+                            </button>
+                            <label class="btn btn-outline-secondary mb-0" style="cursor:pointer;">
+                                <i class="fas fa-upload me-1"></i> Carregar Arquivo
+                                <input type="file" id="inputFotoArquivo" accept="image/*" style="display:none;" onchange="carregarFotoArquivo(event)">
+                            </label>
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerFoto()" id="btnRemoverFoto" style="display:none;">
+                                <i class="fas fa-trash me-1"></i> Remover
+                            </button>
+                        </div>
+                        <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i> A foto será salva automaticamente junto com o cadastro.</p>
+                    </div>
+                </div>
+                <div id="areaCamera" class="mt-3" style="display:none;">
+                    <div class="border rounded p-3 bg-light text-center">
+                        <video id="videoCamera" autoplay playsinline class="rounded mb-2" style="max-width:100%;max-height:280px;"></video>
+                        <br>
+                        <button type="button" class="btn btn-success me-2" onclick="capturarFoto()">
+                            <i class="fas fa-circle me-1"></i> Capturar
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="fecharCamera()">
+                            <i class="fas fa-times me-1"></i> Cancelar
+                        </button>
+                        <canvas id="canvasCaptura" style="display:none;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ENDEREÇO -->
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-map-marked-alt me-2"></i> Endereço</div>
                 <div class="row g-3">
@@ -82,6 +126,7 @@
                 </div>
             </div>
 
+            <!-- NÚCLEO FAMILIAR -->
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-users-line me-2"></i> Núcleo Familiar e Renda</div>
                 
@@ -128,12 +173,14 @@
                 </div>
             </div>
 
+            <!-- BENEFÍCIOS SOCIAIS -->
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-hand-holding-heart me-2"></i> Benefícios Sociais</div>
                 <div id="containerBeneficios"></div>
                 <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="adicionarLinhaBeneficio()">+ Adicionar Benefício</button>
             </div>
 
+            <!-- MATRÍCULA -->
             <div class="form-card" style="border: 2px solid var(--primary);">
                 <div class="section-title text-primary"><i class="fas fa-check-circle me-2"></i> Matrícula no Projeto e Turma</div>
                 <div class="row g-3">
@@ -168,11 +215,76 @@
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const BUCKET_FOTOS = 'fotos-alunos';
+
+        let fotoBlob = null;
+        let streamCamera = null;
 
         window.onload = () => {
             adicionarLinhaBeneficio();
         };
 
+        // ============================================================
+        // FUNÇÕES DE CÂMERA
+        // ============================================================
+        async function abrirCamera() {
+            const areaCamera = document.getElementById('areaCamera');
+            const video = document.getElementById('videoCamera');
+            areaCamera.style.display = 'block';
+            try {
+                streamCamera = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+                video.srcObject = streamCamera;
+            } catch (err) {
+                alert('Não foi possível acessar a câmera: ' + err.message);
+                areaCamera.style.display = 'none';
+            }
+        }
+
+        function fecharCamera() {
+            if (streamCamera) {
+                streamCamera.getTracks().forEach(t => t.stop());
+                streamCamera = null;
+            }
+            document.getElementById('areaCamera').style.display = 'none';
+        }
+
+        function capturarFoto() {
+            const video = document.getElementById('videoCamera');
+            const canvas = document.getElementById('canvasCaptura');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            canvas.toBlob(blob => {
+                fotoBlob = blob;
+                const url = URL.createObjectURL(blob);
+                document.getElementById('previewFoto').src = url;
+                document.getElementById('btnRemoverFoto').style.display = 'inline-block';
+                fecharCamera();
+            }, 'image/jpeg', 0.85);
+        }
+
+        function carregarFotoArquivo(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            fotoBlob = file;
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('previewFoto').src = e.target.result;
+                document.getElementById('btnRemoverFoto').style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removerFoto() {
+            fotoBlob = null;
+            document.getElementById('previewFoto').src = 'https://ui-avatars.com/api/?name=Aluno&background=e2e8f0&color=94a3b8&size=150&rounded=true';
+            document.getElementById('btnRemoverFoto').style.display = 'none';
+            document.getElementById('inputFotoArquivo').value = '';
+        }
+
+        // ============================================================
+        // TURMAS
+        // ============================================================
         async function carregarTurmas(projetoId) {
             const selectTurma = document.getElementById('select_turma');
             selectTurma.innerHTML = '<option value="">Carregando turmas...</option>';
@@ -187,6 +299,9 @@
             if (data) data.forEach(t => selectTurma.add(new Option(t.nome_turma, t.id)));
         }
 
+        // ============================================================
+        // BENEFÍCIOS
+        // ============================================================
         function adicionarLinhaBeneficio() {
             const div = document.createElement('div');
             div.className = 'benefit-row row g-2';
@@ -197,6 +312,9 @@
             document.getElementById('containerBeneficios').appendChild(div);
         }
 
+        // ============================================================
+        // UTILITÁRIOS
+        // ============================================================
         function calcularIdade(data) {
             const nasc = new Date(data);
             const hoje = new Date();
@@ -231,6 +349,9 @@
             }
         }
 
+        // ============================================================
+        // SALVAR ALUNO
+        // ============================================================
         async function salvarAluno() {
             const btn = document.getElementById('btnSalvar');
             const projId = document.getElementById('select_projeto').value;
@@ -273,7 +394,7 @@
                 salario_pai: document.getElementById('salario_pai').value,
                 cpf_pai: document.getElementById('cpf_pai').value,
                 rg_pai: document.getElementById('rg_pai').value,
-                nome_outro: document.getElementById('nome_outro').value, 
+                nome_outro: document.getElementById('nome_outro').value,
                 parentesco_outro: document.getElementById('parentesco_outro').value,
                 profissao_outro: document.getElementById('profissao_outro').value,
                 salario_outro: document.getElementById('salario_outro').value,
@@ -281,7 +402,7 @@
                 cpf_outro: document.getElementById('cpf_outro').value,
                 rg_outro: document.getElementById('rg_outro').value,
                 beneficios_detalhados: listaBeneficios,
-                projetos: [projId] // <--- CORRIGIDO AQUI: Colocado dentro de uma array []
+                projetos: [projId]
             };
 
             try {
@@ -296,7 +417,42 @@
                     throw new Error("O aluno foi salvo, mas o banco de dados não retornou o ID. Verifique se existe alguma política de RLS bloqueando a leitura.");
                 }
 
-                // 2. Inserir Matrícula
+                // 2. Upload da foto (se houver)
+                if (fotoBlob) {
+                    btn.innerHTML = 'ENVIANDO FOTO...';
+                    const ext = fotoBlob.type === 'image/png' ? 'png' : 'jpg';
+                    const caminhoStorage = `${novoAluno.id}.${ext}`;
+
+                    const { error: uploadError } = await supabaseClient.storage
+                        .from(BUCKET_FOTOS)
+                        .upload(caminhoStorage, fotoBlob, {
+                            upsert: true,
+                            contentType: fotoBlob.type || 'image/jpeg'
+                        });
+
+                    if (uploadError) {
+                        console.warn('Erro ao enviar foto (cadastro salvo sem foto):', uploadError.message);
+                    } else {
+                        // Obter URL pública e gravar na coluna 'foto'
+                        const { data: urlData } = supabaseClient.storage
+                            .from(BUCKET_FOTOS)
+                            .getPublicUrl(caminhoStorage);
+
+                        const urlPublica = urlData.publicUrl;
+
+                        const { error: updateError } = await supabaseClient
+                            .from('alunos')
+                            .update({ foto: urlPublica })
+                            .eq('id', novoAluno.id);
+
+                        if (updateError) {
+                            console.warn('Foto enviada mas erro ao gravar URL:', updateError.message);
+                        }
+                    }
+                }
+
+                // 3. Inserir Matrícula
+                btn.innerHTML = 'FINALIZANDO...';
                 const dadosMatricula = {
                     aluno_id: novoAluno.id,
                     projeto_id: parseInt(projId),
