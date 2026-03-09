@@ -35,7 +35,7 @@
             touch-action: none;
             display: block;
             width: 100%;
-            height: 150px;
+            height: 160px;
         }
         .signature-canvas-edit.signing {
             border-color: #3b82f6;
@@ -331,7 +331,7 @@
         async function carregarDados() {
             if (!alunoId) return;
 
-            const { data: a } = await supabaseClient.from('alunos').select('*').eq('id', alunoId).single();
+            const { data: a } = await supabaseClient.from('alunos').select('*, assinatura_mae_url, assinatura_pai_url').eq('id', alunoId).single();
             if (a) {
                 document.getElementById('nome_titulo').innerText = a.nome;
 
