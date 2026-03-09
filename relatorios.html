@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios | Centro Social Irmã Tecla Merlo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --bg-body: #f1f5f9; --sidebar-bg: #1e293b; --primary: #3b82f6; --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        body { background-color: var(--bg-body); font-family: 'Inter', sans-serif; color: #1e293b; }
+        .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar-bg); padding: 20px 0; z-index: 100; }
+        .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; text-decoration: none; display: block; font-size: 0.9rem; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+        .main-content { margin-left: 240px; padding: 40px; }
+        .card-config { background: #fff; border-radius: 12px; padding: 25px; box-shadow: var(--card-shadow); margin-bottom: 25px; border: 1px solid #e2e8f0; }
+        .section-title { font-size: 1rem; font-weight: 700; color: var(--primary); margin-bottom: 20px; display: flex; align-items: center; border-bottom: 2px solid #eff6ff; padding-bottom: 10px; }
+        .campo-check { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer; transition: all 0.2s; user-select: none; }
+        .campo-check:hover { border-color: var(--primary); background: #eff6ff; }
+        .campo-check.selecionado { border-color: var(--primary); background: #eff6ff; color: var(--primary); font-weight: 600; }
+        .campo-check input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+        .btn-export { min-width: 160px; font-weight: 600; border-radius: 8px; padding: 10px 20px; }
+        #tabelaPreview { font-size: 0.88rem; }
+        #tabelaPreview th { background: #1e293b; color: #fff; font-weight: 600; white-space: nowrap; }
+        #tabelaPreview td { white-space: nowrap; }
+        .badge-ativo { background: #dcfce7; color: #16a34a; font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+        .badge-inativo { background: #f1f5f9; color: #64748b; font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+        .select-all-btn { font-size: 0.82rem; cursor: pointer; color: var(--primary); text-decoration: underline; background: none; border: none; padding: 0; }
+        #loadingSpinner { display: none; }
+        .projeto-tag { background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-right: 3px; display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="px-4 mb-5 text-white fw-bold"><h5><i class="fas fa-graduation-cap me-2"></i>Centro Social Irmã Tecla Merlo</h5></div>
+        <nav class="nav flex-column">
+            <a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
+            <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
+            <a class="nav-link" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
+            <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
+            <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
+            <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
+            <a class="nav-link active" href="relatorios.html"><i class="fas fa-file-alt me-2"></i> Relatórios</a>
+            <div class="mt-5 px-4">
+                <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="mb-4 d-flex justify-content-between align-items-center">
+            <div>
+                <h3 class="fw-bold mb-1">Relatórios</h3>
+                <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>O relatório exporta apenas alunos <strong>ativos</strong>.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-danger btn-export" onclick="exportarPDF()" id="btnPDF" disabled>
+                    <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+                </button>
+                <button class="btn btn-success btn-export" onclick="exportarExcel()" id="btnExcel" disabled>
+                    <i class="fas fa-file-excel me-2"></i>Exportar Excel
+                </button>
+            </div>
+        </header>
+
+        <!-- Seleção de Campos -->
+        <div class="card-config">
+            <div class="section-title">
+                <i class="fas fa-sliders-h me-2"></i> Selecione os Campos do Relatório
+                <div class="ms-auto d-flex gap-3">
+                    <button class="select-all-btn" onclick="selecionarTodos()">Selecionar todos</button>
+                    <button class="select-all-btn text-danger" style="color:#ef4444!important;" onclick="limparSelecao()">Limpar</button>
+                </div>
+            </div>
+            <div class="row g-2" id="listaCampos">
+                <!-- Campos gerados via JS -->
+            </div>
+            <div class="mt-4 d-flex align-items-center gap-3">
+                <button class="btn btn-primary px-4 fw-bold" onclick="gerarRelatorio()" id="btnGerar">
+                    <i class="fas fa-search me-2"></i>Gerar Relatório
+                </button>
+                <div id="loadingSpinner">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2 text-muted small">Buscando dados...</span>
+                </div>
+                <span id="contadorAlunos" class="text-muted small"></span>
+            </div>
+        </div>
+
+        <!-- Preview da Tabela -->
+        <div class="card-config d-none" id="areaPreview">
+            <div class="section-title"><i class="fas fa-table me-2"></i> Pré-visualização</div>
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered" id="tabelaPreview">
+                    <thead id="theadPreview"></thead>
+                    <tbody id="tbodyPreview"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Libs externas -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- jsPDF + AutoTable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <!-- SheetJS (Excel) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+
+    <script>
+        const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const nomesDosProjetos = {
+            "1": "Adolescer para Crescer",
+            "2": "Criança Certeza",
+            "3": "Sempre Criança",
+            "4": "Valorizando a Infância",
+            "5": "Clube de Mães",
+            "6": "Animar e Celebrar"
+        };
+
+        const CAMPOS_DISPONIVEIS = [
+            { key: 'id',              label: 'ID',               icone: 'fa-hashtag' },
+            { key: 'nome',            label: 'Nome',              icone: 'fa-user' },
+            { key: 'data_nascimento', label: 'Data de Nasc.',     icone: 'fa-calendar' },
+            { key: 'idade',           label: 'Idade',             icone: 'fa-birthday-cake' },
+            { key: 'genero',          label: 'Gênero',            icone: 'fa-venus-mars' },
+            { key: 'cpf',             label: 'CPF',               icone: 'fa-id-card' },
+            { key: 'rua',             label: 'Rua',               icone: 'fa-road' },
+            { key: 'bairro',          label: 'Bairro',            icone: 'fa-map-marker-alt' },
+            { key: 'escola',          label: 'Escola',            icone: 'fa-school' },
+            { key: 'periodo',         label: 'Período',           icone: 'fa-clock' },
+            { key: 'serie',           label: 'Série',             icone: 'fa-layer-group' },
+            { key: 'ativo',           label: 'Ativo',             icone: 'fa-toggle-on' },
+            { key: 'situacao_mae',    label: 'Situação Mãe',      icone: 'fa-female' },
+            { key: 'situacao_pai',    label: 'Situação Pai',      icone: 'fa-male' },
+            { key: 'projetos',        label: 'Projetos',          icone: 'fa-folder' },
+            { key: 'etnia',           label: 'Etnia',             icone: 'fa-globe' },
+        ];
+
+        let dadosRelatorio = [];
+        let camposSelecionados = [];
+
+        // ===== RENDER CHECKBOXES =====
+        function renderizarCampos() {
+            const container = document.getElementById('listaCampos');
+            container.innerHTML = '';
+            CAMPOS_DISPONIVEIS.forEach(campo => {
+                const col = document.createElement('div');
+                col.className = 'col-6 col-md-4 col-lg-3';
+                col.innerHTML = `
+                    <label class="campo-check w-100" id="label-${campo.key}">
+                        <input type="checkbox" value="${campo.key}" onchange="atualizarSelecao()" id="chk-${campo.key}">
+                        <i class="fas ${campo.icone} text-primary" style="width:16px;"></i>
+                        <span>${campo.label}</span>
+                    </label>
+                `;
+                container.appendChild(col);
+            });
+        }
+
+        function atualizarSelecao() {
+            camposSelecionados = [];
+            CAMPOS_DISPONIVEIS.forEach(campo => {
+                const chk = document.getElementById('chk-' + campo.key);
+                const label = document.getElementById('label-' + campo.key);
+                if (chk.checked) {
+                    camposSelecionados.push(campo.key);
+                    label.classList.add('selecionado');
+                } else {
+                    label.classList.remove('selecionado');
+                }
+            });
+        }
+
+        function selecionarTodos() {
+            CAMPOS_DISPONIVEIS.forEach(c => {
+                document.getElementById('chk-' + c.key).checked = true;
+            });
+            atualizarSelecao();
+        }
+
+        function limparSelecao() {
+            CAMPOS_DISPONIVEIS.forEach(c => {
+                document.getElementById('chk-' + c.key).checked = false;
+            });
+            atualizarSelecao();
+            document.getElementById('areaPreview').classList.add('d-none');
+            document.getElementById('contadorAlunos').innerText = '';
+            document.getElementById('btnPDF').disabled = true;
+            document.getElementById('btnExcel').disabled = true;
+            dadosRelatorio = [];
+        }
+
+        // ===== GERAR RELATÓRIO =====
+        async function gerarRelatorio() {
+            if (camposSelecionados.length === 0) {
+                alert('Selecione pelo menos um campo para gerar o relatório.');
+                return;
+            }
+
+            const spinner = document.getElementById('loadingSpinner');
+            const btnGerar = document.getElementById('btnGerar');
+            spinner.style.display = 'inline-flex';
+            btnGerar.disabled = true;
+            document.getElementById('contadorAlunos').innerText = '';
+
+            try {
+                // Sempre busca todos os campos necessários, filtra ativo=true
+                const { data, error } = await supabaseClient
+                    .from('alunos')
+                    .select('*')
+                    .eq('ativo', true)
+                    .order('nome', { ascending: true });
+
+                if (error) throw error;
+
+                dadosRelatorio = data || [];
+
+                renderizarTabela(dadosRelatorio, camposSelecionados);
+
+                document.getElementById('contadorAlunos').innerText =
+                    `${dadosRelatorio.length} aluno(s) ativo(s) encontrado(s)`;
+                document.getElementById('areaPreview').classList.remove('d-none');
+                document.getElementById('btnPDF').disabled = dadosRelatorio.length === 0;
+                document.getElementById('btnExcel').disabled = dadosRelatorio.length === 0;
+
+            } catch (err) {
+                alert('Erro ao buscar dados: ' + err.message);
+                console.error(err);
+            } finally {
+                spinner.style.display = 'none';
+                btnGerar.disabled = false;
+            }
+        }
+
+        // ===== RENDER TABELA =====
+        function getLabelCampo(key) {
+            return CAMPOS_DISPONIVEIS.find(c => c.key === key)?.label || key;
+        }
+
+        function formatarValor(key, val) {
+            if (val === null || val === undefined || val === '') return '—';
+            if (key === 'ativo') {
+                return val === true || val === 'true' || val === 1 || val === 'sim' ? 'Sim' : 'Não';
+            }
+            if (key === 'data_nascimento') {
+                try {
+                    const [y, m, d] = val.split('-');
+                    return `${d}/${m}/${y}`;
+                } catch { return val; }
+            }
+            if (key === 'projetos') {
+                if (!val) return '—';
+                const arr = Array.isArray(val) ? val : String(val).split(',');
+                return arr.map(id => nomesDosProjetos[String(id).trim()] || String(id).trim()).join(', ');
+            }
+            return String(val);
+        }
+
+        function formatarValorHTML(key, val) {
+            if (val === null || val === undefined || val === '') return '<span class="text-muted">—</span>';
+            if (key === 'ativo') {
+                const isAtivo = val === true || val === 'true' || val === 1 || val === 'sim';
+                return isAtivo
+                    ? '<span class="badge-ativo">Ativo</span>'
+                    : '<span class="badge-inativo">Inativo</span>';
+            }
+            if (key === 'data_nascimento') {
+                try {
+                    const [y, m, d] = val.split('-');
+                    return `${d}/${m}/${y}`;
+                } catch { return val; }
+            }
+            if (key === 'projetos') {
+                if (!val) return '<span class="text-muted">—</span>';
+                const arr = Array.isArray(val) ? val : String(val).split(',');
+                return arr.map(id => `<span class="projeto-tag">${nomesDosProjetos[String(id).trim()] || String(id).trim()}</span>`).join('');
+            }
+            return String(val);
+        }
+
+        function renderizarTabela(dados, campos) {
+            const thead = document.getElementById('theadPreview');
+            const tbody = document.getElementById('tbodyPreview');
+
+            // Header
+            thead.innerHTML = '<tr>' + campos.map(k => `<th>${getLabelCampo(k)}</th>`).join('') + '</tr>';
+
+            // Body
+            if (dados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${campos.length}" class="text-center py-4 text-muted">Nenhum aluno ativo encontrado.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = dados.map(aluno =>
+                '<tr>' + campos.map(k => `<td>${formatarValorHTML(k, aluno[k])}</td>`).join('') + '</tr>'
+            ).join('');
+        }
+
+        // ===== EXPORTAR PDF =====
+        function exportarPDF() {
+            if (!dadosRelatorio.length || !camposSelecionados.length) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.text('Centro Social Irmã Tecla Merlo — Relatório de Alunos Ativos', 14, 14);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100);
+            const hoje = new Date().toLocaleDateString('pt-BR');
+            doc.text(`Gerado em: ${hoje}  |  Total de alunos: ${dadosRelatorio.length}`, 14, 20);
+            doc.setTextColor(0);
+
+            const cabecalho = camposSelecionados.map(k => getLabelCampo(k));
+            const linhas = dadosRelatorio.map(aluno =>
+                camposSelecionados.map(k => formatarValor(k, aluno[k]))
+            );
+
+            doc.autoTable({
+                head: [cabecalho],
+                body: linhas,
+                startY: 25,
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [248, 250, 252] },
+                margin: { left: 14, right: 14 },
+            });
+
+            doc.save(`relatorio_alunos_${hoje.replace(/\//g, '-')}.pdf`);
+        }
+
+        // ===== EXPORTAR EXCEL =====
+        function exportarExcel() {
+            if (!dadosRelatorio.length || !camposSelecionados.length) return;
+
+            const cabecalho = camposSelecionados.map(k => getLabelCampo(k));
+            const linhas = dadosRelatorio.map(aluno =>
+                camposSelecionados.map(k => formatarValor(k, aluno[k]))
+            );
+
+            const wsData = [cabecalho, ...linhas];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            // Largura automática das colunas
+            const colWidths = cabecalho.map((h, i) => {
+                const maxLen = Math.max(h.length, ...linhas.map(r => String(r[i] || '').length));
+                return { wch: Math.min(maxLen + 2, 40) };
+            });
+            ws['!cols'] = colWidths;
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Alunos Ativos');
+
+            const hoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+            XLSX.writeFile(wb, `relatorio_alunos_${hoje}.xlsx`);
+        }
+
+        // ===== LOGOUT =====
+        function logout() {
+            sessionStorage.clear();
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        // ===== INIT =====
+        renderizarCampos();
+    </script>
+</body>
+</html>
