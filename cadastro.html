@@ -65,10 +65,8 @@
                       <label class="form-label">Etnia</label>
                       <select id="etnia" class="form-select">
                         <option value="">Selecione</option>
-                        <option value="Amarelo">Amarelo</option>
                         <option value="Branco">Branco</option>
                         <option value="Negro">Negro</option>
-                        <option value="Indígena">Indígena</option>
                         <option value="Pardo">Pardo</option>
                       </select>
                     </div>
@@ -732,5 +730,10 @@
             }
         }
     </script>
+    <!-- Migração de Etnia no Supabase (execute no SQL Editor):
+         UPDATE alunos SET etnia = 'Branco' WHERE etnia IN ('0', '1', 'Amarelo');
+         UPDATE alunos SET etnia = 'Negro'  WHERE etnia IN ('2');
+         UPDATE alunos SET etnia = 'Pardo'  WHERE etnia IN ('3', '4', 'Indígena');
+    -->
 </body>
 </html>
