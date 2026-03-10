@@ -109,9 +109,9 @@
                             <div class="col-md-3"><label class="form-label">Gênero</label>
                                 <select id="genero" class="form-select">
                                     <option value="">Selecione</option>
-                                    <option value="Masculino">Masculino</option>
-                                    <option value="Feminino">Feminino</option>
-                                    <option value="Outro">Outro</option>
+                                    <option value="MASCULINO">Masculino</option>
+                                    <option value="FEMININO">Feminino</option>
+                                    <option value="OUTRO">Outro</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -386,7 +386,7 @@
                 document.getElementById('nome_titulo').innerText = a.nome;
 
                 const colunas = [
-                    'nome', 'data_nascimento', 'idade', 'genero', 'etnia', 'cpf', 'rg', 'cep', 'logradouro',
+                    'nome', 'data_nascimento', 'idade', 'cpf', 'rg', 'cep', 'logradouro',
                     'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
                     'nome_pai', 'situacao_pai', 'tel_pai', 'cpf_pai', 'rg_pai', 'prof_pai', 'sal_pai',
                     'nome_mae', 'situacao_mae', 'tel_mae', 'cpf_mae', 'rg_mae', 'prof_mae', 'sal_mae',
@@ -406,7 +406,7 @@
                 // Tratamento especial para selects: genero e etnia
                 ['genero', 'etnia'].forEach(col => {
                     const el = document.getElementById(col);
-                    if (el && a[col]) el.value = a[col];
+                    if (el && a[col] != null) el.value = a[col];
                 });
 
                 // Tratamento especial para o campo "salario_outro" que está escrito errado no banco, 
