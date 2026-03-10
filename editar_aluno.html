@@ -275,6 +275,8 @@
             </div>
 
             <div id="aba-historico" class="tab-content">
+
+                <!-- Observações Gerais -->
                 <div class="section-title">Observações Gerais</div>
                 <div class="row g-3 mb-4">
                     <div class="col-md-12">
@@ -282,11 +284,44 @@
                         <textarea id="observacoes" class="form-control" rows="4" placeholder="Digite aqui observações relevantes sobre o aluno..."></textarea>
                     </div>
                 </div>
-                <div class="section-title">Histórico de Projetos</div>
+
+                <!-- Curso Atual -->
+                <div class="section-title">Curso Atual</div>
                 <div class="row g-3 mb-4">
-                    <div class="col-md-12"><label class="form-label">Projeto Atual</label><input type="text" id="projeto_atual" class="form-control"></div>
+                    <div class="col-md-6">
+                        <label class="form-label">Projeto Atual</label>
+                        <select id="projeto_atual" class="form-select">
+                            <option value=""></option>
+                            <option value="Adolescer para Crescer">Adolescer para Crescer</option>
+                            <option value="Criança Certeza">Criança Certeza</option>
+                            <option value="Sempre Criança">Sempre Criança</option>
+                            <option value="Valorizando a Infância">Valorizando a Infância</option>
+                            <option value="Clube de Mães">Clube de Mães</option>
+                            <option value="Animar e Celebrar">Animar e Celebrar</option>
+                        </select>
+                        <small class="text-muted">Selecione o projeto em que o aluno está atualmente matriculado</small>
+                    </div>
                 </div>
-                <div id="lista-projetos-antigos"></div>
+
+                <!-- Histórico de Projetos Anteriores -->
+                <div class="section-title">Histórico de Projetos Anteriores</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-12">
+                        <table class="table table-bordered table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:40px;" class="text-center text-muted">#</th>
+                                    <th>Projeto</th>
+                                    <th style="width:200px;">Data de Término</th>
+                                    <th style="width:130px;" class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historico-projetos-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
 
         </form>
@@ -304,14 +339,31 @@
         const urlParams = new URLSearchParams(window.location.search);
         const alunoId = urlParams.get('id');
 
-        const histContainer = document.getElementById('lista-projetos-antigos');
+        // Gera as linhas editáveis da tabela de histórico
+        const tbody = document.getElementById('historico-projetos-tbody');
         for (let i = 1; i <= 6; i++) {
-            histContainer.innerHTML += `
-                <div class="row g-2 mb-2 align-items-center">
-                    <div class="col-md-8"><input type="text" id="projeto_${i}" class="form-control" placeholder="Projeto Anterior ${i}"></div>
-                    <div class="col-md-3"><input type="date" id="data_termino_${i}" class="form-control"></div>
-                    <div class="col-md-1"><span class="badge bg-secondary">P${i}</span></div>
-                </div>`;
+            const tr = document.createElement('tr');
+            tr.id = `historico-row-${i}`;
+            tr.innerHTML = `
+                <td class="text-center text-muted fw-bold">${i}</td>
+                <td><input type="text" id="projeto_${i}" class="form-control form-control-sm" placeholder="Nome do projeto anterior"></td>
+                <td><input type="date" id="data_termino_${i}" class="form-control form-control-sm"></td>
+                <td class="text-center" id="badge-status-${i}">
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Em andamento</span>
+                </td>`;
+            tbody.appendChild(tr);
+            document.getElementById(`data_termino_${i}`).addEventListener('input', () => atualizarBadgeHistorico(i));
+        }
+
+        function badgeHTML(concluido) {
+            return concluido
+                ? `<span class="badge bg-success-subtle text-success border border-success-subtle">Concluído</span>`
+                : `<span class="badge bg-warning-subtle text-warning border border-warning-subtle">Em andamento</span>`;
+        }
+
+        function atualizarBadgeHistorico(i) {
+            const data = document.getElementById(`data_termino_${i}`).value;
+            document.getElementById(`badge-status-${i}`).innerHTML = badgeHTML(!!data);
         }
 
         function toggleAba(id, link) {
@@ -403,6 +455,7 @@
                 for (let i = 1; i <= 6; i++) {
                     document.getElementById(`projeto_${i}`).value = h[`projeto_${i}`] || '';
                     document.getElementById(`data_termino_${i}`).value = h[`data_termino_${i}`] || '';
+                    atualizarBadgeHistorico(i);
                 }
             }
         }
