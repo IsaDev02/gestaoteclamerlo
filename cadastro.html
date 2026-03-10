@@ -62,6 +62,15 @@
                     <div class="col-md-1"><label class="form-label">Idade</label><input type="text" id="idade" class="form-control age-display" readonly></div>
                     <div class="col-md-3"><label class="form-label">WhatsApp (Aluno)</label><input type="text" id="whatsapp" class="form-control mascara-fone"></div>
                     <div class="col-md-2">
+                      <label class="form-label">Gênero</label>
+                      <select id="genero" class="form-select">
+                        <option value="">Selecione</option>
+                        <option value="MASCULINO">Masculino</option>
+                        <option value="FEMININO">Feminino</option>
+                        <option value="OUTRO">Outro</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2">
                       <label class="form-label">Etnia</label>
                       <select id="etnia" class="form-select">
                         <option value="">Selecione</option>
@@ -558,6 +567,7 @@
                 data_nascimento: document.getElementById('data_nasc').value || null,
                 idade: parseInt(document.getElementById('idade').value) || null,
                 whatsapp: document.getElementById('whatsapp').value,
+                genero: document.getElementById('genero').value || null,
                 etnia: document.getElementById('etnia').value || null,
                 cep: document.getElementById('cep').value,
                 rua: document.getElementById('rua').value,
