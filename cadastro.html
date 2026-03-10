@@ -174,6 +174,77 @@
                     <div class="col-md-4"><label class="form-label">CPF</label><input type="text" id="cpf_outro" class="form-control mascara-cpf"></div>
                     <div class="col-md-4"><label class="form-label">RG</label><input type="text" id="rg_outro" class="form-control mascara-rg"></div>
                 </div>
+
+                <!-- INFORMAÇÕES DA MORADIA -->
+                <h6 class="text-primary fw-bold mb-3 mt-4">Informações da Moradia</h6>
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Pais Vivem Juntos</label>
+                        <select id="pais_juntos" class="form-select">
+                            <option value="">Selecione...</option>
+                            <option value="Sim">Sim</option>
+                            <option value="Não">Não</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Quantidade de Irmãos</label>
+                        <select id="qtd_irmaos" class="form-select">
+                            <option value="">Selecione...</option>
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Moradia</label>
+                        <select id="tipo_moradia" class="form-select">
+                            <option value="">Selecione...</option>
+                            <option value="Casa Própria">Casa Própria</option>
+                            <option value="Aluguel">Aluguel</option>
+                            <option value="Casa Cedida">Casa Cedida</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Qtd. Cômodos</label>
+                        <select id="qtd_comodos" class="form-select">
+                            <option value="">Selecione...</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Pessoas na Casa</label>
+                        <select id="total_pessoas_casa" class="form-select">
+                            <option value="">Selecione...</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
 
@@ -245,6 +316,13 @@
     <!-- Execute no SQL Editor do Supabase:
          ALTER TABLE alunos ADD COLUMN assinatura_mae_url text;
          ALTER TABLE alunos ADD COLUMN assinatura_pai_url text;
+    -->
+    <!-- Execute no SQL Editor do Supabase para adicionar os novos campos de núcleo familiar:
+         ALTER TABLE alunos ADD COLUMN IF NOT EXISTS pais_juntos text;
+         ALTER TABLE alunos ADD COLUMN IF NOT EXISTS qtd_irmaos integer;
+         ALTER TABLE alunos ADD COLUMN IF NOT EXISTS tipo_moradia text;
+         ALTER TABLE alunos ADD COLUMN IF NOT EXISTS qtd_comodos integer;
+         ALTER TABLE alunos ADD COLUMN IF NOT EXISTS total_pessoas_casa integer;
     -->
     <script>
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
@@ -510,6 +588,11 @@
                 tel_outro: document.getElementById('tel_outro').value,
                 cpf_outro: document.getElementById('cpf_outro').value,
                 rg_outro: document.getElementById('rg_outro').value,
+                pais_juntos: document.getElementById('pais_juntos').value || null,
+                qtd_irmaos: document.getElementById('qtd_irmaos').value !== '' ? parseInt(document.getElementById('qtd_irmaos').value) : null,
+                tipo_moradia: document.getElementById('tipo_moradia').value || null,
+                qtd_comodos: parseInt(document.getElementById('qtd_comodos').value) || null,
+                total_pessoas_casa: parseInt(document.getElementById('total_pessoas_casa').value) || null,
                 beneficios_detalhados: listaBeneficios,
                 projetos: [projId]
             };
