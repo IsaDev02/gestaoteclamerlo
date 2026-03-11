@@ -41,6 +41,39 @@
             border-color: #3b82f6;
             border-style: solid;
         }
+        .projeto-atual-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .projeto-atual-card .projeto-icon {
+            background: #3b82f6;
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        .projeto-atual-card .projeto-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #3b82f6;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .projeto-atual-card .projeto-nome {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
     </style>
 </head>
 <body>
@@ -287,9 +320,17 @@
                 <!-- Curso Atual -->
                 <div class="section-title">Curso Atual</div>
                 <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label">Projeto Atual</label>
-                        <select id="projeto_atual" class="form-select">
+                    <div class="col-md-8">
+                        <div class="projeto-atual-card mb-3">
+                            <div class="projeto-icon"><i class="fas fa-folder-open"></i></div>
+                            <div>
+                                <div class="projeto-label">Projeto Atual</div>
+                                <div class="projeto-nome" id="projeto_atual_display">—</div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="projeto_atual">
+                        <label class="form-label">Alterar Projeto Atual</label>
+                        <select id="projeto_atual_alterar" class="form-select form-select-sm" onchange="atualizarProjetoAtualDisplay(this.value);">
                             <option value=""></option>
                             <option value="Adolescer para Crescer">Adolescer para Crescer</option>
                             <option value="Criança Certeza">Criança Certeza</option>
@@ -298,7 +339,7 @@
                             <option value="Clube de Mães">Clube de Mães</option>
                             <option value="Animar e Celebrar">Animar e Celebrar</option>
                         </select>
-                        <small class="text-muted">Selecione o projeto em que o aluno está atualmente matriculado</small>
+                        <small class="text-muted">Selecione para alterar o projeto em que o aluno está matriculado</small>
                     </div>
                 </div>
 
@@ -324,6 +365,19 @@
             </div>
 
             <div id="aba-rematricula" class="tab-content">
+
+                <!-- Projeto Atual -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-8">
+                        <div class="projeto-atual-card">
+                            <div class="projeto-icon"><i class="fas fa-folder-open"></i></div>
+                            <div>
+                                <div class="projeto-label">Projeto Atual</div>
+                                <div class="projeto-nome" id="rematricula_projeto_atual_display">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Histórico de Rematrículas Anteriores -->
                 <div class="section-title">Histórico de Rematrículas</div>
@@ -526,6 +580,7 @@
             const { data: h } = await supabaseClient.from('historico_projetos').select('*').eq('aluno_id', alunoIdInt).maybeSingle();
             if (h) {
                 document.getElementById('projeto_atual').value = h.projeto_atual || '';
+                atualizarProjetoAtualDisplay(h.projeto_atual || '');
                 for (let i = 1; i <= 6; i++) {
                     document.getElementById(`projeto_${i}`).value = h[`projeto_${i}`] || '';
                     document.getElementById(`data_termino_${i}`).value = h[`data_termino_${i}`] || '';
@@ -546,7 +601,9 @@
                         3: 'Sempre Criança', 4: 'Valorizando a Infância',
                         5: 'Clube de Mães', 6: 'Animar e Celebrar'
                     };
-                    document.getElementById('projeto_atual').value = nomesProjetos[m.projeto_id] || '';
+                    const nomeProjeto = nomesProjetos[m.projeto_id] || '';
+                    document.getElementById('projeto_atual').value = nomeProjeto;
+                    atualizarProjetoAtualDisplay(nomeProjeto);
                 }
             }
         }
@@ -765,10 +822,24 @@
 
         // ── REMATRÍCULA ────────────────────────────────────────────────
 
+        function atualizarProjetoAtualDisplay(valor) {
+            const hiddenInput = document.getElementById('projeto_atual');
+            if (hiddenInput) hiddenInput.value = valor || '';
+            const displayHist = document.getElementById('projeto_atual_display');
+            if (displayHist) displayHist.textContent = valor || '—';
+            const displayRemat = document.getElementById('rematricula_projeto_atual_display');
+            if (displayRemat) displayRemat.textContent = valor || '—';
+            const alterarSelect = document.getElementById('projeto_atual_alterar');
+            if (alterarSelect) alterarSelect.value = valor || '';
+        }
+
         function inicializarAbaRematricula() {
             document.getElementById('rematricula_data').value = new Date().toISOString().split('T')[0];
             const projetoAtualEl = document.getElementById('projeto_atual');
-            document.getElementById('rematricula_projeto_anterior').value = projetoAtualEl ? projetoAtualEl.value : '';
+            const valorProjeto = projetoAtualEl ? projetoAtualEl.value : '';
+            document.getElementById('rematricula_projeto_anterior').value = valorProjeto;
+            const displayRemat = document.getElementById('rematricula_projeto_atual_display');
+            if (displayRemat) displayRemat.textContent = valorProjeto || '—';
             carregarHistoricoRematriculas();
         }
 
@@ -885,6 +956,7 @@
                     if (histError) throw histError;
                     document.getElementById('projeto_atual').value = projetoNovo;
                     document.getElementById('rematricula_projeto_anterior').value = projetoNovo;
+                    atualizarProjetoAtualDisplay(projetoNovo);
                 }
 
                 const { error: alunoError } = await supabaseClient
