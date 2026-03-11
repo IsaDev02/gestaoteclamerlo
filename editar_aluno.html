@@ -408,6 +408,7 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const alunoId = urlParams.get('id');
+        const alunoIdInt = parseInt(alunoId, 10);
 
         // Gera as linhas editáveis da tabela de histórico
         const tbody = document.getElementById('historico-projetos-tbody');
@@ -456,7 +457,7 @@
         async function carregarDados() {
             if (!alunoId) return;
 
-            const { data: a } = await supabaseClient.from('alunos').select('*, assinatura_mae_url, assinatura_pai_url').eq('id', alunoId).single();
+            const { data: a } = await supabaseClient.from('alunos').select('*, assinatura_mae_url, assinatura_pai_url').eq('id', alunoIdInt).single();
             if (a) {
                 document.getElementById('nome_titulo').innerText = a.nome;
 
@@ -522,7 +523,7 @@
                 }
             }
 
-            const { data: h } = await supabaseClient.from('historico_projetos').select('*').eq('aluno_id', alunoId).maybeSingle();
+            const { data: h } = await supabaseClient.from('historico_projetos').select('*').eq('aluno_id', alunoIdInt).maybeSingle();
             if (h) {
                 document.getElementById('projeto_atual').value = h.projeto_atual || '';
                 for (let i = 1; i <= 6; i++) {
@@ -535,7 +536,7 @@
                 const { data: m } = await supabaseClient
                     .from('matriculas')
                     .select('projeto_id')
-                    .eq('aluno_id', alunoId)
+                    .eq('aluno_id', alunoIdInt)
                     .order('data_matricula', { ascending: false })
                     .limit(1)
                     .maybeSingle();
@@ -594,11 +595,11 @@
             }
 
             try {
-                const { error: e1 } = await supabaseClient.from('alunos').update(dadosA).eq('id', alunoId);
+                const { error: e1 } = await supabaseClient.from('alunos').update(dadosA).eq('id', alunoIdInt);
                 if (e1) throw e1;
 
                 const { error: e2 } = await supabaseClient.from('historico_projetos')
-                    .upsert({ aluno_id: parseInt(alunoId), ...dadosH }, { onConflict: 'aluno_id' });
+                    .upsert({ aluno_id: alunoIdInt, ...dadosH }, { onConflict: 'aluno_id' });
                 if (e2) throw e2;
 
                 // Upload de assinaturas (se houver novas)
@@ -633,7 +634,7 @@
                 }
 
                 if (Object.keys(atualizacoesAssinatura).length > 0) {
-                    const { error: errUrlAssin } = await supabaseClient.from('alunos').update(atualizacoesAssinatura).eq('id', alunoId);
+                    const { error: errUrlAssin } = await supabaseClient.from('alunos').update(atualizacoesAssinatura).eq('id', alunoIdInt);
                     if (errUrlAssin) console.warn('Erro ao salvar URLs das assinaturas:', errUrlAssin.message);
                 }
 
@@ -778,7 +779,7 @@
             const { data, error } = await supabaseClient
                 .from('rematriculas')
                 .select('*')
-                .eq('aluno_id', alunoId)
+                .eq('aluno_id', alunoIdInt)
                 .order('data_rematricula', { ascending: false });
 
             if (error || !data || data.length === 0) {
@@ -866,7 +867,7 @@
                 }
 
                 const { error: insertError } = await supabaseClient.from('rematriculas').insert({
-                    aluno_id: parseInt(alunoId),
+                    aluno_id: alunoIdInt,
                     data_rematricula: dataRematricula,
                     projeto_anterior: projetoAnterior || null,
                     projeto_novo: projetoNovo || null,
@@ -880,7 +881,7 @@
                     const { error: histError } = await supabaseClient
                         .from('historico_projetos')
                         .update({ projeto_atual: projetoNovo })
-                        .eq('aluno_id', alunoId);
+                        .eq('aluno_id', alunoIdInt);
                     if (histError) throw histError;
                     document.getElementById('projeto_atual').value = projetoNovo;
                     document.getElementById('rematricula_projeto_anterior').value = projetoNovo;
@@ -889,7 +890,7 @@
                 const { error: alunoError } = await supabaseClient
                     .from('alunos')
                     .update({ data_rematricula: dataRematricula })
-                    .eq('id', alunoId);
+                    .eq('id', alunoIdInt);
                 if (alunoError) throw alunoError;
 
                 const ctx = canvasRematricula.getContext('2d');
