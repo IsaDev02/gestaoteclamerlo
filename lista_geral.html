@@ -194,7 +194,7 @@
                 // Filtro por projeto (coluna é array, usar .contains)
                 if (filtroProjeto === "sem_projeto") {
                     // Alunos sem projeto: projetos é null ou array vazio
-                    query = query.or('projetos.is.null,projetos.cs.{}');
+                    query = query.or('projetos.is.null,projetos.eq.{}');
                 } else if (filtroProjeto !== "") {
                     query = query.contains('projetos', [parseInt(filtroProjeto, 10)]);
                 }
