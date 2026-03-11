@@ -184,7 +184,7 @@
             <div class="form-card" style="border: 2px solid var(--primary);">
                 <div class="section-title text-primary"><i class="fas fa-check-circle me-2"></i> Matrícula no Projeto e Turma</div>
                 <div class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">Projeto</label>
                         <select id="select_projeto" class="form-select" onchange="carregarTurmas(this.value)">
                             <option value="">Escolha o Projeto...</option>
@@ -196,11 +196,15 @@
                             <option value="6">Animar e Celebrar</option>
                         </select>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">Turma</label>
                         <select id="select_turma" class="form-select">
                             <option value="">Selecione a Turma...</option>
                         </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Data do Cadastro</label>
+                        <input type="date" id="data_entrada_projeto" class="form-control">
                     </div>
                 </div>
             </div>
@@ -222,6 +226,7 @@
 
         window.onload = () => {
             adicionarLinhaBeneficio();
+            document.getElementById('data_entrada_projeto').value = '2026-03-11';
         };
 
         // ============================================================
@@ -402,7 +407,8 @@
                 cpf_outro: document.getElementById('cpf_outro').value,
                 rg_outro: document.getElementById('rg_outro').value,
                 beneficios_detalhados: listaBeneficios,
-                projetos: [projId]
+                projetos: [projId],
+                data_entrada_projeto: document.getElementById('data_entrada_projeto').value || null
             };
 
             try {
