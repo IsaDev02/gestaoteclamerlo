@@ -21,6 +21,8 @@
         .benefit-row { background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
         .age-display { background: #eff6ff; color: var(--primary); font-weight: 800; text-align: center; }
         #videoCamera { border: 3px solid var(--primary); border-radius: 8px; }
+        .signature-canvas { border: 2px dashed #cbd5e1; border-radius: 8px; background: #fff; cursor: crosshair; touch-action: none; display: block; width: 100%; height: 160px; }
+        .signature-canvas.signing { border-color: #3b82f6; border-style: solid; }
     </style>
 </head>
 <body>
@@ -34,6 +36,7 @@
             <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
             <a class="nav-link active" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
             <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
+            <a class="nav-link" href="relatorios.html"><i class="fas fa-file-alt me-2"></i> Relatórios</a>
             
             <div class="mt-5 px-4">
                 <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
@@ -173,6 +176,33 @@
                 </div>
             </div>
 
+            <!-- ASSINATURA DOS RESPONSÁVEIS -->
+            <div class="form-card">
+                <div class="section-title"><i class="fas fa-signature me-2"></i> Assinatura dos Responsáveis</div>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Assinatura da Mãe / Responsável 1</label>
+                        <canvas id="canvasMae" class="signature-canvas" width="600" height="160"></canvas>
+                        <div class="d-flex align-items-center mt-2 gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparAssinatura('canvasMae')">
+                                <i class="fas fa-eraser me-1"></i> Limpar
+                            </button>
+                            <small class="text-muted"><i class="fas fa-pen-nib me-1"></i> Assine no campo acima</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Assinatura do Pai / Responsável 2</label>
+                        <canvas id="canvasPai" class="signature-canvas" width="600" height="160"></canvas>
+                        <div class="d-flex align-items-center mt-2 gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparAssinatura('canvasPai')">
+                                <i class="fas fa-eraser me-1"></i> Limpar
+                            </button>
+                            <small class="text-muted"><i class="fas fa-pen-nib me-1"></i> Assine no campo acima</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- BENEFÍCIOS SOCIAIS -->
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-hand-holding-heart me-2"></i> Benefícios Sociais</div>
@@ -184,7 +214,7 @@
             <div class="form-card" style="border: 2px solid var(--primary);">
                 <div class="section-title text-primary"><i class="fas fa-check-circle me-2"></i> Matrícula no Projeto e Turma</div>
                 <div class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="form-label">Projeto</label>
                         <select id="select_projeto" class="form-select" onchange="carregarTurmas(this.value)">
                             <option value="">Escolha o Projeto...</option>
@@ -196,15 +226,11 @@
                             <option value="6">Animar e Celebrar</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="form-label">Turma</label>
                         <select id="select_turma" class="form-select">
                             <option value="">Selecione a Turma...</option>
                         </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Data do Cadastro</label>
-                        <input type="date" id="data_entrada_projeto" class="form-control">
                     </div>
                 </div>
             </div>
@@ -214,6 +240,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- SUPABASE: Execute no SQL Editor do Supabase para adicionar a coluna etnia:
          ALTER TABLE alunos ADD COLUMN etnia text;
+    -->
+    <!-- Execute no SQL Editor do Supabase:
+         ALTER TABLE alunos ADD COLUMN assinatura_mae_url text;
+         ALTER TABLE alunos ADD COLUMN assinatura_pai_url text;
     -->
     <script>
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
@@ -226,7 +256,8 @@
 
         window.onload = () => {
             adicionarLinhaBeneficio();
-            document.getElementById('data_entrada_projeto').value = '2026-03-11';
+            initSignaturePad('canvasMae');
+            initSignaturePad('canvasPai');
         };
 
         // ============================================================
@@ -355,6 +386,78 @@
         }
 
         // ============================================================
+        // ASSINATURAS
+        // ============================================================
+        function isCanvasBlank(canvas) {
+            const blank = document.createElement('canvas');
+            blank.width = canvas.width;
+            blank.height = canvas.height;
+            return canvas.toDataURL() === blank.toDataURL();
+        }
+
+        function limparAssinatura(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function initSignaturePad(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+            let lastX = 0, lastY = 0;
+
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                return {
+                    x: (e.clientX - rect.left) * scaleX,
+                    y: (e.clientY - rect.top) * scaleY
+                };
+            }
+
+            canvas.addEventListener('pointerdown', (e) => {
+                drawing = true;
+                canvas.setPointerCapture(e.pointerId);
+                canvas.classList.add('signing');
+                const pos = getPos(e);
+                lastX = pos.x;
+                lastY = pos.y;
+                const r = (e.pressure > 0 ? e.pressure : 0.5) * 1.5;
+                ctx.beginPath();
+                ctx.arc(lastX, lastY, r, 0, Math.PI * 2);
+                ctx.fillStyle = '#1e293b';
+                ctx.fill();
+            });
+
+            canvas.addEventListener('pointermove', (e) => {
+                if (!drawing) return;
+                const pos = getPos(e);
+                const pressure = e.pressure > 0 ? e.pressure : 0.5;
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = pressure * 4;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+                lastX = pos.x;
+                lastY = pos.y;
+            });
+
+            canvas.addEventListener('pointerup', () => {
+                drawing = false;
+                canvas.classList.remove('signing');
+            });
+
+            canvas.addEventListener('pointercancel', () => {
+                drawing = false;
+                canvas.classList.remove('signing');
+            });
+        }
+
+        // ============================================================
         // SALVAR ALUNO
         // ============================================================
         async function salvarAluno() {
@@ -407,8 +510,7 @@
                 cpf_outro: document.getElementById('cpf_outro').value,
                 rg_outro: document.getElementById('rg_outro').value,
                 beneficios_detalhados: listaBeneficios,
-                projetos: [projId],
-                data_entrada_projeto: document.getElementById('data_entrada_projeto').value || null
+                projetos: [projId]
             };
 
             try {
@@ -454,6 +556,63 @@
                         if (updateError) {
                             console.warn('Foto enviada mas erro ao gravar URL:', updateError.message);
                         }
+                    }
+                }
+
+                // 2.5 Upload das assinaturas (se houver)
+                const canvasMae = document.getElementById('canvasMae');
+                const canvasPai = document.getElementById('canvasPai');
+                const updatesAssinatura = {};
+
+                if (!isCanvasBlank(canvasMae) || !isCanvasBlank(canvasPai)) {
+                    btn.innerHTML = 'ENVIANDO ASSINATURA...';
+                }
+
+                if (!isCanvasBlank(canvasMae)) {
+                    try {
+                        const blobMae = await new Promise(resolve => canvasMae.toBlob(resolve, 'image/png'));
+                        if (!blobMae) throw new Error('Não foi possível converter a assinatura da mãe.');
+                        const pathMae = `assinatura_mae_${novoAluno.id}.png`;
+                        const { error: errUpMae } = await supabaseClient.storage
+                            .from(BUCKET_FOTOS)
+                            .upload(pathMae, blobMae, { upsert: true, contentType: 'image/png' });
+                        if (errUpMae) {
+                            console.warn('Erro ao enviar assinatura da mãe:', errUpMae.message);
+                        } else {
+                            const { data: urlMaeData } = supabaseClient.storage.from(BUCKET_FOTOS).getPublicUrl(pathMae);
+                            updatesAssinatura.assinatura_mae_url = urlMaeData.publicUrl;
+                        }
+                    } catch (errMae) {
+                        console.warn('Erro ao processar assinatura da mãe:', errMae.message);
+                    }
+                }
+
+                if (!isCanvasBlank(canvasPai)) {
+                    try {
+                        const blobPai = await new Promise(resolve => canvasPai.toBlob(resolve, 'image/png'));
+                        if (!blobPai) throw new Error('Não foi possível converter a assinatura do pai.');
+                        const pathPai = `assinatura_pai_${novoAluno.id}.png`;
+                        const { error: errUpPai } = await supabaseClient.storage
+                            .from(BUCKET_FOTOS)
+                            .upload(pathPai, blobPai, { upsert: true, contentType: 'image/png' });
+                        if (errUpPai) {
+                            console.warn('Erro ao enviar assinatura do pai:', errUpPai.message);
+                        } else {
+                            const { data: urlPaiData } = supabaseClient.storage.from(BUCKET_FOTOS).getPublicUrl(pathPai);
+                            updatesAssinatura.assinatura_pai_url = urlPaiData.publicUrl;
+                        }
+                    } catch (errPai) {
+                        console.warn('Erro ao processar assinatura do pai:', errPai.message);
+                    }
+                }
+
+                if (Object.keys(updatesAssinatura).length > 0) {
+                    const { error: updateSigError } = await supabaseClient
+                        .from('alunos')
+                        .update(updatesAssinatura)
+                        .eq('id', novoAluno.id);
+                    if (updateSigError) {
+                        console.warn('Erro ao gravar URLs de assinatura:', updateSigError.message);
                     }
                 }
 
