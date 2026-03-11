@@ -530,6 +530,23 @@
                     document.getElementById(`data_termino_${i}`).value = h[`data_termino_${i}`] || '';
                     atualizarBadgeHistorico(i);
                 }
+            } else {
+                // Fallback: busca o projeto mais recente da tabela matriculas
+                const { data: m } = await supabaseClient
+                    .from('matriculas')
+                    .select('projeto_id')
+                    .eq('aluno_id', alunoId)
+                    .order('data_matricula', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                if (m) {
+                    const nomesProjetos = {
+                        1: 'Adolescer para Crescer', 2: 'Criança Certeza',
+                        3: 'Sempre Criança', 4: 'Valorizando a Infância',
+                        5: 'Clube de Mães', 6: 'Animar e Celebrar'
+                    };
+                    document.getElementById('projeto_atual').value = nomesProjetos[m.projeto_id] || '';
+                }
             }
         }
 
@@ -580,7 +597,8 @@
                 const { error: e1 } = await supabaseClient.from('alunos').update(dadosA).eq('id', alunoId);
                 if (e1) throw e1;
 
-                const { error: e2 } = await supabaseClient.from('historico_projetos').update(dadosH).eq('aluno_id', alunoId);
+                const { error: e2 } = await supabaseClient.from('historico_projetos')
+                    .upsert({ aluno_id: parseInt(alunoId), ...dadosH }, { onConflict: 'aluno_id' });
                 if (e2) throw e2;
 
                 // Upload de assinaturas (se houver novas)
