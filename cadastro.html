@@ -176,6 +176,14 @@
                 </div>
             </div>
 
+          
+            <!-- BENEFÍCIOS SOCIAIS -->
+            <div class="form-card">
+                <div class="section-title"><i class="fas fa-hand-holding-heart me-2"></i> Benefícios Sociais</div>
+                <div id="containerBeneficios"></div>
+                <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="adicionarLinhaBeneficio()">+ Adicionar Benefício</button>
+            </div>
+ 
             <!-- ASSINATURA DOS RESPONSÁVEIS -->
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-signature me-2"></i> Assinatura dos Responsáveis</div>
@@ -202,14 +210,7 @@
                     </div>
                 </div>
             </div>
-
-            <!-- BENEFÍCIOS SOCIAIS -->
-            <div class="form-card">
-                <div class="section-title"><i class="fas fa-hand-holding-heart me-2"></i> Benefícios Sociais</div>
-                <div id="containerBeneficios"></div>
-                <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="adicionarLinhaBeneficio()">+ Adicionar Benefício</button>
-            </div>
-
+          
             <!-- MATRÍCULA -->
             <div class="form-card" style="border: 2px solid var(--primary);">
                 <div class="section-title text-primary"><i class="fas fa-check-circle me-2"></i> Matrícula no Projeto e Turma</div>
@@ -630,30 +631,6 @@
 
                 const { error: erroM } = await supabaseClient.from('matriculas').insert([dadosMatricula]);
                 if (erroM) throw erroM;
-
-                // 4. Registrar no histórico de projetos
-                btn.innerHTML = 'REGISTRANDO HISTÓRICO...';
-                const nomesProjetosMap = {
-                    1: 'Adolescer para Crescer',
-                    2: 'Criança Certeza',
-                    3: 'Sempre Criança',
-                    4: 'Valorizando a Infância',
-                    5: 'Clube de Mães',
-                    6: 'Animar e Celebrar'
-                };
-                const dadosHistorico = {
-                    aluno_id: novoAluno.id,
-                    projeto_atual: nomesProjetosMap[parseInt(projId)] || ''
-                };
-
-                const { error: erroH } = await supabaseClient
-                    .from('historico_projetos')
-                    .insert([dadosHistorico]);
-
-                if (erroH) {
-                    console.warn('Aviso: erro ao registrar histórico de projetos:', erroH.message);
-                    // Não bloqueia o cadastro — apenas loga o aviso
-                }
 
                 alert("Cadastro realizado com sucesso!");
                 window.location.href = 'projetos.html';
