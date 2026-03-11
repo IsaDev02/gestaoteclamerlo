@@ -88,6 +88,7 @@
             <li class="nav-item"><a class="nav-link" id="l2" href="javascript:void(0)" onclick="toggleAba('aba-familia', 'l2')">Família e Renda</a></li>
             <li class="nav-item"><a class="nav-link" id="l3" href="javascript:void(0)" onclick="toggleAba('aba-institucional', 'l3')">Institucional</a></li>
             <li class="nav-item"><a class="nav-link" id="l4" href="javascript:void(0)" onclick="toggleAba('aba-historico', 'l4')">Histórico</a></li>
+            <li class="nav-item"><a class="nav-link" id="l5" href="javascript:void(0)" onclick="toggleAba('aba-rematricula', 'l5')"><i class="fas fa-sync-alt me-1"></i> Rematrícula</a></li>
         </ul>
 
         <form id="formEdicao" class="form-container">
@@ -322,6 +323,77 @@
 
             </div>
 
+            <div id="aba-rematricula" class="tab-content">
+
+                <!-- Histórico de Rematrículas Anteriores -->
+                <div class="section-title">Histórico de Rematrículas</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-12">
+                        <div id="lista-rematriculas">
+                            <p class="text-muted small">Carregando...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nova Rematrícula -->
+                <div class="section-title">Nova Rematrícula</div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Data da Rematrícula</label>
+                        <input type="date" id="rematricula_data" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Projeto Atual (antes da rematrícula)</label>
+                        <input type="text" id="rematricula_projeto_anterior" class="form-control bg-light" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Novo Projeto <span class="text-muted small">(opcional — só se mudar)</span></label>
+                        <select id="rematricula_projeto_novo" class="form-select">
+                            <option value="">Manter projeto atual</option>
+                            <option value="Adolescer para Crescer">Adolescer para Crescer</option>
+                            <option value="Criança Certeza">Criança Certeza</option>
+                            <option value="Sempre Criança">Sempre Criança</option>
+                            <option value="Valorizando a Infância">Valorizando a Infância</option>
+                            <option value="Clube de Mães">Clube de Mães</option>
+                            <option value="Animar e Celebrar">Animar e Celebrar</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Observação <span class="text-muted small">(opcional)</span></label>
+                        <textarea id="rematricula_obs" class="form-control" rows="2" placeholder="Ex: Aluno mudou de turma, troca de responsável..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Assinatura do Responsável (Rematrícula) -->
+                <div class="section-title"><i class="fas fa-signature me-1"></i> Assinatura do Responsável (Rematrícula)</div>
+                <div class="row g-4 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nova Assinatura</label>
+                        <canvas id="canvas_assinatura_rematricula" class="signature-canvas-edit"></canvas>
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="limparAssinaturaEdit('rematricula')">
+                                <i class="fas fa-eraser me-1"></i> Limpar
+                            </button>
+                            <span class="text-muted small align-self-center">Assine acima para registrar</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6" id="preview_assinatura_rematricula_container" style="display:none">
+                        <label class="form-label">Última Assinatura Registrada</label>
+                        <img id="img_assinatura_rematricula_preview" src="" alt="Última assinatura de rematrícula"
+                            class="img-fluid border rounded" style="max-height:120px;">
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-3">
+                    <button type="button" id="btnConfirmarRematricula" class="btn btn-success" onclick="salvarRematricula()">
+                        <i class="fas fa-sync-alt me-2"></i> Confirmar Rematrícula
+                    </button>
+                </div>
+
+            </div>
+
         </form>
     </main>
 
@@ -369,6 +441,9 @@
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             document.getElementById(link).classList.add('active');
+            if (id === 'aba-rematricula') {
+                inicializarAbaRematricula();
+            }
         }
 
         function atualizarLabelStatus() {
@@ -645,7 +720,10 @@
         }
 
         function limparAssinaturaEdit(tipo) {
-            const canvasId = tipo === 'mae' ? 'canvas_assinatura_mae' : 'canvas_assinatura_pai';
+            let canvasId;
+            if (tipo === 'mae') canvasId = 'canvas_assinatura_mae';
+            else if (tipo === 'pai') canvasId = 'canvas_assinatura_pai';
+            else if (tipo === 'rematricula') canvasId = 'canvas_assinatura_rematricula';
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
@@ -663,7 +741,155 @@
             await carregarDados();
             inicializarCanvasAssinaturaEdit('canvas_assinatura_mae');
             inicializarCanvasAssinaturaEdit('canvas_assinatura_pai');
+            inicializarCanvasAssinaturaEdit('canvas_assinatura_rematricula');
         };
+
+        // ── REMATRÍCULA ────────────────────────────────────────────────
+
+        function inicializarAbaRematricula() {
+            document.getElementById('rematricula_data').value = new Date().toISOString().split('T')[0];
+            const projetoAtualEl = document.getElementById('projeto_atual');
+            document.getElementById('rematricula_projeto_anterior').value = projetoAtualEl ? projetoAtualEl.value : '';
+            carregarHistoricoRematriculas();
+        }
+
+        async function carregarHistoricoRematriculas() {
+            const container = document.getElementById('lista-rematriculas');
+            container.innerHTML = '<p class="text-muted small">Carregando...</p>';
+
+            const { data, error } = await supabaseClient
+                .from('rematriculas')
+                .select('*')
+                .eq('aluno_id', alunoId)
+                .order('data_rematricula', { ascending: false });
+
+            if (error || !data || data.length === 0) {
+                container.innerHTML = '<p class="text-muted small">Nenhuma rematrícula registrada ainda.</p>';
+                return;
+            }
+
+            if (data[0].assinatura_url) {
+                document.getElementById('img_assinatura_rematricula_preview').src = data[0].assinatura_url;
+                document.getElementById('preview_assinatura_rematricula_container').style.display = 'block';
+            }
+
+            let html = `<table class="table table-bordered table-hover align-middle table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Data</th>
+                        <th>Projeto</th>
+                        <th>Observação</th>
+                        <th class="text-center">Assinatura</th>
+                    </tr>
+                </thead><tbody>`;
+
+            data.forEach((r, idx) => {
+                let projHtml;
+                if (r.projeto_anterior && r.projeto_novo) {
+                    const badgeAtual = idx === 0 ? '<span class="badge bg-success-subtle text-success border border-success-subtle ms-1">PROJETO ATUAL</span>' : '';
+                    projHtml = `<s>${r.projeto_anterior}</s> <i class="fas fa-arrow-right mx-1 text-primary"></i> <strong>${r.projeto_novo}</strong> ${badgeAtual}`;
+                } else {
+                    projHtml = r.projeto_anterior || '—';
+                }
+
+                const dataFormatada = r.data_rematricula
+                    ? new Date(r.data_rematricula + 'T00:00:00').toLocaleDateString('pt-BR')
+                    : '—';
+
+                const assinaturaHtml = r.assinatura_url
+                    ? `<a href="${r.assinatura_url}" target="_blank"><img src="${r.assinatura_url}" alt="Assinatura" style="max-height:40px;"></a>`
+                    : '<span class="text-muted small">Sem assinatura</span>';
+
+                const badgeNova = idx === 0
+                    ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">Última</span>'
+                    : '';
+
+                html += `<tr>
+                    <td>${dataFormatada} ${badgeNova}</td>
+                    <td>${projHtml}</td>
+                    <td class="small text-muted">${r.observacao || '—'}</td>
+                    <td class="text-center">${assinaturaHtml}</td>
+                </tr>`;
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        async function salvarRematricula() {
+            const dataRematricula = document.getElementById('rematricula_data').value;
+
+            if (!dataRematricula) {
+                alert('Informe a data da rematrícula.');
+                return;
+            }
+
+            const btn = document.getElementById('btnConfirmarRematricula');
+            btn.disabled = true;
+            btn.innerText = 'Salvando...';
+
+            try {
+                const projetoAnterior = document.getElementById('rematricula_projeto_anterior').value;
+                const projetoNovo = document.getElementById('rematricula_projeto_novo').value;
+                const observacao = document.getElementById('rematricula_obs').value;
+
+                let assinaturaUrl = null;
+                const canvasRematricula = document.getElementById('canvas_assinatura_rematricula');
+                if (canvasRematricula && !isCanvasBlankEdit(canvasRematricula)) {
+                    btn.innerText = 'Enviando assinatura...';
+                    const blob = await new Promise(res => canvasRematricula.toBlob(res, 'image/png'));
+                    const fileName = `assinatura_rematricula_${alunoId}_${Date.now()}.png`;
+                    const { error: uploadError } = await supabaseClient
+                        .storage.from(BUCKET_ASSINATURAS)
+                        .upload(fileName, blob, { contentType: 'image/png', upsert: false });
+                    if (uploadError) throw uploadError;
+                    const { data: urlData } = supabaseClient.storage.from(BUCKET_ASSINATURAS).getPublicUrl(fileName);
+                    assinaturaUrl = urlData.publicUrl;
+                }
+
+                const { error: insertError } = await supabaseClient.from('rematriculas').insert({
+                    aluno_id: parseInt(alunoId),
+                    data_rematricula: dataRematricula,
+                    projeto_anterior: projetoAnterior || null,
+                    projeto_novo: projetoNovo || null,
+                    observacao: observacao || null,
+                    assinatura_url: assinaturaUrl
+                });
+                if (insertError) throw insertError;
+
+                if (projetoNovo) {
+                    btn.innerText = 'Atualizando projeto...';
+                    const { error: histError } = await supabaseClient
+                        .from('historico_projetos')
+                        .update({ projeto_atual: projetoNovo })
+                        .eq('aluno_id', alunoId);
+                    if (histError) throw histError;
+                    document.getElementById('projeto_atual').value = projetoNovo;
+                    document.getElementById('rematricula_projeto_anterior').value = projetoNovo;
+                }
+
+                const { error: alunoError } = await supabaseClient
+                    .from('alunos')
+                    .update({ data_rematricula: dataRematricula })
+                    .eq('id', alunoId);
+                if (alunoError) throw alunoError;
+
+                const ctx = canvasRematricula.getContext('2d');
+                ctx.clearRect(0, 0, canvasRematricula.width, canvasRematricula.height);
+                document.getElementById('rematricula_obs').value = '';
+                document.getElementById('rematricula_projeto_novo').value = '';
+
+                alert('✅ Rematrícula registrada com sucesso!');
+                await carregarHistoricoRematriculas();
+
+            } catch (err) {
+                alert('Erro ao salvar rematrícula: ' + err.message);
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt me-2"></i> Confirmar Rematrícula';
+            }
+        }
     </script>
     <!-- Migração de Etnia no Supabase (execute no SQL Editor):
          UPDATE alunos SET etnia = 'Branco' WHERE etnia IN ('0', '1', 'Amarelo');
