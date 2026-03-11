@@ -106,7 +106,7 @@
                 const { count } = await supabaseClient
                     .from('alunos')
                     .select('*', { count: 'exact', head: true })
-                    .contains('projetos', [id]);
+                    .contains('projetos', [parseInt(id, 10)]);
                 return { id, total: count || 0 };
             });
 
@@ -147,7 +147,7 @@
             const { data: aData } = await supabaseClient
                 .from('alunos')
                 .select('id, nome, ativo')
-                .contains('projetos', [projetoAtivoId])
+                .contains('projetos', [parseInt(projetoAtivoId, 10)])
                 .order('nome');
 
             listaDiv.innerHTML = aData && aData.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno neste projeto.</div>';
@@ -208,12 +208,13 @@
                 let projetosAtuais = aluno.projetos || [];
                 // Garantir que é um array (caso de dados legados)
                 if (!Array.isArray(projetosAtuais)) {
-                    projetosAtuais = projetosAtuais ? [String(projetosAtuais)] : [];
+                    projetosAtuais = projetosAtuais ? [parseInt(projetosAtuais, 10)] : [];
                 }
 
                 // Só adiciona se o projeto ainda não estiver no array
-                if (!projetosAtuais.includes(projetoAtivoId)) {
-                    projetosAtuais.push(projetoAtivoId);
+                const idNumerico = parseInt(projetoAtivoId, 10);
+                if (!projetosAtuais.map(Number).includes(idNumerico)) {
+                    projetosAtuais.push(idNumerico);
                 }
 
                 // 3. Atualizar no banco
@@ -267,11 +268,12 @@
 
             let projetosAtuais = aluno.projetos || [];
             if (!Array.isArray(projetosAtuais)) {
-                projetosAtuais = projetosAtuais ? [String(projetosAtuais)] : [];
+                projetosAtuais = projetosAtuais ? [parseInt(projetosAtuais, 10)] : [];
             }
 
             // 2. Filtrar removendo apenas o projeto ativo
-            const novosProjetos = projetosAtuais.filter(p => p !== projetoAtivoId);
+            const idNumerico = parseInt(projetoAtivoId, 10);
+            const novosProjetos = projetosAtuais.filter(p => parseInt(p, 10) !== idNumerico);
 
             // 3. Atualizar no banco
             await supabaseClient
