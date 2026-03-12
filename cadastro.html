@@ -61,6 +61,20 @@
                     <div class="col-md-2"><label class="form-label">Nascimento</label><input type="date" id="data_nasc" class="form-control" onchange="calcularIdade(this.value)"></div>
                     <div class="col-md-1"><label class="form-label">Idade</label><input type="text" id="idade" class="form-control age-display" readonly></div>
                     <div class="col-md-3"><label class="form-label">WhatsApp (Aluno)</label><input type="text" id="whatsapp" class="form-control mascara-fone"></div>
+
+                    <!-- ADIÇÃO: Campo GÊNERO -->
+                    <div class="col-md-2">
+                      <label class="form-label">Gênero</label>
+                      <select id="genero" class="form-select">
+                        <option value="">Selecione</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Feminino">Feminino</option>
+                        <option value="Nao-binario">Não-binário</option>
+                        <option value="Outro">Outro</option>
+                        <option value="Prefiro nao informar">Prefiro não informar</option>
+                      </select>
+                    </div>
+
                     <div class="col-md-2">
                       <label class="form-label">Etnia</label>
                       <select id="etnia" class="form-select">
@@ -483,6 +497,7 @@
                 idade: parseInt(document.getElementById('idade').value) || null,
                 whatsapp: document.getElementById('whatsapp').value,
                 etnia: document.getElementById('etnia').value || null,
+                genero: document.getElementById('genero') ? document.getElementById('genero').value || null : null,
                 cep: document.getElementById('cep').value,
                 rua: document.getElementById('rua').value,
                 numero: document.getElementById('numero').value,
