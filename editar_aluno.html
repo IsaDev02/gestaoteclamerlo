@@ -15,7 +15,7 @@
         .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
         .main-content { margin-left: 240px; padding: 40px; }
         .form-container { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 35px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .section-title { font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 25px; margin-bottom: 15px; padding-bottom: 5px; bor[...]
+        .section-title { font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 25px; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid #eff6ff; }
         .form-label { font-weight: 600; font-size: 0.8rem; color: #64748b; margin-bottom: 5px; }
         .form-control, .form-select { border-color: #e2e8f0; font-size: 0.9rem; border-radius: 8px; }
         .nav-tabs { border: none; margin-bottom: 25px; gap: 8px; }
@@ -99,7 +99,7 @@
         <header class="mb-4 d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-4">
                 <div>
-                    <h3 class="fw-bold">Editar Aluno</h3>
+                    <h3 class="fw-bold mb-0">Editar Aluno</h3>
                     <span id="nome_titulo" class="text-primary fw-medium small">Carregando...</span>
                 </div>
                 <div class="status-badge-wrapper d-flex align-items-center gap-2">
@@ -138,7 +138,7 @@
                     <div class="col-md">
                         <div class="row g-3">
                             <div class="col-md-12"><label class="form-label">Nome Completo</label><input type="text" id="nome" class="form-control"></div>
-                            <div class="col-md-4"><label class="form-label">Data de Nascimento</label><input type="date" id="data_nascimento" class="form-control" onchange="calcularIdade(this.value)">[...]
+                            <div class="col-md-4"><label class="form-label">Data de Nascimento</label><input type="date" id="data_nascimento" class="form-control" onchange="calcularIdade(this.value)"></div>
                             <div class="col-md-2"><label class="form-label">Idade</label><input type="text" id="idade" class="form-control bg-light text-center" readonly></div>
                             <div class="col-md-3"><label class="form-label">Gênero</label>
                                 <select id="genero" class="form-select">
@@ -222,72 +222,6 @@
                     <div class="col-md-3"><label class="form-label">Profissão Pai</label><input type="text" id="prof_pai" class="form-control"></div>
                     <div class="col-md-3"><label class="form-label">Salário Pai</label><input type="text" id="sal_pai" class="form-control"></div>
                 </div>
-
-                <!-- INÍCIO: Campos reinseridos (pais_juntos, qtd_irmaos, tipo_moradia, qtd_comodos, aluguel) -->
-                <div class="row g-3 mb-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Pais vivem juntos</label>
-                        <select id="pais_juntos" class="form-select">
-                            <option value="">Selecione</option>
-                            <option value="sim">Sim</option>
-                            <option value="nao">Não</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Quantos irmãos</label>
-                        <select id="qtd_irmaos" class="form-select">
-                            <option value="">Selecione</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                            <option value="6">6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>
-                            <option value="10">10</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Tipo de moradia</label>
-                        <select id="tipo_moradia" class="form-select" onchange="toggleAluguelFieldEdit()">
-                            <option value="">Selecione</option>
-                            <option value="Casa Própria">Casa própria</option>
-                            <option value="Aluguel">Aluguel</option>
-                            <option value="Terreno da Prefeitura">Terreno da prefeitura</option>
-                            <option value="Terreno Particular">Terreno particular</option>
-                            <option value="Casa Cedida">Casa cedida</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Quantidade de cômodos</label>
-                        <select id="qtd_comodos" class="form-select">
-                            <option value="">Selecione</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                            <option value="6">6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>
-                            <option value="10">10</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="row g-3 mb-4" id="divAluguel" style="display:none;">
-                    <div class="col-md-4">
-                        <label class="form-label">Valor do Aluguel (R$)</label>
-                        <input type="number" step="0.01" id="aluguel" class="form-control" placeholder="0.00">
-                    </div>
-                </div>
-                <!-- FIM: Campos reinseridos -->
 
                 <!-- OUTRO PARENTE -->
                 <div class="section-title">Outro Parente / Responsável</div>
@@ -611,7 +545,7 @@
                     document.getElementById('salario_outro').value = a.salario_outro;
                 }
 
-                // Tratamento do multi-select de projetos
+                // Tratamento especial para o multi-select de projetos
                 const selectProjetos = document.getElementById('projetos');
                 
                 let projetosIds = [];
@@ -641,24 +575,6 @@
                     document.getElementById('img_assinatura_pai').src = a.assinatura_pai_url;
                     document.getElementById('preview_assinatura_pai').style.display = 'block';
                 }
-
-                // --- Preenche os novos campos adicionados ---
-                try {
-                    // pais_juntos: boolean -> select 'sim'/'nao'
-                    if (typeof a.pais_juntos === 'boolean') {
-                        document.getElementById('pais_juntos').value = a.pais_juntos ? 'sim' : 'nao';
-                    } else {
-                        document.getElementById('pais_juntos').value = (a.pais_juntos === null || a.pais_juntos === undefined) ? '' : (a.pais_juntos ? 'sim' : 'nao');
-                    }
-
-                    document.getElementById('qtd_irmaos').value = a.qtd_irmaos ? String(a.qtd_irmaos) : '';
-                    document.getElementById('tipo_moradia').value = a.tipo_moradia || '';
-                    document.getElementById('qtd_comodos').value = a.qtd_comodos ? String(a.qtd_comodos) : '';
-                    document.getElementById('aluguel').value = (a.aluguel !== undefined && a.aluguel !== null) ? String(a.aluguel) : '';
-                } catch (innerErr) {
-                    console.warn('Erro ao popular campos de núcleo familiar:', innerErr);
-                }
-
             }
 
             const { data: h } = await supabaseClient.from('historico_projetos').select('*').eq('aluno_id', alunoIdInt).maybeSingle();
@@ -690,10 +606,6 @@
                     atualizarProjetoAtualDisplay(nomeProjeto);
                 }
             }
-
-            // Ajusta visibilidade do campo aluguel logo após carregar os dados
-            const tipoEl = document.getElementById('tipo_moradia');
-            if (tipoEl) toggleAluguelFieldEdit();
         }
 
         async function atualizarCadastro() {
@@ -718,36 +630,6 @@
                     dadosA[col] = el.value === "" ? null : el.value;
                 }
             });
-
-            // --- Captura dos novos campos de núcleo familiar ---
-            try {
-                const pjEl = document.getElementById('pais_juntos');
-                if (pjEl) {
-                    const v = pjEl.value;
-                    if (v === 'sim') dadosA['pais_juntos'] = true;
-                    else if (v === 'nao') dadosA['pais_juntos'] = false;
-                    else dadosA['pais_juntos'] = null;
-                }
-
-                const qIr = document.getElementById('qtd_irmaos');
-                dadosA['qtd_irmaos'] = (qIr && qIr.value) ? parseInt(qIr.value, 10) : null;
-
-                const tipoMor = document.getElementById('tipo_moradia');
-                dadosA['tipo_moradia'] = tipoMor && tipoMor.value ? tipoMor.value : null;
-
-                const qCom = document.getElementById('qtd_comodos');
-                dadosA['qtd_comodos'] = (qCom && qCom.value) ? parseInt(qCom.value, 10) : null;
-
-                const alugEl = document.getElementById('aluguel');
-                if (alugEl && alugEl.value !== '') {
-                    const n = parseFloat(alugEl.value);
-                    dadosA['aluguel'] = isNaN(n) ? null : n;
-                } else {
-                    dadosA['aluguel'] = null;
-                }
-            } catch (err) {
-                console.warn('Erro ao ler campos de núcleo familiar ao salvar:', err);
-            }
 
             // Tratamento especial para o salário do outro parente (nome errado no banco)
             const salOutro = document.getElementById('salario_outro');
@@ -801,7 +683,7 @@
                     const caminho = `assinatura_pai_${alunoId}.png`;
                     const { error: errPai } = await supabaseClient.storage.from(BUCKET_ASSINATURAS).upload(caminho, blob, { upsert: true, contentType: 'image/png' });
                     if (!errPai) {
-                        const { data: urlPai } = await supabaseClient.storage.from(BUCKET_ASSINATURAS).getPublicUrl(caminho);
+                        const { data: urlPai } = supabaseClient.storage.from(BUCKET_ASSINATURAS).getPublicUrl(caminho);
                         atualizacoesAssinatura['assinatura_pai_url'] = urlPai.publicUrl;
                     } else {
                         console.warn('Erro ao salvar assinatura pai:', errPai.message);
@@ -841,19 +723,6 @@
                     document.getElementById('cidade').value = d.localidade;
                     document.getElementById('uf').value = d.uf;
                 }
-            }
-        }
-
-        // Exibe/oculta campo valor do aluguel
-        function toggleAluguelFieldEdit() {
-            const tipo = (document.getElementById('tipo_moradia') && document.getElementById('tipo_moradia').value) || '';
-            const div = document.getElementById('divAluguel');
-            if (tipo.toLowerCase().includes('aluguel')) {
-                div.style.display = 'flex';
-            } else {
-                div.style.display = 'none';
-                const el = document.getElementById('aluguel');
-                if (el) el.value = '';
             }
         }
 
