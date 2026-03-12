@@ -151,7 +151,7 @@
                 <h6 class="text-primary fw-bold mb-3">Dados da Mãe</h6>
                 <div class="row g-3 mb-2">
                     <div class="col-md-4"><label class="form-label">Nome da Mãe</label><input type="text" id="nome_mae" class="form-control"></div>
-                    <div class="col-md-2"><label class="form-label">Situação</label><select id="situacao_mae" class="form-select"><option>PRESENTE</option><option>AUSENTE</option><option>FALECIDA</option></select></div>
+                    <div class="col-md-2"><label class="form-label">Situação</label><select id="situacao_mae" class="form-select"><option>PRESENTE</option><option>AUSENTE</option><option>FALECIDA</o[...]
                     <div class="col-md-3"><label class="form-label">Profissão</label><input type="text" id="prof_mae" class="form-control"></div>
                     <div class="col-md-3"><label class="form-label">Salário</label><input type="text" id="salario_mae" class="form-control"></div>
                 </div>
@@ -165,7 +165,7 @@
                 <h6 class="text-primary fw-bold mb-3">Dados do Pai</h6>
                 <div class="row g-3 mb-2">
                     <div class="col-md-4"><label class="form-label">Nome do Pai</label><input type="text" id="nome_pai" class="form-control"></div>
-                    <div class="col-md-2"><label class="form-label">Situação</label><select id="situacao_pai" class="form-select"><option>PRESENTE</option><option>AUSENTE</option><option>FALECIDO</option></select></div>
+                    <div class="col-md-2"><label class="form-label">Situação</label><select id="situacao_pai" class="form-select"><option>PRESENTE</option><option>AUSENTE</option><option>FALECIDO</o[...]
                     <div class="col-md-3"><label class="form-label">Profissão</label><input type="text" id="prof_pai" class="form-control"></div>
                     <div class="col-md-3"><label class="form-label">Salário</label><input type="text" id="salario_pai" class="form-control"></div>
                 </div>
@@ -198,6 +198,22 @@
                 <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="adicionarLinhaBeneficio()">+ Adicionar Benefício</button>
             </div>
  
+            <!-- AUTORIZAÇÃO DE USO DE IMAGEM (ADICIONADO ANTES DAS ASSINATURAS) -->
+            <div class="form-card">
+                <div class="section-title"><i class="fas fa-image me-2"></i> Autorização de Uso de Imagem</div>
+                <div class="row g-3 align-items-center">
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="1" id="autorizacao_imagem">
+                            <label class="form-check-label" for="autorizacao_imagem">
+                                Aceito o uso da imagem do meu filho para divulgação em murais de fotos, redes sociais e sites.
+                            </label>
+                        </div>
+                        <p class="text-muted small mt-2">Marque esta opção caso autorize o uso da imagem para divulgação institucional. Caso não marque, não será autorizado.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- ASSINATURA DOS RESPONSÁVEIS -->
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-signature me-2"></i> Assinatura dos Responsáveis</div>
@@ -526,7 +542,9 @@
                 cpf_outro: document.getElementById('cpf_outro').value,
                 rg_outro: document.getElementById('rg_outro').value,
                 beneficios_detalhados: listaBeneficios,
-                projetos: [projId]
+                projetos: [projId],
+                // NOVO CAMPO: autorização de uso de imagem (boolean)
+                autorizacao_imagem: document.getElementById('autorizacao_imagem') ? document.getElementById('autorizacao_imagem').checked : false
             };
 
             try {
@@ -558,7 +576,7 @@
                         console.warn('Erro ao enviar foto (cadastro salvo sem foto):', uploadError.message);
                     } else {
                         // Obter URL pública e gravar na coluna 'foto'
-                        const { data: urlData } = supabaseClient.storage
+                        const { data: urlData } = await supabaseClient.storage
                             .from(BUCKET_FOTOS)
                             .getPublicUrl(caminhoStorage);
 
@@ -595,7 +613,7 @@
                         if (errUpMae) {
                             console.warn('Erro ao enviar assinatura da mãe:', errUpMae.message);
                         } else {
-                            const { data: urlMaeData } = supabaseClient.storage.from(BUCKET_FOTOS).getPublicUrl(pathMae);
+                            const { data: urlMaeData } = await supabaseClient.storage.from(BUCKET_FOTOS).getPublicUrl(pathMae);
                             updatesAssinatura.assinatura_mae_url = urlMaeData.publicUrl;
                         }
                     } catch (errMae) {
@@ -614,7 +632,7 @@
                         if (errUpPai) {
                             console.warn('Erro ao enviar assinatura do pai:', errUpPai.message);
                         } else {
-                            const { data: urlPaiData } = supabaseClient.storage.from(BUCKET_FOTOS).getPublicUrl(pathPai);
+                            const { data: urlPaiData } = await supabaseClient.storage.from(BUCKET_FOTOS).getPublicUrl(pathPai);
                             updatesAssinatura.assinatura_pai_url = urlPaiData.publicUrl;
                         }
                     } catch (errPai) {
