@@ -125,6 +125,32 @@
                 </div>
             </div>
 
+            <!-- INFORMAÇÕES ACADÊMICAS -->
+            <div class="form-card">
+                <div class="section-title"><i class="fas fa-school me-2"></i> Informações Acadêmicas</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Escola</label>
+                        <input type="text" id="escola" class="form-control" placeholder="Nome da escola">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Período</label>
+                        <select id="periodo" class="form-select">
+                            <option value="">Selecione</option>
+                            <option value="Matutino">Manhã</option>
+                            <option value="Vespertino">Tarde</option>
+                            <option value="Noturno">Noite</option>
+                            <option value="Integral">Integral</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Série</label>
+                        <input type="text" id="serie" class="form-control" placeholder="Ex: 1º ano / 5ª série / Ensino Médio">
+                    </div>
+                </div>
+            </div>
+
             <!-- ENDEREÇO -->
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-map-marked-alt me-2"></i> Endereço</div>
@@ -134,12 +160,11 @@
                     <div class="col-md-1"><label class="form-label">Nº</label><input type="text" id="numero" class="form-control"></div>
                     <div class="col-md-2"><label class="form-label">Complemento</label><input type="text" id="complemento" class="form-control"></div>
                     <div class="col-md-2"><label class="form-label">Bairro</label><input type="text" id="bairro" class="form-control"></div>
-                    <div class="col-md-1"><label class="form-label">Cidade</label><input type="text" id="cidade" class="form-control"></div>
-                    <div class="col-md-1"><label class="form-label">UF</label><input type="text" id="uf" class="form-control" readonly></div>
+                    <div class="col-md-2"><label class="form-label">Cidade</label><input type="text" id="cidade" class="form-control"></div>
                 </div>
             </div>
 
-            <!-- NÚCLEO FAMILIAR -->    
+            <!-- NÚCLEO FAMILIAR -->
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-users-line me-2"></i> Núcleo Familiar e Renda</div>
                 
@@ -186,11 +211,17 @@
                 </div>
             </div>
 
-            <!-- CAMPOS: Pais juntos, qtd irmãos, tipo moradia, qtd comodos -->
+          
+            <!-- BENEFÍCIOS SOCIAIS -->
             <div class="form-card">
-                    <div class="row g-3 mb-3">
-                         <div class="col-md-3">
-                        
+                <div class="section-title"><i class="fas fa-hand-holding-heart me-2"></i> Benefícios Sociais</div>
+                <div id="containerBeneficios"></div>
+                <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="adicionarLinhaBeneficio()">+ Adicionar Benefício</button>
+            </div>
+
+             <!-- CAMPOS: Pais juntos, qtd irmãos, tipo moradia, qtd comodos -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
                         <label class="form-label">Pais vivem juntos</label>
                         <select id="pais_juntos" class="form-select">
                             <option value="">Selecione</option>
@@ -253,17 +284,7 @@
                         <input type="number" step="0.01" id="aluguel" class="form-control" placeholder="0.00">
                     </div>
                 </div>
-            </div>
-
-          
-            <!-- BENEFÍCIOS SOCIAIS -->
-            <div class="form-card">
-                <div class="section-title"><i class="fas fa-hand-holding-heart me-2"></i> Benefícios Sociais</div>
-                <div id="containerBeneficios"></div>
-                <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="adicionarLinhaBeneficio()">+ Adicionar Benefício</button>
-            </div>
-
-              
+ 
             <!-- AUTORIZAÇÃO DE USO DE IMAGEM (ADICIONADO ANTES DAS ASSINATURAS) -->
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-image me-2"></i> Autorização de Uso de Imagem</div>
@@ -355,7 +376,6 @@
             adicionarLinhaBeneficio();
             initSignaturePad('canvasMae');
             initSignaturePad('canvasPai');
-            initUfAutofill(); // inicializa autocompletar UF a partir da cidade
         };
 
         // ============================================================
@@ -479,122 +499,8 @@
                     document.getElementById('rua').value = d.logradouro;
                     document.getElementById('bairro').value = d.bairro;
                     document.getElementById('cidade').value = d.localidade;
-                    // preenche UF se retornado pelo ViaCEP
-                    if (d.uf) {
-                        document.getElementById('uf').value = d.uf;
-                    }
                 }
             }
-        }
-
-        // ============================================================
-        // AUTOCOMPLETE UF A PARTIR DA CIDADE (IBGE)
-        // ============================================================
-        function debounce(fn, wait) {
-            let t;
-            return function () {
-                const args = arguments;
-                clearTimeout(t);
-                t = setTimeout(() => fn.apply(this, args), wait);
-            };
-        }
-
-        async function queryIbgeForCity(city) {
-            if (!city || city.trim().length < 2) return null;
-            const q = encodeURIComponent(city.trim());
-            try {
-                const url = 'https://servicodados.ibge.gov.br/api/v1/localidades/municipios?nome=' + q;
-                const res = await fetch(url, { cache: 'no-store' });
-                if (!res.ok) return null;
-                const data = await res.json();
-                if (!Array.isArray(data) || data.length === 0) return [];
-                return data; // array of municipality objects
-            } catch (e) {
-                return null;
-            }
-        }
-
-        function showUfSelect(ufs) {
-            // cria ou reutiliza um select pequeno abaixo do campo UF para o usuário escolher
-            let existing = document.getElementById('uf_select');
-            if (!existing) {
-                existing = document.createElement('select');
-                existing.id = 'uf_select';
-                existing.className = 'form-select';
-                existing.style.marginTop = '6px';
-                existing.style.maxWidth = '120px';
-                const ufInput = document.getElementById('uf');
-                ufInput.parentNode.appendChild(existing);
-            }
-            existing.innerHTML = '';
-            const placeholder = document.createElement('option');
-            placeholder.value = '';
-            placeholder.textContent = '-- escolha --';
-            existing.appendChild(placeholder);
-            ufs.forEach(u => {
-                const opt = document.createElement('option');
-                opt.value = u;
-                opt.textContent = u;
-                existing.appendChild(opt);
-            });
-            existing.style.display = '';
-            existing.onchange = function () {
-                document.getElementById('uf').value = this.value || '';
-                existing.style.display = 'none';
-            };
-        }
-
-        function hideUfSelect() {
-            const existing = document.getElementById('uf_select');
-            if (existing) existing.style.display = 'none';
-        }
-
-        function initUfAutofill() {
-            const cityInput = document.getElementById('cidade');
-            if (!cityInput) return;
-
-            const doLookup = debounce(async function () {
-                const cityVal = (cityInput.value || '').trim();
-                if (!cityVal) {
-                    document.getElementById('uf').value = '';
-                    hideUfSelect();
-                    return;
-                }
-                document.getElementById('uf').value = '...';
-                hideUfSelect();
-
-                const results = await queryIbgeForCity(cityVal);
-                if (results === null) {
-                    document.getElementById('uf').value = '';
-                    return;
-                }
-                if (results.length === 0) {
-                    document.getElementById('uf').value = '';
-                    return;
-                }
-                // extrair siglas de UF distintas
-                const ufs = Array.from(new Set(results.map(item => {
-                    try {
-                        return item.microrregiao.mesorregiao.UF.sigla;
-                    } catch (e) {
-                        return null;
-                    }
-                }).filter(Boolean)));
-
-                if (ufs.length === 1) {
-                    document.getElementById('uf').value = ufs[0];
-                } else if (ufs.length > 1) {
-                    document.getElementById('uf').value = '';
-                    showUfSelect(ufs);
-                } else {
-                    document.getElementById('uf').value = '';
-                }
-            }, 600);
-
-            cityInput.addEventListener('input', doLookup);
-            cityInput.addEventListener('blur', doLookup);
-            // se já tiver valor ao carregar
-            if (cityInput.value && cityInput.value.trim().length > 0) doLookup();
         }
 
         // ============================================================
@@ -708,13 +614,17 @@
                 whatsapp: document.getElementById('whatsapp').value,
                 etnia: document.getElementById('etnia').value || null,
                 genero: document.getElementById('genero') ? document.getElementById('genero').value || null : null,
+                // ---------- Campos Acadêmicos adicionados ----------
+                escola: document.getElementById('escola') ? (document.getElementById('escola').value || null) : null,
+                periodo: document.getElementById('periodo') ? (document.getElementById('periodo').value || null) : null,
+                serie: document.getElementById('serie') ? (document.getElementById('serie').value || null) : null,
+                // ---------------------------------------------------
                 cep: document.getElementById('cep').value,
                 rua: document.getElementById('rua').value,
                 numero: document.getElementById('numero').value,
                 complemento: document.getElementById('complemento').value,
                 bairro: document.getElementById('bairro').value,
                 cidade: document.getElementById('cidade').value,
-                uf: document.getElementById('uf') ? (document.getElementById('uf').value || null) : null,
                 nome_mae: document.getElementById('nome_mae').value,
                 situacao_mae: document.getElementById('situacao_mae').value,
                 tel_mae: document.getElementById('tel_mae').value,
