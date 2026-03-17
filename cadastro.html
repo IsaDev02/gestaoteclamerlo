@@ -21,7 +21,9 @@
         .benefit-row { background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
         .age-display { background: #eff6ff; color: var(--primary); font-weight: 800; text-align: center; }
         #videoCamera { border: 3px solid var(--primary); border-radius: 8px; }
-        /* Ajuste na área de assinatura: maior e responsiva para tablets */
+
+        /* Ajuste na área de assinatura: agora cada assinatura ocupa toda a largura disponível (col-12)
+           Aumentei a altura e a responsividade para tablets/PCs para dar mais espaço às assinaturas */
         .signature-canvas {
             border: 2px dashed #cbd5e1;
             border-radius: 8px;
@@ -30,17 +32,25 @@
             touch-action: none;
             display: block;
             width: 100%;
-            height: 260px; /* Aumentado para melhor área de assinatura em tablets */
-            max-height: 360px;
+            height: 420px; /* Maior altura para fornecer espaço de assinatura */
+            max-height: 80vh;
             box-sizing: border-box;
         }
 
-        /* Em telas muito pequenas, reduzir um pouco a altura */
+        /* Altura um pouco menor em telas pequenas (celular/portrait) */
+        @media (max-width: 768px) {
+            .signature-canvas { height: 320px; }
+        }
+
         @media (max-width: 576px) {
-            .signature-canvas { height: 200px; }
+            .signature-canvas { height: 260px; }
         }
 
         .signature-canvas.signing { border-color: #3b82f6; border-style: solid; }
+
+        /* Remove gap between stacked canvases to maximize vertical space */
+        .assinaturas-container .col-12 { padding-left: 0; padding-right: 0; }
+        .assinaturas-container .d-flex { justify-content: flex-end; gap: .5rem; }
     </style>
 </head>
 <body>
@@ -322,28 +332,36 @@
                 </div>
             </div>
 
-            <!-- ASSINATURA DOS RESPONSÁVEIS -->
-            <div class="form-card">
+            <!-- ASSINATURA DOS RESPONSÁVEIS (AGORA EMPILHADAS, OCUPANDO A LARGURA) -->
+            <div class="form-card assinaturas-container">
                 <div class="section-title"><i class="fas fa-signature me-2"></i> Assinatura dos Responsáveis</div>
-                <div class="row g-4">
-                    <div class="col-md-6">
+
+                <!-- A assinatura da mãe ocupa toda a largura -->
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
                         <label class="form-label">Assinatura da Mãe / Responsável 1</label>
                         <canvas id="canvasMae" class="signature-canvas" aria-label="Assinatura da mãe / responsável 1"></canvas>
-                        <div class="d-flex align-items-center mt-2 gap-2">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparAssinatura('canvasMae')">
+                        <div class="d-flex align-items-center mt-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" onclick="limparAssinatura('canvasMae')">
                                 <i class="fas fa-eraser me-1"></i> Limpar
                             </button>
-                            <small class="text-muted"><i class="fas fa-pen-nib me-1"></i> Assine no campo acima</small>
+                            <small class="text-muted ms-2"><i class="fas fa-pen-nib me-1"></i> Assine no campo acima</small>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                </div>
+
+                <hr>
+
+                <!-- A assinatura do pai/resp 2 ocupa toda a largura abaixo da mãe -->
+                <div class="row g-3">
+                    <div class="col-12">
                         <label class="form-label">Assinatura do Pai / Responsável 2</label>
                         <canvas id="canvasPai" class="signature-canvas" aria-label="Assinatura do pai / responsável 2"></canvas>
-                        <div class="d-flex align-items-center mt-2 gap-2">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparAssinatura('canvasPai')">
+                        <div class="d-flex align-items-center mt-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" onclick="limparAssinatura('canvasPai')">
                                 <i class="fas fa-eraser me-1"></i> Limpar
                             </button>
-                            <small class="text-muted"><i class="fas fa-pen-nib me-1"></i> Assine no campo acima</small>
+                            <small class="text-muted ms-2"><i class="fas fa-pen-nib me-1"></i> Assine no campo acima</small>
                         </div>
                     </div>
                 </div>
@@ -594,6 +612,12 @@
                 window.addEventListener('resize', () => {
                     document.querySelectorAll('.signature-canvas').forEach(c => resizeCanvasAndMaintainDrawing(c));
                 });
+                // Também redimensionar ao girar (orientationchange)
+                window.addEventListener('orientationchange', () => {
+                    setTimeout(() => {
+                        document.querySelectorAll('.signature-canvas').forEach(c => resizeCanvasAndMaintainDrawing(c));
+                    }, 300);
+                });
                 window._signatureResizeHandlerAdded = true;
             }
 
@@ -638,7 +662,7 @@
                 const pressure = (e.pressure && e.pressure > 0) ? e.pressure : 0.5;
                 const dpr = window.devicePixelRatio || 1;
                 // Controle de espessura honrando pressure + dpr
-                let lineW = Math.max(2, Math.min(12, pressure * 6 * dpr));
+                let lineW = Math.max(2, Math.min(18, pressure * 6 * dpr));
                 // suavização simples (misturar com valor anterior poderia ser adicionado)
                 ctx.beginPath();
                 ctx.moveTo(lastX, lastY);
