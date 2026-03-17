@@ -21,7 +21,25 @@
         .benefit-row { background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
         .age-display { background: #eff6ff; color: var(--primary); font-weight: 800; text-align: center; }
         #videoCamera { border: 3px solid var(--primary); border-radius: 8px; }
-        .signature-canvas { border: 2px dashed #cbd5e1; border-radius: 8px; background: #fff; cursor: crosshair; touch-action: none; display: block; width: 100%; height: 160px; }
+        /* Ajuste na área de assinatura: maior e responsiva para tablets */
+        .signature-canvas {
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            background: #fff;
+            cursor: crosshair;
+            touch-action: none;
+            display: block;
+            width: 100%;
+            height: 260px; /* Aumentado para melhor área de assinatura em tablets */
+            max-height: 360px;
+            box-sizing: border-box;
+        }
+
+        /* Em telas muito pequenas, reduzir um pouco a altura */
+        @media (max-width: 576px) {
+            .signature-canvas { height: 200px; }
+        }
+
         .signature-canvas.signing { border-color: #3b82f6; border-style: solid; }
     </style>
 </head>
@@ -310,7 +328,7 @@
                 <div class="row g-4">
                     <div class="col-md-6">
                         <label class="form-label">Assinatura da Mãe / Responsável 1</label>
-                        <canvas id="canvasMae" class="signature-canvas" width="600" height="160"></canvas>
+                        <canvas id="canvasMae" class="signature-canvas" aria-label="Assinatura da mãe / responsável 1"></canvas>
                         <div class="d-flex align-items-center mt-2 gap-2">
                             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparAssinatura('canvasMae')">
                                 <i class="fas fa-eraser me-1"></i> Limpar
@@ -320,7 +338,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Assinatura do Pai / Responsável 2</label>
-                        <canvas id="canvasPai" class="signature-canvas" width="600" height="160"></canvas>
+                        <canvas id="canvasPai" class="signature-canvas" aria-label="Assinatura do pai / responsável 2"></canvas>
                         <div class="d-flex align-items-center mt-2 gap-2">
                             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparAssinatura('canvasPai')">
                                 <i class="fas fa-eraser me-1"></i> Limpar
@@ -507,44 +525,101 @@
         }
 
         // ============================================================
-        // ASSINATURAS
+        // ASSINATURAS (melhor sensibilidade e responsividade para tablets)
         // ============================================================
         function isCanvasBlank(canvas) {
-            const blank = document.createElement('canvas');
-            blank.width = canvas.width;
-            blank.height = canvas.height;
-            return canvas.toDataURL() === blank.toDataURL();
+            try {
+                const blank = document.createElement('canvas');
+                blank.width = canvas.width;
+                blank.height = canvas.height;
+                return canvas.toDataURL() === blank.toDataURL();
+            } catch (err) {
+                // fallback conservador
+                return false;
+            }
         }
 
+        // Redimensiona o canvas para o devicePixelRatio e preserva o desenho atual
+        function resizeCanvasAndMaintainDrawing(canvas) {
+            try {
+                const ratio = window.devicePixelRatio || 1;
+                // Salvar desenho atual
+                const data = canvas.toDataURL();
+                // Ajustar tamanho do buffer do canvas
+                canvas.width = Math.floor(canvas.clientWidth * ratio);
+                canvas.height = Math.floor(canvas.clientHeight * ratio);
+                const ctx = canvas.getContext('2d');
+                // Resetar transform e aplicar escala para coordenadas em CSS pixels
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.scale(ratio, ratio);
+                // Redesenhar imagem salva (se houver)
+                if (data) {
+                    const img = new Image();
+                    img.onload = function() {
+                        ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+                        ctx.drawImage(img, 0, 0, canvas.clientWidth, canvas.clientHeight);
+                    };
+                    img.src = data;
+                } else {
+                    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+                }
+            } catch (err) {
+                console.warn('resizeCanvasAndMaintainDrawing erro:', err);
+            }
+        }
+
+        // Limpar assinatura — considera o dimensionamento do canvas
         function limparAssinatura(canvasId) {
             const canvas = document.getElementById(canvasId);
-            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            // Limpa a área inteira levando em conta o tamanho real do canvas
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
         function initSignaturePad(canvasId) {
             const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
             const ctx = canvas.getContext('2d');
+
+            // Inicializa tamanho e mantém desenho se rotacionar/redimensionar
+            resizeCanvasAndMaintainDrawing(canvas);
+
             let drawing = false;
             let lastX = 0, lastY = 0;
 
-            function getPos(e) {
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                return {
-                    x: (e.clientX - rect.left) * scaleX,
-                    y: (e.clientY - rect.top) * scaleY
-                };
+            // Adiciona manipulador de resize global (apenas uma vez)
+            if (!window._signatureResizeHandlerAdded) {
+                window.addEventListener('resize', () => {
+                    document.querySelectorAll('.signature-canvas').forEach(c => resizeCanvasAndMaintainDrawing(c));
+                });
+                window._signatureResizeHandlerAdded = true;
             }
 
             canvas.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
                 drawing = true;
                 canvas.setPointerCapture(e.pointerId);
                 canvas.classList.add('signing');
-                const pos = getPos(e);
+
+                // Garante resolução correta antes de desenhar
+                resizeCanvasAndMaintainDrawing(canvas);
+
+                const rect = canvas.getBoundingClientRect();
+
+                // calcular posição relativa à área visual (CSS pixels)
+                const pos = {
+                    x: (e.clientX - rect.left),
+                    y: (e.clientY - rect.top)
+                };
+
                 lastX = pos.x;
                 lastY = pos.y;
-                const r = (e.pressure > 0 ? e.pressure : 0.5) * 1.5;
+
+                const pressure = (e.pressure && e.pressure > 0) ? e.pressure : 0.5;
+                const r = Math.max(1.5, pressure * 5);
+                // desenha ponto inicial (usa transform do canvas já escalado)
                 ctx.beginPath();
                 ctx.arc(lastX, lastY, r, 0, Math.PI * 2);
                 ctx.fillStyle = '#1e293b';
@@ -553,29 +628,44 @@
 
             canvas.addEventListener('pointermove', (e) => {
                 if (!drawing) return;
-                const pos = getPos(e);
-                const pressure = e.pressure > 0 ? e.pressure : 0.5;
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const pos = {
+                    x: (e.clientX - rect.left),
+                    y: (e.clientY - rect.top)
+                };
+                // pressure fallback
+                const pressure = (e.pressure && e.pressure > 0) ? e.pressure : 0.5;
+                const dpr = window.devicePixelRatio || 1;
+                // Controle de espessura honrando pressure + dpr
+                let lineW = Math.max(2, Math.min(12, pressure * 6 * dpr));
+                // suavização simples (misturar com valor anterior poderia ser adicionado)
                 ctx.beginPath();
                 ctx.moveTo(lastX, lastY);
                 ctx.lineTo(pos.x, pos.y);
                 ctx.strokeStyle = '#1e293b';
-                ctx.lineWidth = pressure * 4;
+                ctx.lineWidth = lineW;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
                 ctx.stroke();
+
                 lastX = pos.x;
                 lastY = pos.y;
             });
 
-            canvas.addEventListener('pointerup', () => {
+            canvas.addEventListener('pointerup', (e) => {
                 drawing = false;
                 canvas.classList.remove('signing');
+                try { canvas.releasePointerCapture && canvas.releasePointerCapture(e.pointerId); } catch (err) {}
             });
 
             canvas.addEventListener('pointercancel', () => {
                 drawing = false;
                 canvas.classList.remove('signing');
             });
+
+            // Previne scroll/gestos ao desenhar em alguns navegadores
+            canvas.addEventListener('touchstart', (e) => { e.preventDefault(); }, { passive: false });
         }
 
         // Exibe/oculta campo valor do aluguel
