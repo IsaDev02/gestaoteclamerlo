@@ -19,7 +19,6 @@
                         <p class="text-muted">Acesse sua conta</p>
                     </div>
                     
-                    <!-- Formulário de Login -->
                     <form id="loginForm">
                         <div class="mb-3">
                             <label class="form-label">E-mail</label>
@@ -32,7 +31,6 @@
                         <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Entrar</button>
                     </form>
                     
-                    <!-- Div para mostrar mensagens de erro -->
                     <div id="msg" class="alert alert-danger mt-3 d-none"></div>
                 </div>
             </div>
@@ -40,52 +38,38 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // Seleciona o formulário e a div de mensagem
+    // IMPORTANTE: Substitua pelas suas chaves do Supabase (Settings > API)
+    const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     const loginForm = document.getElementById('loginForm');
     const msgDiv = document.getElementById('msg');
 
-    // Event listener para o formulário de login
-    loginForm.addEventListener('submit', async (event) => {
-        event.preventDefault(); // Evita recarregar a página
-        
-        msgDiv.classList.add('d-none'); // Esconde mensagens anteriores
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        msgDiv.classList.add('d-none'); // Esconde erro anterior
 
-        const email = document.getElementById('email').value; // Coleta o email
-        const password = document.getElementById('password').value; // Coleta a senha
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
 
-        try {
-            // Faz a requisição para o endpoint de login no back-end
-            const response = await fetch('http://localhost:3000/auth/login', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify({
-                    email: email,
-                    senha: password
-                }),
-            });
+        // Tenta logar no Supabase
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
 
-            const data = await response.json(); // Converte a resposta para JSON
-
-            if (response.ok) {
-                // Login bem-sucedido, salva token e redireciona
-                localStorage.setItem('token', data.token); // Salva o token JWT
-                localStorage.setItem('role', data.role); // Salva o papel (role) do usuário
-                window.location.href = 'dashboard.html'; // Redireciona para o 'dashboard'
-            } else {
-                // Mostra mensagem de erro em caso de falha
-                msgDiv.innerText = data.message || 'Erro ao fazer login.';
-                msgDiv.classList.remove('d-none');
-            }
-        } catch (error) {
-            console.error('Erro de rede:', error);
-            msgDiv.innerText = 'Erro ao conectar ao servidor. Tente novamente.';
+        if (error) {
+            msgDiv.innerText = "Usuário ou senha incorretos.";
             msgDiv.classList.remove('d-none');
+        } else {
+            // Sucesso! Salva a sessão e vai para o dashboard
+            window.location.href = 'dashboard.html';
         }
     });
 </script>
-
 </body>
+
 </html>
