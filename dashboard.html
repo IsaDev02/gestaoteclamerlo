@@ -63,6 +63,18 @@
         .table tbody td { padding: 16px 15px; border-bottom: 1px solid #f1f5f9; }
         .project-dot { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; margin-right: 12px; }
     </style>
+
+    <script>
+    // Verifica se o usuário está autenticado
+    const token = localStorage.getItem('token'); // Obtém o token do localStorage
+
+    if (!token) {
+        // Se não houver token, redireciona para a página de login
+        alert('Você precisa estar logado para acessar esta página.');
+        window.location.href = 'index.html';
+    }
+</script>
+    
 </head>
 <body>
 
