@@ -28,13 +28,18 @@
     </style>
     
 <script>
-    // Verifica se o usuário está autenticado
+    // Verifica se o usuário está autenticado e tem permissão para acessar a página
     const token = localStorage.getItem('token'); // Obtém o token do localStorage
+    const role = localStorage.getItem('role'); // Obtém o papel do usuário (admin/professor)
 
     if (!token) {
-        // Se não houver token, redireciona para a página de login
+        // Caso o token não exista, redireciona para a página de login
         alert('Você precisa estar logado para acessar esta página.');
         window.location.href = 'index.html';
+    } else if (role !== 'admin' && role !== 'professor') {
+        // Se o papel do usuário não for "admin" ou "professor", bloqueia o acesso
+        alert('Apenas administradores ou professores podem acessar esta página.');
+        window.location.href = 'dashboard.html';
     }
 </script>
 
