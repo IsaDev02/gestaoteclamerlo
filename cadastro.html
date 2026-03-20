@@ -52,7 +52,22 @@
         .assinaturas-container .col-12 { padding-left: 0; padding-right: 0; }
         .assinaturas-container .d-flex { justify-content: flex-end; gap: .5rem; }
     </style>
+    
+<script>
+    // Verifica se o usuário está autenticado e tem permissão de acesso
+    const token = localStorage.getItem('token'); // Obtém o token do localStorage
+    const role = localStorage.getItem('role'); // Obtém o papel do usuário do localStorage (admin/professor)
 
+    if (!token) {
+        // Se não houver token, redireciona para a página de login
+        alert('Você precisa estar logado para acessar esta página.');
+        window.location.href = 'index.html';
+    } else if (role !== 'admin' && role !== 'professor') {
+        // Se o papel não for "admin" ou "professor", nega o acesso
+        alert('Apenas administradores ou professores podem acessar esta página.');
+        window.location.href = 'dashboard.html';
+    }
+</script>
    
 </head>
 <body>
