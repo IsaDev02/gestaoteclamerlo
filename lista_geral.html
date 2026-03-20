@@ -25,17 +25,21 @@
         .pagination .page-item.disabled .page-link { cursor: not-allowed; opacity: 0.6; }
     </style>
 
-    <script>
-    // Verifica se o usuário está autenticado
+<script>
+    // Verifica se o usuário está autenticado e tem o papel de admin
     const token = localStorage.getItem('token'); // Obtém o token do localStorage
+    const role = localStorage.getItem('role'); // Obtém o papel do usuário (admin/professor)
 
     if (!token) {
-        // Se não houver token, redireciona para a página de login
+        // Caso o token não exista, redireciona para a página de login
         alert('Você precisa estar logado para acessar esta página.');
         window.location.href = 'index.html';
+    } else if (role !== 'admin') {
+        // Se o papel do usuário não for "admin", bloqueia o acesso
+        alert('Apenas administradores podem acessar esta página.');
+        window.location.href = 'dashboard.html';
     }
 </script>
-
     
 </head>
 <body>
