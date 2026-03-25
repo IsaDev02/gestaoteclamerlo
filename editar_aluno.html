@@ -607,6 +607,11 @@
                     const nomeProjeto = nomesProjetos[m.projeto_id] || '';
                     document.getElementById('projeto_atual').value = nomeProjeto;
                     atualizarProjetoAtualDisplay(nomeProjeto);
+                    // Cria o registro que faltou no cadastro
+                    if (nomeProjeto) {
+                        await supabaseClient.from('historico_projetos')
+                            .upsert({ aluno_id: alunoIdInt, projeto_atual: nomeProjeto }, { onConflict: 'aluno_id' });
+                    }
                 }
             }
         }
