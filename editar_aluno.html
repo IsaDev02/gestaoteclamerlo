@@ -580,37 +580,65 @@
                 }
             }
 
-            const { data: h } = await supabaseClient.from('historico_projetos').select('*').eq('aluno_id', alunoIdInt).maybeSingle();
-            if (h) {
-                document.getElementById('projeto_atual').value = h.projeto_atual || '';
-                atualizarProjetoAtualDisplay(h.projeto_atual || '');
+            // Busca historico_projetos usando select com limit para evitar erro do maybeSingle
+            const { data: hLista, error: hErro } = await supabaseClient
+                .from('historico_projetos')
+                .select('*')
+                .eq('aluno_id', alunoIdInt)
+                .limit(1);
+
+            console.log('[DEBUG] aluno_id buscado:', alunoIdInt);
+            console.log('[DEBUG] historico_projetos resultado:', hLista, '| erro:', hErro);
+
+            const h = (hLista && hLista.length > 0) ? hLista[0] : null;
+
+            if (h && h.projeto_atual) {
+                document.getElementById('projeto_atual').value = h.projeto_atual;
+                atualizarProjetoAtualDisplay(h.projeto_atual);
                 for (let i = 1; i <= 6; i++) {
                     document.getElementById(`projeto_${i}`).value = h[`projeto_${i}`] || '';
                     document.getElementById(`data_termino_${i}`).value = h[`data_termino_${i}`] || '';
                     atualizarBadgeHistorico(i);
                 }
             } else {
-                // Fallback: busca o projeto mais recente da tabela matriculas
-                const { data: m } = await supabaseClient
-                    .from('matriculas')
-                    .select('projeto_id')
-                    .eq('aluno_id', alunoIdInt)
-                    .order('data_matricula', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-                if (m) {
-                    const nomesProjetos = {
-                        1: 'Adolescer para Crescer', 2: 'Criança Certeza',
-                        3: 'Sempre Criança', 4: 'Valorizando a Infância',
-                        5: 'Clube de Mães', 6: 'Animar e Celebrar'
-                    };
-                    const nomeProjeto = nomesProjetos[m.projeto_id] || '';
+                // Fallback: busca na tabela alunos (campo projetos) e depois em matriculas
+                const nomesProjetos = {
+                    1: 'Adolescer para Crescer', 2: 'Criança Certeza',
+                    3: 'Sempre Criança', 4: 'Valorizando a Infância',
+                    5: 'Clube de Mães', 6: 'Animar e Celebrar'
+                };
+
+                // Tenta primeiro pelo campo projetos da tabela alunos
+                let nomeProjeto = '';
+                const alunoProj = document.getElementById('projetos');
+                const selectedOpts = alunoProj ? Array.from(alunoProj.selectedOptions) : [];
+                if (selectedOpts.length > 0) {
+                    nomeProjeto = nomesProjetos[parseInt(selectedOpts[0].value)] || selectedOpts[0].text || '';
+                }
+
+                // Se não achou, busca na tabela matriculas
+                if (!nomeProjeto) {
+                    const { data: mLista } = await supabaseClient
+                        .from('matriculas')
+                        .select('projeto_id')
+                        .eq('aluno_id', alunoIdInt)
+                        .order('data_matricula', { ascending: false })
+                        .limit(1);
+                    const m = mLista && mLista.length > 0 ? mLista[0] : null;
+                    if (m) nomeProjeto = nomesProjetos[m.projeto_id] || '';
+                }
+
+                if (nomeProjeto) {
                     document.getElementById('projeto_atual').value = nomeProjeto;
                     atualizarProjetoAtualDisplay(nomeProjeto);
-                    // Cria o registro que faltou no cadastro
-                    if (nomeProjeto) {
+                    // Salva no banco para as próximas visitas
+                    if (h) {
                         await supabaseClient.from('historico_projetos')
-                            .upsert({ aluno_id: alunoIdInt, projeto_atual: nomeProjeto }, { onConflict: 'aluno_id' });
+                            .update({ projeto_atual: nomeProjeto })
+                            .eq('aluno_id', alunoIdInt);
+                    } else {
+                        await supabaseClient.from('historico_projetos')
+                            .insert({ aluno_id: alunoIdInt, projeto_atual: nomeProjeto });
                     }
                 }
             }
