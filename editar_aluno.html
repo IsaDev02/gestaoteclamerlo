@@ -988,13 +988,11 @@
 
                     // Calcula data de término automática: 30/jun (1º semestre) ou 10/dez (2º semestre)
                     const hoje = new Date();
-                    const mes = hoje.getMonth() + 1; // 1-12
+                    const mes = hoje.getMonth() + 1;
                     const ano = hoje.getFullYear();
-                    const dataTermino = mes <= 6
-                        ? `${ano}-06-30`
-                        : `${ano}-12-10`;
+                    const dataTermino = mes <= 6 ? `${ano}-06-30` : `${ano}-12-10`;
 
-                    // Busca o histórico atual para encontrar a próxima linha vazia
+                    // Busca (ou cria) o registro de historico_projetos
                     const { data: hAtual } = await supabaseClient
                         .from('historico_projetos')
                         .select('*')
@@ -1004,49 +1002,54 @@
                     const hReg = hAtual && hAtual.length > 0 ? hAtual[0] : null;
 
                     // Encontra a próxima slot livre (projeto_1 até projeto_6)
-                    let slotLivre = null;
-                    for (let i = 1; i <= 6; i++) {
-                        if (!hReg || !hReg[`projeto_${i}`]) {
-                            slotLivre = i;
-                            break;
+                    let slotLivre = 1;
+                    if (hReg) {
+                        for (let i = 1; i <= 6; i++) {
+                            if (!hReg[`projeto_${i}`]) { slotLivre = i; break; }
+                            if (i === 6) slotLivre = null; // todos ocupados
                         }
                     }
 
-                    const updateData = { projeto_atual: projetoNovo };
-
-                    // Preenche o slot livre com o projeto anterior e a data de término
-                    if (slotLivre) {
-                        updateData[`projeto_${slotLivre}`] = projetoAnterior;
-                        updateData[`data_termino_${slotLivre}`] = dataTermino;
+                    // Monta os dados a salvar
+                    const saveData = { aluno_id: alunoIdInt, projeto_atual: projetoNovo };
+                    if (slotLivre && projetoAnterior) {
+                        // Preserva slots já preenchidos
+                        if (hReg) {
+                            for (let i = 1; i <= 6; i++) {
+                                saveData[`projeto_${i}`] = hReg[`projeto_${i}`] || null;
+                                saveData[`data_termino_${i}`] = hReg[`data_termino_${i}`] || null;
+                            }
+                        }
+                        saveData[`projeto_${slotLivre}`] = projetoAnterior;
+                        saveData[`data_termino_${slotLivre}`] = dataTermino;
                     }
 
-                    if (hReg) {
-                        const { error: histError } = await supabaseClient
-                            .from('historico_projetos')
-                            .update(updateData)
-                            .eq('aluno_id', alunoIdInt);
-                        if (histError) throw histError;
-                    } else {
-                        const { error: histError } = await supabaseClient
-                            .from('historico_projetos')
-                            .insert({ aluno_id: alunoIdInt, ...updateData });
-                        if (histError) throw histError;
+                    // Upsert garante que funciona tanto para registros novos quanto existentes
+                    const { error: histError } = await supabaseClient
+                        .from('historico_projetos')
+                        .upsert(saveData, { onConflict: 'aluno_id' });
+                    if (histError) {
+                        // Fallback: tenta insert se upsert falhar por falta de constraint
+                        if (!hReg) {
+                            const { error: insErr } = await supabaseClient
+                                .from('historico_projetos').insert(saveData);
+                            if (insErr) throw insErr;
+                        } else {
+                            const { error: updErr } = await supabaseClient
+                                .from('historico_projetos').update(saveData).eq('aluno_id', alunoIdInt);
+                            if (updErr) throw updErr;
+                        }
                     }
 
-                    // Atualiza a tabela visual do histórico na tela
-                    if (slotLivre) {
+                    // Atualiza campos visuais na tela imediatamente
+                    atualizarProjetoAtualDisplay(projetoNovo);
+                    document.getElementById('rematricula_projeto_anterior').value = projetoNovo;
+                    if (slotLivre && projetoAnterior) {
                         const inputProjeto = document.getElementById(`projeto_${slotLivre}`);
                         const inputData = document.getElementById(`data_termino_${slotLivre}`);
                         if (inputProjeto) inputProjeto.value = projetoAnterior;
-                        if (inputData) {
-                            inputData.value = dataTermino;
-                            atualizarBadgeHistorico(slotLivre);
-                        }
+                        if (inputData) { inputData.value = dataTermino; atualizarBadgeHistorico(slotLivre); }
                     }
-
-                    document.getElementById('projeto_atual').value = projetoNovo;
-                    document.getElementById('rematricula_projeto_anterior').value = projetoNovo;
-                    atualizarProjetoAtualDisplay(projetoNovo);
                 }
 
                 const { error: alunoError } = await supabaseClient
