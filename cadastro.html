@@ -904,6 +904,22 @@
                 const { error: erroM } = await supabaseClient.from('matriculas').insert([dadosMatricula]);
                 if (erroM) throw erroM;
 
+                // 4. Criar registro em historico_projetos com o projeto atual
+                const nomesProjetos = {
+                    '1': 'Adolescer para Crescer',
+                    '2': 'Criança Certeza',
+                    '3': 'Sempre Criança',
+                    '4': 'Valorizando a Infância',
+                    '5': 'Clube de Mães',
+                    '6': 'Animar e Celebrar'
+                };
+                const nomeProjeto = nomesProjetos[String(projId)] || '';
+                if (nomeProjeto) {
+                    const { error: erroH } = await supabaseClient.from('historico_projetos')
+                        .upsert({ aluno_id: novoAluno.id, projeto_atual: nomeProjeto }, { onConflict: 'aluno_id' });
+                    if (erroH) console.warn('Erro ao criar histórico de projeto:', erroH.message);
+                }
+
                 alert("Cadastro realizado com sucesso!");
                 window.location.href = 'projetos.html';
                 
