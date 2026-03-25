@@ -1018,8 +1018,11 @@
                     }
 
                     // upsert com onConflict em aluno_id (tem UNIQUE constraint)
-                    const { error: histErr } = await supabaseClient.from('historico_projetos')
-                        .upsert(saveData, { onConflict: 'aluno_id' });
+                    console.log('[DEBUG] saveData a salvar:', JSON.stringify(saveData));
+                    const { data: upsertResult, error: histErr } = await supabaseClient.from('historico_projetos')
+                        .upsert(saveData, { onConflict: 'aluno_id' })
+                        .select();
+                    console.log('[DEBUG] upsert resultado:', upsertResult, '| erro:', histErr);
                     if (histErr) throw histErr;
 
                     // Atualiza campos visuais na tela imediatamente
