@@ -1024,21 +1024,19 @@
                         saveData[`data_termino_${slotLivre}`] = dataTermino;
                     }
 
-                    // Upsert garante que funciona tanto para registros novos quanto existentes
-                    const { error: histError } = await supabaseClient
-                        .from('historico_projetos')
-                        .upsert(saveData, { onConflict: 'aluno_id' });
-                    if (histError) {
-                        // Fallback: tenta insert se upsert falhar por falta de constraint
-                        if (!hReg) {
-                            const { error: insErr } = await supabaseClient
-                                .from('historico_projetos').insert(saveData);
-                            if (insErr) throw insErr;
-                        } else {
-                            const { error: updErr } = await supabaseClient
-                                .from('historico_projetos').update(saveData).eq('aluno_id', alunoIdInt);
-                            if (updErr) throw updErr;
-                        }
+                    // Salva: update se já existe, insert se não existe
+                    if (hReg) {
+                        delete saveData.aluno_id;
+                        const { error: updErr } = await supabaseClient
+                            .from('historico_projetos')
+                            .update(saveData)
+                            .eq('aluno_id', alunoIdInt);
+                        if (updErr) throw updErr;
+                    } else {
+                        const { error: insErr } = await supabaseClient
+                            .from('historico_projetos')
+                            .insert(saveData);
+                        if (insErr) throw insErr;
                     }
 
                     // Atualiza campos visuais na tela imediatamente
