@@ -691,8 +691,17 @@
                 const { error: e1 } = await supabaseClient.from('alunos').update(dadosA).eq('id', alunoIdInt);
                 if (e1) throw e1;
 
-                const { error: e2 } = await supabaseClient.from('historico_projetos')
-                    .upsert({ aluno_id: alunoIdInt, ...dadosH }, { onConflict: 'aluno_id' });
+                // Verifica se já existe registro antes de insert/update
+                const { data: hCheck } = await supabaseClient
+                    .from('historico_projetos').select('id').eq('aluno_id', alunoIdInt).limit(1);
+                let e2;
+                if (hCheck && hCheck.length > 0) {
+                    ({ error: e2 } = await supabaseClient.from('historico_projetos')
+                        .update(dadosH).eq('aluno_id', alunoIdInt));
+                } else {
+                    ({ error: e2 } = await supabaseClient.from('historico_projetos')
+                        .insert({ aluno_id: alunoIdInt, ...dadosH }));
+                }
                 if (e2) throw e2;
 
                 // Upload de assinaturas (se houver novas)
