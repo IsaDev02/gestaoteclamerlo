@@ -46,7 +46,7 @@ const FERIADOS_BRASIL = {
         '04-10': 'Sexta-feira Santa',
         '04-21': 'Tiradentes',
         '05-01': 'Dia do Trabalho',
-        '06-11': 'Corpus Christi',
+        '06-04': 'Corpus Christi',
         '09-07': 'Independência',
         '10-12': 'Nossa Senhora Aparecida',
         '11-02': 'Finados',
