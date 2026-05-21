@@ -1,6 +1,6 @@
 /**
  * CALENDÁRIO COM ANIVERSÁRIOS E FERIADOS
- * Marca em azul: Aniversários dos alunos
+ * Marca em azul: Aniversários dos alunos ATIVOS
  * Marca em verde: Feriados do mês
  */
 
@@ -73,12 +73,16 @@ function obterFeriadosMes(mes, ano) {
     return feriadosMes;
 }
 
-// Função para extrair dia/mês dos aniversários
+// Função para extrair dia/mês dos aniversários de alunos ATIVOS apenas
 function obterAniversariosMes(alunos, mes, ano) {
     const aniversariosMes = {};
     
     alunos.forEach(aluno => {
-        if (aluno.data_nascimento) {
+        // Verificar se o aluno está ATIVO
+        const alunoAtivo = aluno.ativo ? String(aluno.ativo).trim().toLowerCase() : '';
+        const isAtivo = ['sim', 'true', 'ativo', '1', 's'].includes(alunoAtivo);
+        
+        if (isAtivo && aluno.data_nascimento) {
             try {
                 const data = new Date(aluno.data_nascimento + 'T00:00:00');
                 if (data.getMonth() === mes && data.getFullYear() <= ano) {
