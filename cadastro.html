@@ -19,6 +19,7 @@
         .form-label { font-weight: 600; font-size: 0.82rem; color: #64748b; margin-bottom: 4px; text-transform: uppercase; }
         .form-control, .form-select { border-radius: 8px; padding: 10px 12px; border: 1px solid #cbd5e1; font-size: 0.95rem; }
         .benefit-row { background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
+        .contato-row { background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
         .age-display { background: #eff6ff; color: var(--primary); font-weight: 800; text-align: center; }
         #videoCamera { border: 3px solid var(--primary); border-radius: 8px; }
 
@@ -89,7 +90,15 @@
                     <div class="col-md-2"><label class="form-label">CPF</label><input type="text" id="cpf" class="form-control mascara-cpf"></div>
                     <div class="col-md-2"><label class="form-label">Nascimento</label><input type="date" id="data_nasc" class="form-control" onchange="calcularIdade(this.value)"></div>
                     <div class="col-md-1"><label class="form-label">Idade</label><input type="text" id="idade" class="form-control age-display" readonly></div>
-                    <div class="col-md-3"><label class="form-label">WhatsApp (Aluno)</label><input type="text" id="whatsapp" class="form-control mascara-fone"></div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">WhatsApp (Aluno)</label>
+                        <input type="text" id="whatsapp" class="form-control mascara-fone">
+                        <div id="containerContatosExtras" class="mt-2"></div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="adicionarLinhaContato()">
+                            <i class="fas fa-plus me-1"></i> Contatos
+                        </button>
+                    </div>
 
                     <!-- ADIÇÃO: Campo GÊNERO -->
                     <div class="col-md-2">
@@ -403,6 +412,9 @@
          ALTER TABLE alunos ADD COLUMN assinatura_mae_url text;
          ALTER TABLE alunos ADD COLUMN assinatura_pai_url text;
     -->
+    <!-- Execute no SQL Editor do Supabase (NOVO):
+         ALTER TABLE alunos ADD COLUMN contatos_extras jsonb;
+    -->
     <script>
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
@@ -504,6 +516,19 @@
                 <div class="col-4"><input type="text" class="form-control ben-valor" placeholder="Valor"></div>
                 <div class="col-1"><button type="button" class="btn btn-danger btn-sm w-100" onclick="this.parentElement.parentElement.remove()">×</button></div>`;
             document.getElementById('containerBeneficios').appendChild(div);
+        }
+
+        // ============================================================
+        // CONTATOS EXTRAS
+        // ============================================================
+        function adicionarLinhaContato() {
+            const div = document.createElement('div');
+            div.className = 'contato-row row g-2';
+            div.innerHTML = `
+                <div class="col-6"><input type="text" class="form-control contato-nome" placeholder="Nome do contato"></div>
+                <div class="col-5"><input type="text" class="form-control contato-fone mascara-fone" placeholder="WhatsApp"></div>
+                <div class="col-1"><button type="button" class="btn btn-danger btn-sm w-100" onclick="this.parentElement.parentElement.remove()">×</button></div>`;
+            document.getElementById('containerContatosExtras').appendChild(div);
         }
 
         // ============================================================
@@ -723,6 +748,13 @@
             const valoresB = Array.from(document.querySelectorAll('.ben-valor')).map(i => i.value);
             const listaBeneficios = nomesB.map((nome, i) => `${nome}: R$ ${valoresB[i]}`).filter(x => x.length > 5).join(' | ');
 
+            // Coleta dos contatos extras
+            const nomesContatos = Array.from(document.querySelectorAll('.contato-nome')).map(i => i.value);
+            const fonesContatos = Array.from(document.querySelectorAll('.contato-fone')).map(i => i.value);
+            const contatosExtras = nomesContatos
+                .map((nome, i) => ({ nome: nome.trim(), whatsapp: (fonesContatos[i] || '').trim() }))
+                .filter(c => c.nome || c.whatsapp);
+
             const dadosAluno = {
                 nome: document.getElementById('nome').value,
                 rg: document.getElementById('rg').value,
@@ -730,6 +762,7 @@
                 data_nascimento: document.getElementById('data_nasc').value || null,
                 idade: parseInt(document.getElementById('idade').value) || null,
                 whatsapp: document.getElementById('whatsapp').value,
+                contatos_extras: contatosExtras.length > 0 ? contatosExtras : null,
                 etnia: document.getElementById('etnia').value || null,
                 genero: document.getElementById('genero') ? document.getElementById('genero').value || null : null,
                 // ---------- Campos Acadêmicos adicionados ----------
