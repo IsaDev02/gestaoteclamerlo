@@ -377,6 +377,17 @@
                 </div>
             </div>
           
+            <!-- OBSERVAÇÃO -->
+            <div class="form-card">
+                <div class="section-title"><i class="fas fa-comment-dots me-2"></i> Observação</div>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Observações sobre o aluno</label>
+                        <textarea id="observacao" class="form-control" rows="4" placeholder="Escreva aqui qualquer informação adicional relevante sobre o aluno..."></textarea>
+                    </div>
+                </div>
+            </div>
+
             <!-- MATRÍCULA -->
             <div class="form-card" style="border: 2px solid var(--primary);">
                 <div class="section-title text-primary"><i class="fas fa-check-circle me-2"></i> Matrícula no Projeto e Turma</div>
@@ -414,6 +425,7 @@
     -->
     <!-- Execute no SQL Editor do Supabase (NOVO):
          ALTER TABLE alunos ADD COLUMN contatos_extras jsonb;
+         ALTER TABLE alunos ADD COLUMN observacao text;
     -->
     <script>
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
@@ -814,6 +826,7 @@
                 cpf_outro: document.getElementById('cpf_outro').value,
                 rg_outro: document.getElementById('rg_outro').value,
                 beneficios_detalhados: listaBeneficios,
+                observacao: document.getElementById('observacao') ? (document.getElementById('observacao').value || null) : null,
                 projetos: [projId],
                 // AUTORIZAÇÃO DE USO DE IMAGEM
                 autorizacao_imagem: document.getElementById('autorizacao_imagem') ? document.getElementById('autorizacao_imagem').checked : false
