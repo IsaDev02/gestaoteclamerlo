@@ -15,7 +15,7 @@
         .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
         .main-content { margin-left: 240px; padding: 40px; }
         .form-card { background: #fff; border-radius: 12px; padding: 25px; box-shadow: var(--card-shadow); margin-bottom: 25px; border: 1px solid #e2e8f0; }
-        .section-title { font-size: 1rem; font-weight: 700; color: var(--primary); margin-bottom: 20px; display: flex; align-items: center; border-bottom: 2px solid #eff6ff; padding-bottom: 10px; [...]
+        .section-title { font-size: 1rem; font-weight: 700; color: var(--primary); margin-bottom: 20px; display: flex; align-items: center; border-bottom: 2px solid #eff6ff; padding-bottom: 10px; }
         .form-label { font-weight: 600; font-size: 0.82rem; color: #64748b; margin-bottom: 4px; text-transform: uppercase; }
         .form-control, .form-select { border-radius: 8px; padding: 10px 12px; border: 1px solid #cbd5e1; font-size: 0.95rem; }
         .benefit-row { background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; }
@@ -23,8 +23,57 @@
         .age-display { background: #eff6ff; color: var(--primary); font-weight: 800; text-align: center; }
         #videoCamera { border: 3px solid var(--primary); border-radius: 8px; }
 
-        /* Ajuste na área de assinatura: agora cada assinatura ocupa toda a largura disponível (col-12)
-           Aumentei a altura e a responsividade para tablets/PCs para dar mais espaço às assinaturas */
+        /* ESTILOS PARA SEÇÕES DE PARENTES */
+        .parente-section {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .parente-section:hover {
+            background: #f0f4f8;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+        }
+
+        .parente-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .parente-title i {
+            font-size: 1.1rem;
+        }
+
+        .parente-row-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .parente-row-group.full {
+            grid-template-columns: 1fr;
+        }
+
+        .parente-row-group.two-cols {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .parente-row-group.three-cols {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        /* Signature canvas */
         .signature-canvas {
             border: 2px dashed #313131;
             border-radius: 8px;
@@ -33,14 +82,15 @@
             touch-action: none;
             display: block;
             width: 100%;
-            height: 350px; /* Maior altura para fornecer espaço de assinatura */
+            height: 350px;
             max-height: 80vh;
             box-sizing: border-box;
         }
 
-        /* Altura um pouco menor em telas pequenas (celular/portrait) */
         @media (max-width: 768px) {
             .signature-canvas { height: 320px; }
+            .parente-row-group { grid-template-columns: 1fr; }
+            .parente-row-group.two-cols { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 576px) {
@@ -49,7 +99,6 @@
 
         .signature-canvas.signing { border-color: #3b82f6; border-style: solid; }
 
-        /* Remove gap between stacked canvases to maximize vertical space */
         .assinaturas-container .col-12 { padding-left: 0; padding-right: 0; }
         .assinaturas-container .d-flex { justify-content: flex-end; gap: .5rem; }
     </style>
@@ -100,7 +149,6 @@
                         </button>
                     </div>
 
-                    <!-- ADIÇÃO: Campo GÊNERO -->
                     <div class="col-md-2">
                       <label class="form-label">Gênero</label>
                       <select id="genero" class="form-select">
@@ -207,60 +255,196 @@
                 <div class="section-title"><i class="fas fa-users-line me-2"></i> Núcleo Familiar e Renda</div>
                 
                 <!-- DADOS DA MÃE -->
-                <h6 class="text-primary fw-bold mb-3">Dados da Mãe</h6>
-                <div class="row g-3 mb-2">
-                    <div class="col-md-4"><label class="form-label">Nome da Mãe</label><input type="text" id="nome_mae" class="form-control"></div>
-                    <div class="col-md-2"><label class="form-label">Situação</label><select id="situacao_mae" class="form-select"><option>PRESENTE</option><option>AUSENTE</option><option>FALECI[...]
-                    <div class="col-md-3"><label class="form-label">Profissão</label><input type="text" id="prof_mae" class="form-control"></div>
-                    <div class="col-md-3"><label class="form-label">Salário</label><input type="text" id="salario_mae" class="form-control"></div>
-                </div>
-                <div class="row g-3 mb-2">
-                    <div class="col-md-2"><label class="form-label">Data de Nascimento</label><input type="date" id="data_nasc_mae" class="form-control" onchange="calcularIdadeParente('data_nasc_mae', 'idade_mae')"></div>
-                    <div class="col-md-1"><label class="form-label">Idade</label><input type="text" id="idade_mae" class="form-control age-display" readonly></div>
-                </div>
-                <div class="row g-3 mb-4 border-bottom pb-4">
-                    <div class="col-md-4"><label class="form-label">Telefone Mãe</label><input type="text" id="tel_mae" class="form-control mascara-fone"></div>
-                    <div class="col-md-4"><label class="form-label">CPF Mãe</label><input type="text" id="cpf_mae" class="form-control mascara-cpf"></div>
-                    <div class="col-md-4"><label class="form-label">RG Mãe</label><input type="text" id="rg_mae" class="form-control mascara-rg"></div>
+                <div class="parente-section">
+                    <div class="parente-title">
+                        <i class="fas fa-female"></i>
+                        Dados da Mãe
+                    </div>
+                    
+                    <!-- Linha 1: Nome e Situação -->
+                    <div class="parente-row-group full">
+                        <div>
+                            <label class="form-label">Nome da Mãe</label>
+                            <input type="text" id="nome_mae" class="form-control">
+                        </div>
+                        <div>
+                            <label class="form-label">Situação</label>
+                            <select id="situacao_mae" class="form-select">
+                                <option>PRESENTE</option>
+                                <option>AUSENTE</option>
+                                <option>FALECIDA</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Linha 2: Profissão e Salário -->
+                    <div class="parente-row-group two-cols">
+                        <div>
+                            <label class="form-label">Profissão</label>
+                            <input type="text" id="prof_mae" class="form-control">
+                        </div>
+                        <div>
+                            <label class="form-label">Salário</label>
+                            <input type="text" id="salario_mae" class="form-control">
+                        </div>
+                    </div>
+
+                    <!-- Linha 3: Data de Nascimento e Idade -->
+                    <div class="parente-row-group two-cols">
+                        <div>
+                            <label class="form-label">Data de Nascimento</label>
+                            <input type="date" id="data_nasc_mae" class="form-control" onchange="calcularIdadeParente('data_nasc_mae', 'idade_mae')">
+                        </div>
+                        <div>
+                            <label class="form-label">Idade</label>
+                            <input type="text" id="idade_mae" class="form-control age-display" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Linha 4: Telefone, CPF, RG -->
+                    <div class="parente-row-group three-cols">
+                        <div>
+                            <label class="form-label">Telefone</label>
+                            <input type="text" id="tel_mae" class="form-control mascara-fone">
+                        </div>
+                        <div>
+                            <label class="form-label">CPF</label>
+                            <input type="text" id="cpf_mae" class="form-control mascara-cpf">
+                        </div>
+                        <div>
+                            <label class="form-label">RG</label>
+                            <input type="text" id="rg_mae" class="form-control mascara-rg">
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- DADOS DO PAI -->
-                <h6 class="text-primary fw-bold mb-3">Dados do Pai</h6>
-                <div class="row g-3 mb-2">
-                    <div class="col-md-4"><label class="form-label">Nome do Pai</label><input type="text" id="nome_pai" class="form-control"></div>
-                    <div class="col-md-2"><label class="form-label">Situação</label><select id="situacao_pai" class="form-select"><option>PRESENTE</option><option>AUSENTE</option><option>FALECI[...]
-                    <div class="col-md-3"><label class="form-label">Profissão</label><input type="text" id="prof_pai" class="form-control"></div>
-                    <div class="col-md-3"><label class="form-label">Salário</label><input type="text" id="salario_pai" class="form-control"></div>
-                </div>
-                <div class="row g-3 mb-2">
-                    <div class="col-md-2"><label class="form-label">Data de Nascimento</label><input type="date" id="data_nasc_pai" class="form-control" onchange="calcularIdadeParente('data_nasc_pai', 'idade_pai')"></div>
-                    <div class="col-md-1"><label class="form-label">Idade</label><input type="text" id="idade_pai" class="form-control age-display" readonly></div>
-                </div>
-                <div class="row g-3 mb-4 border-bottom pb-4">
-                    <div class="col-md-4"><label class="form-label">Telefone Pai</label><input type="text" id="tel_pai" class="form-control mascara-fone"></div>
-                    <div class="col-md-4"><label class="form-label">CPF Pai</label><input type="text" id="cpf_pai" class="form-control mascara-cpf"></div>
-                    <div class="col-md-4"><label class="form-label">RG Pai</label><input type="text" id="rg_pai" class="form-control mascara-rg"></div>
+                <div class="parente-section">
+                    <div class="parente-title">
+                        <i class="fas fa-male"></i>
+                        Dados do Pai
+                    </div>
+                    
+                    <!-- Linha 1: Nome e Situação -->
+                    <div class="parente-row-group full">
+                        <div>
+                            <label class="form-label">Nome do Pai</label>
+                            <input type="text" id="nome_pai" class="form-control">
+                        </div>
+                        <div>
+                            <label class="form-label">Situação</label>
+                            <select id="situacao_pai" class="form-select">
+                                <option>PRESENTE</option>
+                                <option>AUSENTE</option>
+                                <option>FALECIDO</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Linha 2: Profissão e Salário -->
+                    <div class="parente-row-group two-cols">
+                        <div>
+                            <label class="form-label">Profissão</label>
+                            <input type="text" id="prof_pai" class="form-control">
+                        </div>
+                        <div>
+                            <label class="form-label">Salário</label>
+                            <input type="text" id="salario_pai" class="form-control">
+                        </div>
+                    </div>
+
+                    <!-- Linha 3: Data de Nascimento e Idade -->
+                    <div class="parente-row-group two-cols">
+                        <div>
+                            <label class="form-label">Data de Nascimento</label>
+                            <input type="date" id="data_nasc_pai" class="form-control" onchange="calcularIdadeParente('data_nasc_pai', 'idade_pai')">
+                        </div>
+                        <div>
+                            <label class="form-label">Idade</label>
+                            <input type="text" id="idade_pai" class="form-control age-display" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Linha 4: Telefone, CPF, RG -->
+                    <div class="parente-row-group three-cols">
+                        <div>
+                            <label class="form-label">Telefone</label>
+                            <input type="text" id="tel_pai" class="form-control mascara-fone">
+                        </div>
+                        <div>
+                            <label class="form-label">CPF</label>
+                            <input type="text" id="cpf_pai" class="form-control mascara-cpf">
+                        </div>
+                        <div>
+                            <label class="form-label">RG</label>
+                            <input type="text" id="rg_pai" class="form-control mascara-rg">
+                        </div>
+                    </div>
                 </div>
 
                 <!-- OUTRO PARENTE -->
-                <h6 class="text-primary fw-bold mb-3">Outro Parente / Responsável</h6>
-                <div class="row g-3 mb-2">
-                    <div class="col-md-4"><label class="form-label">Nome</label><input type="text" id="nome_outro" class="form-control"></div>
-                    <div class="col-md-2"><label class="form-label">Parentesco</label><input type="text" id="parentesco_outro" class="form-control" placeholder="Ex: Avó, Tio"></div>
-                    <div class="col-md-3"><label class="form-label">Profissão</label><input type="text" id="profissao_outro" class="form-control"></div>
-                    <div class="col-md-3"><label class="form-label">Salário</label><input type="text" id="salario_outro" class="form-control"></div>
+                <div class="parente-section">
+                    <div class="parente-title">
+                        <i class="fas fa-user-friends"></i>
+                        Outro Parente / Responsável
+                    </div>
+                    
+                    <!-- Linha 1: Nome, Parentesco -->
+                    <div class="parente-row-group full">
+                        <div>
+                            <label class="form-label">Nome</label>
+                            <input type="text" id="nome_outro" class="form-control">
+                        </div>
+                        <div>
+                            <label class="form-label">Parentesco</label>
+                            <input type="text" id="parentesco_outro" class="form-control" placeholder="Ex: Avó, Tio">
+                        </div>
+                    </div>
+
+                    <!-- Linha 2: Profissão e Salário -->
+                    <div class="parente-row-group two-cols">
+                        <div>
+                            <label class="form-label">Profissão</label>
+                            <input type="text" id="profissao_outro" class="form-control">
+                        </div>
+                        <div>
+                            <label class="form-label">Salário</label>
+                            <input type="text" id="salario_outro" class="form-control">
+                        </div>
+                    </div>
+
+                    <!-- Linha 3: Data de Nascimento e Idade -->
+                    <div class="parente-row-group two-cols">
+                        <div>
+                            <label class="form-label">Data de Nascimento</label>
+                            <input type="date" id="data_nasc_outro" class="form-control" onchange="calcularIdadeParente('data_nasc_outro', 'idade_outro')">
+                        </div>
+                        <div>
+                            <label class="form-label">Idade</label>
+                            <input type="text" id="idade_outro" class="form-control age-display" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Linha 4: Telefone, CPF, RG -->
+                    <div class="parente-row-group three-cols">
+                        <div>
+                            <label class="form-label">Telefone</label>
+                            <input type="text" id="tel_outro" class="form-control mascara-fone">
+                        </div>
+                        <div>
+                            <label class="form-label">CPF</label>
+                            <input type="text" id="cpf_outro" class="form-control mascara-cpf">
+                        </div>
+                        <div>
+                            <label class="form-label">RG</label>
+                            <input type="text" id="rg_outro" class="form-control mascara-rg">
+                        </div>
+                    </div>
                 </div>
-                <div class="row g-3 mb-2">
-                    <div class="col-md-2"><label class="form-label">Data de Nascimento</label><input type="date" id="data_nasc_outro" class="form-control" onchange="calcularIdadeParente('data_nasc_outro', 'idade_outro')"></div>
-                    <div class="col-md-1"><label class="form-label">Idade</label><input type="text" id="idade_outro" class="form-control age-display" readonly></div>
-                </div>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-4"><label class="form-label">Telefone</label><input type="text" id="tel_outro" class="form-control mascara-fone"></div>
-                    <div class="col-md-4"><label class="form-label">CPF</label><input type="text" id="cpf_outro" class="form-control mascara-cpf"></div>
-                    <div class="col-md-4"><label class="form-label">RG</label><input type="text" id="rg_outro" class="form-control mascara-rg"></div>
-                </div>
-<hr>
-                  <!-- CAMPOS: Pais juntos, qtd irmãos, tipo moradia, qtd comodos -->
+
+                <hr class="my-4">
+
+                <!-- CAMPOS: Pais juntos, qtd irmãos, tipo moradia, qtd comodos -->
                 <h6 class="text-primary fw-bold mb-3">Família e Morada</h6>
                 <div class="row g-3 mb-3">
                     <div class="col-md-3">
@@ -338,7 +522,7 @@
 
            
   
-            <!-- AUTORIZAÇÃO DE USO DE IMAGEM (ADICIONADO ANTES DAS ASSINATURAS) -->
+            <!-- AUTORIZAÇÃO DE USO DE IMAGEM -->
             <div class="form-card">
                 <div class="section-title"><i class="fas fa-image me-2"></i> Autorização de Uso de Imagem</div>
                 <div class="row g-3 align-items-center">
@@ -354,7 +538,7 @@
                 </div>
             </div>
 
-            <!-- ASSINATURA DOS RESPONSÁVEIS (AGORA EMPILHADAS, OCUPANDO A LARGURA) -->
+            <!-- ASSINATURA DOS RESPONSÁVEIS -->
             <div class="form-card assinaturas-container">
                 <div class="section-title"><i class="fas fa-signature me-2"></i> Assinatura dos Responsáveis</div>
 
@@ -428,17 +612,6 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- SUPABASE: Execute no SQL Editor do Supabase para adicionar a coluna etnia:
-         ALTER TABLE alunos ADD COLUMN etnia text;
-    -->
-    <!-- Execute no SQL Editor do Supabase:
-         ALTER TABLE alunos ADD COLUMN assinatura_mae_url text;
-         ALTER TABLE alunos ADD COLUMN assinatura_pai_url text;
-    -->
-    <!-- Execute no SQL Editor do Supabase (NOVO):
-         ALTER TABLE alunos ADD COLUMN contatos_extras jsonb;
-         ALTER TABLE alunos ADD COLUMN observacao text;
-    -->
     <script>
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
@@ -566,7 +739,6 @@
             document.getElementById('idade').value = idade;
         }
 
-        // Nova função para calcular idade dos parentes
         function calcularIdadeParente(campoData, campoIdade) {
             const inputData = document.getElementById(campoData);
             const inputIdade = document.getElementById(campoIdade);
@@ -610,7 +782,7 @@
         }
 
         // ============================================================
-        // ASSINATURAS (melhor sensibilidade e responsividade para tablets)
+        // ASSINATURAS
         // ============================================================
         function isCanvasBlank(canvas) {
             try {
@@ -619,25 +791,19 @@
                 blank.height = canvas.height;
                 return canvas.toDataURL() === blank.toDataURL();
             } catch (err) {
-                // fallback conservador
                 return false;
             }
         }
 
-        // Redimensiona o canvas para o devicePixelRatio e preserva o desenho atual
         function resizeCanvasAndMaintainDrawing(canvas) {
             try {
                 const ratio = window.devicePixelRatio || 1;
-                // Salvar desenho atual
                 const data = canvas.toDataURL();
-                // Ajustar tamanho do buffer do canvas
                 canvas.width = Math.floor(canvas.clientWidth * ratio);
                 canvas.height = Math.floor(canvas.clientHeight * ratio);
                 const ctx = canvas.getContext('2d');
-                // Resetar transform e aplicar escala para coordenadas em CSS pixels
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.scale(ratio, ratio);
-                // Redesenhar imagem salva (se houver)
                 if (data) {
                     const img = new Image();
                     img.onload = function() {
@@ -653,12 +819,10 @@
             }
         }
 
-        // Limpar assinatura — considera o dimensionamento do canvas
         function limparAssinatura(canvasId) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
-            // Limpa a área inteira levando em conta o tamanho real do canvas
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
@@ -668,18 +832,15 @@
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
 
-            // Inicializa tamanho e mantém desenho se rotacionar/redimensionar
             resizeCanvasAndMaintainDrawing(canvas);
 
             let drawing = false;
             let lastX = 0, lastY = 0;
 
-            // Adiciona manipulador de resize global (apenas uma vez)
             if (!window._signatureResizeHandlerAdded) {
                 window.addEventListener('resize', () => {
                     document.querySelectorAll('.signature-canvas').forEach(c => resizeCanvasAndMaintainDrawing(c));
                 });
-                // Também redimensionar ao girar (orientationchange)
                 window.addEventListener('orientationchange', () => {
                     setTimeout(() => {
                         document.querySelectorAll('.signature-canvas').forEach(c => resizeCanvasAndMaintainDrawing(c));
@@ -693,24 +854,16 @@
                 drawing = true;
                 canvas.setPointerCapture(e.pointerId);
                 canvas.classList.add('signing');
-
-                // Garante resolução correta antes de desenhar
                 resizeCanvasAndMaintainDrawing(canvas);
-
                 const rect = canvas.getBoundingClientRect();
-
-                // calcular posição relativa à área visual (CSS pixels)
                 const pos = {
                     x: (e.clientX - rect.left),
                     y: (e.clientY - rect.top)
                 };
-
                 lastX = pos.x;
                 lastY = pos.y;
-
                 const pressure = (e.pressure && e.pressure > 0) ? e.pressure : 0.5;
                 const r = Math.max(1.5, pressure * 5);
-                // desenha ponto inicial (usa transform do canvas já escalado)
                 ctx.beginPath();
                 ctx.arc(lastX, lastY, r, 0, Math.PI * 2);
                 ctx.fillStyle = '#1e293b';
@@ -725,12 +878,9 @@
                     x: (e.clientX - rect.left),
                     y: (e.clientY - rect.top)
                 };
-                // pressure fallback
                 const pressure = (e.pressure && e.pressure > 0) ? e.pressure : 0.5;
                 const dpr = window.devicePixelRatio || 1;
-                // Controle de espessura honrando pressure + dpr
                 let lineW = Math.max(2, Math.min(18, pressure * 6 * dpr));
-                // suavização simples (misturar com valor anterior poderia ser adicionado)
                 ctx.beginPath();
                 ctx.moveTo(lastX, lastY);
                 ctx.lineTo(pos.x, pos.y);
@@ -739,7 +889,6 @@
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
                 ctx.stroke();
-
                 lastX = pos.x;
                 lastY = pos.y;
             });
@@ -755,11 +904,9 @@
                 canvas.classList.remove('signing');
             });
 
-            // Previne scroll/gestos ao desenhar em alguns navegadores
             canvas.addEventListener('touchstart', (e) => { e.preventDefault(); }, { passive: false });
         }
 
-        // Exibe/oculta campo valor do aluguel
         function toggleAluguelField() {
             const tipo = document.getElementById('tipo_moradia').value || '';
             const div = document.getElementById('divAluguel');
@@ -789,7 +936,6 @@
             const valoresB = Array.from(document.querySelectorAll('.ben-valor')).map(i => i.value);
             const listaBeneficios = nomesB.map((nome, i) => `${nome}: R$ ${valoresB[i]}`).filter(x => x.length > 5).join(' | ');
 
-            // Coleta dos contatos extras
             const nomesContatos = Array.from(document.querySelectorAll('.contato-nome')).map(i => i.value);
             const fonesContatos = Array.from(document.querySelectorAll('.contato-fone')).map(i => i.value);
             const contatosExtras = nomesContatos
@@ -806,11 +952,9 @@
                 contatos_extras: contatosExtras.length > 0 ? contatosExtras : null,
                 etnia: document.getElementById('etnia').value || null,
                 genero: document.getElementById('genero') ? document.getElementById('genero').value || null : null,
-                // ---------- Campos Acadêmicos adicionados ----------
                 escola: document.getElementById('escola') ? (document.getElementById('escola').value || null) : null,
                 periodo: document.getElementById('periodo') ? (document.getElementById('periodo').value || null) : null,
                 serie: document.getElementById('serie') ? (document.getElementById('serie').value || null) : null,
-                // ---------------------------------------------------
                 cep: document.getElementById('cep').value,
                 rua: document.getElementById('rua').value,
                 numero: document.getElementById('numero').value,
@@ -835,7 +979,6 @@
                 salario_pai: document.getElementById('salario_pai').value,
                 cpf_pai: document.getElementById('cpf_pai').value,
                 rg_pai: document.getElementById('rg_pai').value,
-                // NOVOS CAMPOS: núcleo familiar
                 pais_juntos: (function() {
                     const v = document.getElementById('pais_juntos') ? document.getElementById('pais_juntos').value : '';
                     if (v === 'sim') return true;
@@ -863,14 +1006,12 @@
                 beneficios_detalhados: listaBeneficios,
                 observacao: document.getElementById('observacao') ? (document.getElementById('observacao').value || null) : null,
                 projetos: [projId],
-                // AUTORIZAÇÃO DE USO DE IMAGEM
                 autorizacao_imagem: document.getElementById('autorizacao_imagem') ? document.getElementById('autorizacao_imagem').checked : false
             };
 
             try {
                 console.log("Tentando salvar:", dadosAluno);
 
-                // 1. Inserir Aluno
                 const { data: novoAlunoData, error: erroA } = await supabaseClient.from('alunos').insert([dadosAluno]).select();
                 if (erroA) throw erroA;
 
@@ -879,7 +1020,6 @@
                     throw new Error("O aluno foi salvo, mas o banco de dados não retornou o ID. Verifique se existe alguma política de RLS bloqueando a leitura.");
                 }
 
-                // 2. Upload da foto (se houver)
                 if (fotoBlob) {
                     btn.innerHTML = 'ENVIANDO FOTO...';
                     const ext = fotoBlob.type === 'image/png' ? 'png' : 'jpg';
@@ -895,7 +1035,6 @@
                     if (uploadError) {
                         console.warn('Erro ao enviar foto (cadastro salvo sem foto):', uploadError.message);
                     } else {
-                        // Obter URL pública e gravar na coluna 'foto'
                         const { data: urlData } = await supabaseClient.storage
                             .from(BUCKET_FOTOS)
                             .getPublicUrl(caminhoStorage);
@@ -913,7 +1052,6 @@
                     }
                 }
 
-                // 2.5 Upload das assinaturas (se houver)
                 const canvasMae = document.getElementById('canvasMae');
                 const canvasPai = document.getElementById('canvasPai');
                 const updatesAssinatura = {};
@@ -970,7 +1108,6 @@
                     }
                 }
 
-                // 3. Inserir Matrícula
                 btn.innerHTML = 'FINALIZANDO...';
                 const dadosMatricula = {
                     aluno_id: novoAluno.id,
@@ -985,7 +1122,6 @@
                 const { error: erroM } = await supabaseClient.from('matriculas').insert([dadosMatricula]);
                 if (erroM) throw erroM;
 
-                // 4. Criar registro em historico_projetos com o projeto atual
                 const nomesProjetos = {
                     '1': 'Adolescer para Crescer',
                     '2': 'Criança Certeza',
