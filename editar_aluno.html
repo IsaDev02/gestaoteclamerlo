@@ -74,6 +74,24 @@
             font-weight: 700;
             color: #1e293b;
         }
+        .btn-concluiu {
+            padding: 8px 16px;
+            font-weight: 600;
+            border-radius: 6px;
+            transition: 0.3s;
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+        }
+        .btn-concluiu:hover {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .btn-concluiu.ativo {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
     </style>
 
 
@@ -100,7 +118,7 @@
 
     <main class="main-content">
         <header class="mb-4 d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-4">
+            <div class="d-flex align-items-center gap-3">
                 <div>
                     <h3 class="fw-bold mb-0">Editar Aluno</h3>
                     <span id="nome_titulo" class="text-primary fw-medium small">Carregando...</span>
@@ -112,6 +130,9 @@
                         <label class="form-check-label fw-bold small ms-1" for="ativo" id="label_status">---</label>
                     </div>
                 </div>
+                <button type="button" id="btnConcluiu" class="btn btn-concluiu" onclick="registrarConclusao()">
+                    <i class="fas fa-check me-1"></i> <span id="textoConcluiu">CONCLUIU</span>
+                </button>
             </div>
             <div>
                 <a href="lista_geral.html" class="btn btn-light border me-2">Sair sem salvar</a>
@@ -467,8 +488,15 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- SUPABASE: Execute no SQL Editor do Supabase para adicionar a coluna etnia:
-         ALTER TABLE alunos ADD COLUMN etnia text;
+    <!-- SUPABASE: Execute no SQL Editor do Supabase para criar a tabela concluiu:
+         CREATE TABLE concluiu (
+           id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+           aluno_id BIGINT NOT NULL,
+           data_conclusao TIMESTAMP DEFAULT NOW(),
+           created_at TIMESTAMP DEFAULT NOW(),
+           FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE CASCADE,
+           UNIQUE(aluno_id)
+         );
     -->
     <script>
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
@@ -523,6 +551,56 @@
             label.style.color = isChecked ? "#10b981" : "#dc3545";
         }
 
+        // ── CONCLUSÃO ──────────────────────────────────────────────
+        async function verificarConclusao() {
+            const { data } = await supabaseClient.from('concluiu').select('*').eq('aluno_id', alunoIdInt).limit(1);
+            const temConclusao = data && data.length > 0;
+            const btnConcluiu = document.getElementById('btnConcluiu');
+            const textoConcluiu = document.getElementById('textoConcluiu');
+            
+            if (temConclusao) {
+                btnConcluiu.classList.add('ativo');
+                const dataConclusao = new Date(data[0].data_conclusao).toLocaleDateString('pt-BR');
+                textoConcluiu.innerHTML = `✓ CONCLUÍDO (${dataConclusao})`;
+            } else {
+                btnConcluiu.classList.remove('ativo');
+                textoConcluiu.innerText = 'CONCLUIU';
+            }
+        }
+
+        async function registrarConclusao() {
+            const btnConcluiu = document.getElementById('btnConcluiu');
+            const temConclusao = btnConcluiu.classList.contains('ativo');
+
+            if (temConclusao) {
+                if (confirm('Tem certeza que deseja remover o status de conclusão?')) {
+                    const { error } = await supabaseClient.from('concluiu').delete().eq('aluno_id', alunoIdInt);
+                    if (error) {
+                        alert('Erro ao remover conclusão: ' + error.message);
+                    } else {
+                        alert('Conclusão removida!');
+                        verificarConclusao();
+                    }
+                }
+            } else {
+                const { error } = await supabaseClient.from('concluiu').insert({
+                    aluno_id: alunoIdInt,
+                    data_conclusao: new Date().toISOString()
+                });
+                
+                if (error) {
+                    if (error.code === '23505') {
+                        alert('Este aluno já foi marcado como concluído!');
+                    } else {
+                        alert('Erro ao registrar conclusão: ' + error.message);
+                    }
+                } else {
+                    alert('Aluno marcado como concluído!');
+                    verificarConclusao();
+                }
+            }
+        }
+
         async function carregarDados() {
             if (!alunoId) return;
 
@@ -558,16 +636,9 @@
                     document.getElementById('data_entrada_projeto').value = dataFormatada;
                 }
 
-                // Debug: mostrar valor de genero
-                console.log('[DEBUG] Valor de genero no banco:', a.genero);
-                console.log('[DEBUG] Elemento genero:', document.getElementById('genero'));
-
-                // Tratamento especial para selects: genero e etnia
-                // Só fazer o set value se o valor não estiver vazio
                 if (a.genero) {
                     const selectGenero = document.getElementById('genero');
                     selectGenero.value = a.genero;
-                    console.log('[DEBUG] Select genero value definido para:', a.genero);
                 }
                 
                 if (a.etnia) {
@@ -605,6 +676,9 @@
                     document.getElementById('img_assinatura_pai').src = a.assinatura_pai_url;
                     document.getElementById('preview_assinatura_pai').style.display = 'block';
                 }
+
+                // Verificar status de conclusão
+                verificarConclusao();
             }
 
             // Busca historico_projetos usando select com limit para evitar erro do maybeSingle
@@ -613,9 +687,6 @@
                 .select('*')
                 .eq('aluno_id', alunoIdInt)
                 .limit(1);
-
-            console.log('[DEBUG] aluno_id buscado:', alunoIdInt);
-            console.log('[DEBUG] historico_projetos resultado:', hLista, '| erro:', hErro);
 
             const h = (hLista && hLista.length > 0) ? hLista[0] : null;
 
