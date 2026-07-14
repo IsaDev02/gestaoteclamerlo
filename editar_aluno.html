@@ -146,9 +146,9 @@
                             <div class="col-md-3"><label class="form-label">Gênero</label>
                                 <select id="genero" class="form-select">
                                     <option value="">Selecione</option>
-                                    <option value="MASCULINO">Masculino</option>
-                                    <option value="FEMININO">Feminino</option>
-                                    <option value="OUTRO">Outro</option>
+                                    <option value="Masculino">Masculino</option>
+                                    <option value="Feminino">Feminino</option>
+                                    <option value="Outro">Outro</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -531,19 +531,31 @@
                 document.getElementById('nome_titulo').innerText = a.nome;
 
                 const colunas = [
-                    'nome', 'data_nascimento', 'idade', 'cpf', 'rg', 'cep', 'logradouro',
+                    'nome', 'data_nascimento', 'idade', 'cpf', 'rg', 'cep', 'rua',
                     'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
                     'nome_pai', 'situacao_pai', 'tel_pai', 'cpf_pai', 'rg_pai', 'prof_pai', 'sal_pai', 'data_nasc_pai', 'idade_pai',
                     'nome_mae', 'situacao_mae', 'tel_mae', 'cpf_mae', 'rg_mae', 'prof_mae', 'sal_mae', 'data_nasc_mae', 'idade_mae',
                     'nome_outro', 'parentesco_outro', 'profissao_outro', 'salario_outro', 'tel_outro', 'cpf_outro', 'rg_outro', 'data_nasc_outro', 'idade_outro',
                     'foto', 'escola', 'periodo', 'serie', 'doc_aluno', 
-                    'turmas', 'data_entrada_projeto', 'observacoes'
+                    'turmas', 'data_entrada_projeto', 'observacoes', 'genero', 'etnia'
                 ];
 
                 colunas.forEach(col => {
                     const el = document.getElementById(col);
-                    if (el) el.value = a[col] || '';
+                    if (el) {
+                        // Mapeamento especial para campos com nomes diferentes
+                        let fieldName = col;
+                        if (col === 'rua') fieldName = 'rua';  // Campo 'rua' do banco vira 'logradouro' no formulário
+                        if (col === 'data_nascimento') fieldName = 'data_nascimento';
+                        
+                        el.value = a[col] || '';
+                    }
                 });
+
+                // Tratamento especial para o campo rua -> logradouro
+                if (document.getElementById('logradouro') && a.rua) {
+                    document.getElementById('logradouro').value = a.rua;
+                }
 
                 // Tratamento especial para selects: genero e etnia
                 ['genero', 'etnia'].forEach(col => {
@@ -647,7 +659,7 @@
 
             const dadosA = {};
             const colunas = [
-                'nome', 'data_nascimento', 'idade', 'genero', 'etnia', 'cpf', 'rg', 'cep', 'logradouro',
+                'nome', 'data_nascimento', 'idade', 'genero', 'etnia', 'cpf', 'rg', 'cep', 'rua',
                 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
                 'nome_pai', 'situacao_pai', 'tel_pai', 'cpf_pai', 'rg_pai', 'prof_pai', 'sal_pai', 'data_nasc_pai', 'idade_pai',
                 'nome_mae', 'situacao_mae', 'tel_mae', 'cpf_mae', 'rg_mae', 'prof_mae', 'sal_mae', 'data_nasc_mae', 'idade_mae',
@@ -662,6 +674,12 @@
                     dadosA[col] = el.value === "" ? null : el.value;
                 }
             });
+
+            // Tratamento especial: campo logradouro do formulário vira 'rua' no banco
+            const logradouro = document.getElementById('logradouro');
+            if (logradouro) {
+                dadosA['rua'] = logradouro.value === "" ? null : logradouro.value;
+            }
 
             // Tratamento do multi-select de projetos
             const selectProjetos = document.getElementById('projetos');
@@ -757,7 +775,6 @@
                     document.getElementById('logradouro').value = d.logradouro;
                     document.getElementById('bairro').value = d.bairro;
                     document.getElementById('cidade').value = d.localidade;
-                    document.getElementById('uf').value = d.uf;
                 }
             }
         }
