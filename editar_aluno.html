@@ -15,7 +15,7 @@
         .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
         .main-content { margin-left: 240px; padding: 40px; }
         .form-container { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 35px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .section-title { font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 25px; margin-bottom: 15px; padding-bottom: 5px;[...]
+        .section-title { font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 25px; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px solid #e2e8f0; }
         .form-label { font-weight: 600; font-size: 0.8rem; color: #64748b; margin-bottom: 5px; }
         .form-control, .form-select { border-color: #e2e8f0; font-size: 0.9rem; border-radius: 8px; }
         .nav-tabs { border: none; margin-bottom: 25px; gap: 8px; }
@@ -553,11 +553,9 @@
                 }
 
                 // Se data_entrada_projeto não está preenchida, use o created_at
-                const dataEntradaProjeto = document.getElementById('data_entrada_projeto');
                 if (!a.data_entrada_projeto && a.created_at) {
-                    // Extrai apenas a data (YYYY-MM-DD) do created_at
                     const dataFormatada = a.created_at.split('T')[0];
-                    dataEntradaProjeto.value = dataFormatada;
+                    document.getElementById('data_entrada_projeto').value = dataFormatada;
                 }
 
                 // Debug: mostrar valor de genero
