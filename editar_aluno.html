@@ -205,6 +205,10 @@
                     <div class="col-md-3"><label class="form-label">Profissão Mãe</label><input type="text" id="prof_mae" class="form-control"></div>
                     <div class="col-md-3"><label class="form-label">Salário Mãe</label><input type="text" id="sal_mae" class="form-control"></div>
                 </div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3"><label class="form-label">Data de Nascimento Mãe</label><input type="date" id="data_nasc_mae" class="form-control" onchange="calcularIdadeParente('data_nasc_mae', 'idade_mae')"></div>
+                    <div class="col-md-2"><label class="form-label">Idade Mãe</label><input type="text" id="idade_mae" class="form-control bg-light text-center" readonly></div>
+                </div>
 
                 <!-- DADOS DO PAI -->
                 <div class="section-title">Dados Paternos</div>
@@ -225,6 +229,10 @@
                     <div class="col-md-3"><label class="form-label">Profissão Pai</label><input type="text" id="prof_pai" class="form-control"></div>
                     <div class="col-md-3"><label class="form-label">Salário Pai</label><input type="text" id="sal_pai" class="form-control"></div>
                 </div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3"><label class="form-label">Data de Nascimento Pai</label><input type="date" id="data_nasc_pai" class="form-control" onchange="calcularIdadeParente('data_nasc_pai', 'idade_pai')"></div>
+                    <div class="col-md-2"><label class="form-label">Idade Pai</label><input type="text" id="idade_pai" class="form-control bg-light text-center" readonly></div>
+                </div>
 
                 <!-- OUTRO PARENTE -->
                 <div class="section-title">Outro Parente / Responsável</div>
@@ -233,6 +241,10 @@
                     <div class="col-md-2"><label class="form-label">Parentesco</label><input type="text" id="parentesco_outro" class="form-control" placeholder="Ex: Avó, Tio"></div>
                     <div class="col-md-3"><label class="form-label">Profissão</label><input type="text" id="profissao_outro" class="form-control"></div>
                     <div class="col-md-3"><label class="form-label">Salário</label><input type="text" id="salario_outro" class="form-control"></div>
+                </div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3"><label class="form-label">Data de Nascimento</label><input type="date" id="data_nasc_outro" class="form-control" onchange="calcularIdadeParente('data_nasc_outro', 'idade_outro')"></div>
+                    <div class="col-md-2"><label class="form-label">Idade</label><input type="text" id="idade_outro" class="form-control bg-light text-center" readonly></div>
                 </div>
                 <div class="row g-3">
                     <div class="col-md-4"><label class="form-label">Telefone</label><input type="text" id="tel_outro" class="form-control"></div>
@@ -521,18 +533,15 @@
                 const colunas = [
                     'nome', 'data_nascimento', 'idade', 'cpf', 'rg', 'cep', 'logradouro',
                     'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
-                    'nome_pai', 'situacao_pai', 'tel_pai', 'cpf_pai', 'rg_pai', 'prof_pai', 'sal_pai',
-                    'nome_mae', 'situacao_mae', 'tel_mae', 'cpf_mae', 'rg_mae', 'prof_mae', 'sal_mae',
-                    'nome_outro', 'parentesco_outro', 'profissao_outro', 'salario_outro', 'tel_outro', 'cpf_outro', 'rg_outro',
+                    'nome_pai', 'situacao_pai', 'tel_pai', 'cpf_pai', 'rg_pai', 'prof_pai', 'sal_pai', 'data_nasc_pai', 'idade_pai',
+                    'nome_mae', 'situacao_mae', 'tel_mae', 'cpf_mae', 'rg_mae', 'prof_mae', 'sal_mae', 'data_nasc_mae', 'idade_mae',
+                    'nome_outro', 'parentesco_outro', 'profissao_outro', 'salario_outro', 'tel_outro', 'cpf_outro', 'rg_outro', 'data_nasc_outro', 'idade_outro',
                     'foto', 'escola', 'periodo', 'serie', 'doc_aluno', 
                     'turmas', 'data_entrada_projeto', 'observacoes'
                 ];
 
                 colunas.forEach(col => {
                     const el = document.getElementById(col);
-                    // O campo no HTML da tela de edição é "sal_mae", mas no cadastro foi "salario_mae" (e salario_outro). 
-                    // Estou mapeando direto com o nome do ID que coloquei no form.
-                    // Para o outro parente, estou pegando com fallback caso o supabase tenha retornado nulo
                     if (el) el.value = a[col] || '';
                 });
 
@@ -541,12 +550,6 @@
                     const el = document.getElementById(col);
                     if (el && a[col] != null) el.value = a[col];
                 });
-
-                // Tratamento especial para o campo "salario_outro" que está escrito errado no banco, 
-                // mas na tela mapeamos o ID como salario_outro
-                if (document.getElementById('salario_outro') && a.salario_outro) {
-                    document.getElementById('salario_outro').value = a.salario_outro;
-                }
 
                 // Tratamento especial para o multi-select de projetos
                 const selectProjetos = document.getElementById('projetos');
@@ -646,9 +649,9 @@
             const colunas = [
                 'nome', 'data_nascimento', 'idade', 'genero', 'etnia', 'cpf', 'rg', 'cep', 'logradouro',
                 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'whatsapp',
-                'nome_pai', 'situacao_pai', 'tel_pai', 'cpf_pai', 'rg_pai', 'prof_pai', 'sal_pai',
-                'nome_mae', 'situacao_mae', 'tel_mae', 'cpf_mae', 'rg_mae', 'prof_mae', 'sal_mae',
-                'nome_outro', 'parentesco_outro', 'profissao_outro', 'tel_outro', 'cpf_outro', 'rg_outro',
+                'nome_pai', 'situacao_pai', 'tel_pai', 'cpf_pai', 'rg_pai', 'prof_pai', 'sal_pai', 'data_nasc_pai', 'idade_pai',
+                'nome_mae', 'situacao_mae', 'tel_mae', 'cpf_mae', 'rg_mae', 'prof_mae', 'sal_mae', 'data_nasc_mae', 'idade_mae',
+                'nome_outro', 'parentesco_outro', 'profissao_outro', 'salario_outro', 'tel_outro', 'cpf_outro', 'rg_outro', 'data_nasc_outro', 'idade_outro',
                 'foto', 'escola', 'periodo', 'serie', 'doc_aluno', 
                 'turmas', 'data_entrada_projeto', 'observacoes'
             ];
@@ -659,12 +662,6 @@
                     dadosA[col] = el.value === "" ? null : el.value;
                 }
             });
-
-            // Tratamento especial para o salário do outro parente (nome errado no banco)
-            const salOutro = document.getElementById('salario_outro');
-            if (salOutro) {
-                dadosA['salario_outro'] = salOutro.value === "" ? null : salOutro.value;
-            }
 
             // Tratamento do multi-select de projetos
             const selectProjetos = document.getElementById('projetos');
@@ -739,6 +736,16 @@
             if (!nasc) return;
             const idade = Math.floor((new Date() - new Date(nasc)) / 31557600000);
             document.getElementById('idade').value = idade;
+        }
+
+        function calcularIdadeParente(dataNascId, idadeId) {
+            const dataNascInput = document.getElementById(dataNascId);
+            const idadeInput = document.getElementById(idadeId);
+            
+            if (!dataNascInput || !dataNascInput.value) return;
+            
+            const idade = Math.floor((new Date() - new Date(dataNascInput.value)) / 31557600000);
+            idadeInput.value = idade;
         }
 
         async function buscarEndereco(cep) {
@@ -998,71 +1005,41 @@
                     let slotLivre = 1;
                     if (hReg) {
                         for (let i = 1; i <= 6; i++) {
-                            if (!hReg[`projeto_${i}`]) { slotLivre = i; break; }
-                            if (i === 6) slotLivre = null; // todos ocupados
-                        }
-                    }
-
-                    // Monta os dados a salvar
-                    const saveData = { aluno_id: alunoIdInt, projeto_atual: projetoNovo };
-                    if (slotLivre && projetoAnterior) {
-                        // Preserva slots já preenchidos
-                        if (hReg) {
-                            for (let i = 1; i <= 6; i++) {
-                                saveData[`projeto_${i}`] = hReg[`projeto_${i}`] || null;
-                                saveData[`data_termino_${i}`] = hReg[`data_termino_${i}`] || null;
+                            if (!hReg[`projeto_${i}`]) {
+                                slotLivre = i;
+                                break;
                             }
                         }
-                        saveData[`projeto_${slotLivre}`] = projetoAnterior;
-                        saveData[`data_termino_${slotLivre}`] = dataTermino;
                     }
 
-                    // upsert com onConflict em aluno_id (tem UNIQUE constraint)
-                    console.log('[DEBUG] saveData a salvar:', JSON.stringify(saveData));
-                    const { data: upsertResult, error: histErr } = await supabaseClient.from('historico_projetos')
-                        .upsert(saveData, { onConflict: 'aluno_id' })
-                        .select();
-                    console.log('[DEBUG] upsert resultado:', upsertResult, '| erro:', histErr);
-                    if (histErr) throw histErr;
+                    const updateHist = {
+                        aluno_id: alunoIdInt,
+                        projeto_atual: projetoNovo,
+                        [`projeto_${slotLivre}`]: projetoNovo,
+                        [`data_termino_${slotLivre}`]: dataTermino
+                    };
 
-                    // Atualiza campos visuais na tela imediatamente
-                    atualizarProjetoAtualDisplay(projetoNovo);
-                    document.getElementById('rematricula_projeto_anterior').value = projetoNovo;
-                    if (slotLivre && projetoAnterior) {
-                        const inputProjeto = document.getElementById(`projeto_${slotLivre}`);
-                        const inputData = document.getElementById(`data_termino_${slotLivre}`);
-                        if (inputProjeto) inputProjeto.value = projetoAnterior;
-                        if (inputData) { inputData.value = dataTermino; atualizarBadgeHistorico(slotLivre); }
-                    }
+                    const { error: histError } = await supabaseClient
+                        .from('historico_projetos')
+                        .upsert(updateHist, { onConflict: 'aluno_id' });
+                    if (histError) throw histError;
                 }
 
-                const { error: alunoError } = await supabaseClient
-                    .from('alunos')
-                    .update({ data_rematricula: dataRematricula })
-                    .eq('id', alunoIdInt);
-                if (alunoError) throw alunoError;
-
-                const ctx = canvasRematricula.getContext('2d');
-                ctx.clearRect(0, 0, canvasRematricula.width, canvasRematricula.height);
-                document.getElementById('rematricula_obs').value = '';
-                document.getElementById('rematricula_projeto_novo').value = '';
-
-                alert('✅ Rematrícula registrada com sucesso!');
+                alert('Rematrícula registrada com sucesso!');
                 await carregarHistoricoRematriculas();
-
-            } catch (err) {
-                alert('Erro ao salvar rematrícula: ' + err.message);
-                console.error(err);
-            } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-sync-alt me-2"></i> Confirmar Rematrícula';
+                btn.innerText = 'Confirmar Rematrícula';
+            } catch (err) {
+                console.error(err);
+                alert('Erro ao salvar rematrícula: ' + err.message);
+                btn.disabled = false;
+                btn.innerText = 'Confirmar Rematrícula';
             }
         }
+
+        function logout() {
+            window.location.href = 'index.html';
+        }
     </script>
-    <!-- Migração de Etnia no Supabase (execute no SQL Editor):
-         UPDATE alunos SET etnia = 'Branco' WHERE etnia IN ('0', '1', 'Amarelo');
-         UPDATE alunos SET etnia = 'Negro'  WHERE etnia IN ('2');
-         UPDATE alunos SET etnia = 'Pardo'  WHERE etnia IN ('3', '4', 'Indígena');
-    -->
 </body>
 </html>
