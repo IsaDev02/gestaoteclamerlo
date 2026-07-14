@@ -543,25 +543,31 @@
                 colunas.forEach(col => {
                     const el = document.getElementById(col);
                     if (el) {
-                        // Mapeamento especial para campos com nomes diferentes
-                        let fieldName = col;
-                        if (col === 'rua') fieldName = 'rua';  // Campo 'rua' do banco vira 'logradouro' no formulário
-                        if (col === 'data_nascimento') fieldName = 'data_nascimento';
-                        
                         el.value = a[col] || '';
                     }
                 });
 
-                // Tratamento especial para o campo rua -> logradouro
+                // Tratamento especial: campo rua -> logradouro
                 if (document.getElementById('logradouro') && a.rua) {
                     document.getElementById('logradouro').value = a.rua;
                 }
 
+                // Debug: mostrar valor de genero
+                console.log('[DEBUG] Valor de genero no banco:', a.genero);
+                console.log('[DEBUG] Elemento genero:', document.getElementById('genero'));
+
                 // Tratamento especial para selects: genero e etnia
-                ['genero', 'etnia'].forEach(col => {
-                    const el = document.getElementById(col);
-                    if (el && a[col] != null) el.value = a[col];
-                });
+                // Só fazer o set value se o valor não estiver vazio
+                if (a.genero) {
+                    const selectGenero = document.getElementById('genero');
+                    selectGenero.value = a.genero;
+                    console.log('[DEBUG] Select genero value definido para:', a.genero);
+                }
+                
+                if (a.etnia) {
+                    const selectEtnia = document.getElementById('etnia');
+                    selectEtnia.value = a.etnia;
+                }
 
                 // Tratamento especial para o multi-select de projetos
                 const selectProjetos = document.getElementById('projetos');
