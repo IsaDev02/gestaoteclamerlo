@@ -98,13 +98,9 @@
 
         let projetoAtivoId = null;
 
-        // =============================================
-        // CARREGAR CONTAGENS - usa .contains() para arrays
-        // =============================================
         async function carregarContagens() {
             const grade = document.getElementById('gradeProjetos');
             const promessas = Object.keys(nomesDosProjetos).map(async (id) => {
-                // .contains() busca alunos cujo array 'projetos' contém o id
                 const { count } = await supabaseClient
                     .from('alunos')
                     .select('*', { count: 'exact', head: true })
@@ -128,9 +124,6 @@
             });
         }
 
-        // =============================================
-        // ABRIR PROJETO
-        // =============================================
         async function abrirProjeto(id, nome) {
             projetoAtivoId = id;
             document.getElementById('containerAlunos').style.display = 'block';
@@ -139,9 +132,6 @@
             atualizarListaAlunos();
         }
 
-        // =============================================
-        // LISTAR ALUNOS DO PROJETO - usa .contains()
-        // =============================================
         async function atualizarListaAlunos() {
             const listaDiv = document.getElementById('listaAlunos');
             listaDiv.innerHTML = '<div class="p-4 text-center"><div class="spinner-border text-primary"></div></div>';
@@ -174,10 +164,6 @@
             }
         }
 
-        // =============================================
-        // VINCULAR ALUNOS - ADICIONA o projeto ao array
-        // sem sobrescrever os projetos já existentes
-        // =============================================
         async function vincularAlunosPorId() {
             const input = document.getElementById('inputIdsAlunos');
             const status = document.getElementById('statusVinculo');
@@ -193,7 +179,6 @@
             let naoEncontrados = [];
 
             for (const alunoId of ids) {
-                // 1. Buscar o aluno e seus projetos atuais
                 const { data: aluno, error: fetchError } = await supabaseClient
                     .from('alunos')
                     .select('id, projetos')
@@ -206,20 +191,16 @@
                     continue;
                 }
 
-                // 2. Montar o novo array de projetos
                 let projetosAtuais = aluno.projetos || [];
-                // Garantir que é um array (caso de dados legados)
                 if (!Array.isArray(projetosAtuais)) {
                     projetosAtuais = projetosAtuais ? [parseInt(projetosAtuais, 10)] : [];
                 }
 
-                // Só adiciona se o projeto ainda não estiver no array
                 const idNumerico = parseInt(projetoAtivoId, 10);
                 if (!projetosAtuais.map(Number).includes(idNumerico)) {
                     projetosAtuais.push(idNumerico);
                 }
 
-                // 3. Atualizar no banco
                 const { error: updateError } = await supabaseClient
                     .from('alunos')
                     .update({ projetos: projetosAtuais })
@@ -236,7 +217,6 @@
             await carregarContagens();
             await atualizarListaAlunos();
 
-            // Feedback detalhado
             let msg = `✅ ${sucesso} aluno(s) vinculado(s) com sucesso!`;
             if (naoEncontrados.length > 0) {
                 msg += ` ⚠️ IDs não encontrados: ${naoEncontrados.join(', ')}`;
@@ -248,15 +228,10 @@
             status.className = erros > 0 ? "mt-2 small fw-bold text-warning" : "mt-2 small fw-bold text-success";
         }
 
-        // =============================================
-        // REMOVER DO PROJETO - remove apenas este projeto
-        // do array, mantendo os demais
-        // =============================================
         async function removerDoProjeto(event, alunoId) {
             event.stopPropagation();
             if (!confirm("Remover o aluno ID " + alunoId + " deste projeto?")) return;
 
-            // 1. Buscar projetos atuais do aluno
             const { data: aluno, error: fetchError } = await supabaseClient
                 .from('alunos')
                 .select('id, projetos')
@@ -273,11 +248,9 @@
                 projetosAtuais = projetosAtuais ? [parseInt(projetosAtuais, 10)] : [];
             }
 
-            // 2. Filtrar removendo apenas o projeto ativo
             const idNumerico = parseInt(projetoAtivoId, 10);
             const novosProjetos = projetosAtuais.filter(p => parseInt(p, 10) !== idNumerico);
 
-            // 3. Atualizar no banco
             await supabaseClient
                 .from('alunos')
                 .update({ projetos: novosProjetos })
@@ -288,6 +261,11 @@
         }
 
         function fecharLista() { document.getElementById('containerAlunos').style.display = 'none'; }
+
+        function logout() {
+            window.location.href = 'index.html';
+        }
+
         window.onload = carregarContagens;
     </script>
 </body>

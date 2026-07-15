@@ -13,24 +13,22 @@
         
         .main-wrapper { display: flex; height: 100vh; }
 
-        /* MENU LATERAL PADRONIZADO */
         .sidebar { width: 240px; height: 100vh; background: var(--sidebar-bg); padding: 20px 0; flex-shrink: 0; }
         .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; font-size: 0.9rem; text-decoration: none; display: block; transition: 0.3s; }
         .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
         .sidebar .nav-link.active { color: #fff; background: var(--primary); font-weight: 600; }
         .sidebar-logo { color: white; font-weight: 700; padding: 0 25px 30px 25px; display: block; font-size: 1.2rem; }
 
-        /* RESTANTE DO LAYOUT PRESERVADO */
         .filter-panel { width: 350px; background: #fff; border-right: 1px solid #d1d7db; display: flex; flex-direction: column; z-index: 20; }
         .filter-header { padding: 20px; background: #f0f2f5; border-bottom: 1px solid #d1d7db; }
         .filter-body { padding: 20px; overflow-y: auto; flex-grow: 1; }
         .chat-area { flex-grow: 1; display: flex; flex-direction: column; background: #efeae2; position: relative; }
-        .chat-area::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.06; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); pointer-events: none; }
+        .chat-area::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.06; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
         .chat-header { padding: 15px 25px; background: #f0f2f5; border-bottom: 1px solid #d1d7db; z-index: 10; display: flex; align-items: center; justify-content: space-between; }
         .chat-footer { padding: 20px 60px; background: #f0f2f5; z-index: 10; }
         .message-box { background: #fff; border-radius: 15px; padding: 20px; box-shadow: 0 1px 0.5px rgba(11,20,26,.13); position: relative; z-index: 10; width: 80%; margin: 20px auto; }
         .textarea-wa { width: 100%; border: none; outline: none; resize: none; min-height: 150px; font-size: 1rem; }
-        .btn-send { background: var(--wa-green); color: white; border: none; border-radius: 50%; width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+        .btn-send { background: var(--wa-green); color: white; border: none; border-radius: 50%; width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
         .destinatarios-badge { background: #e7fce3; color: #1fa855; border-radius: 20px; padding: 8px 15px; font-weight: 700; font-size: 0.85rem; margin-top: 10px; display: block; text-align: center; }
         .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 0.9rem; }
         .search-result-item:hover { background: #f8fafc; color: #3b82f6; }
@@ -162,16 +160,6 @@
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // ⚠️ CONFIGURAÇÃO DO SERVIDOR LOCAL
-        // Você pode sobrescrever via window.WHATSAPP_CONFIG antes deste script rodar.
-        // Exemplo:
-        // <script>
-        //   window.WHATSAPP_CONFIG = {
-        //     API_URL: "https://xyz-abc.trycloudflare.com",
-        //     API_KEY: "sua-chave",
-        //     INSTANCE: "CentroSocial"
-        //   };
-        // </script>
         const WA_CONFIG = window.WHATSAPP_CONFIG || {};
         const API_URL = WA_CONFIG.API_URL || "https://trading-happens-construction-july.trycloudflare.com";
         const API_KEY = WA_CONFIG.API_KEY || "alberione192!";
@@ -351,7 +339,7 @@
                     }
                 } catch (e) {
                     if (qrPollInterval) { clearInterval(qrPollInterval); qrPollInterval = null; }
-                    document.getElementById('areaQR').innerHTML = `<div class="text-danger"><i class="fas fa-exclamation-triangle fa-2x"></i><p class="mt-2 small">Servidor offline ou inacessível.</p></div>`;
+                    document.getElementById('areaQR').innerHTML = `<div class="text-danger"><i class="fas fa-exclamation-triangle fa-2x"></i><p class="mt-2 small">Servidor offline ou inacessível</p></div>`;
                     document.getElementById('qrInstrucao').textContent = 'Verifique se o servidor local está em execução.';
                     document.getElementById('statusEnvio').innerText = 'Servidor WhatsApp offline/inacessível';
                 }
@@ -359,6 +347,10 @@
 
             await fetchQR();
             qrPollInterval = setInterval(fetchQR, 4000);
+        }
+
+        function logout() {
+            window.location.href = 'index.html';
         }
     </script>
 </body>
