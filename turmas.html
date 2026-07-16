@@ -37,6 +37,20 @@
             background: #f1f5f9; border-radius: 12px; padding: 20px; margin-bottom: 20px;
             border: 1px dashed #cbd5e1;
         }
+        .search-result-item {
+            cursor: pointer; padding: 8px 12px; font-size: 0.9rem;
+        }
+        .search-result-item:hover { background: #eff6ff; color: var(--primary); }
+        .aluno-badge {
+            background: #dbeafe; color: #1e40af; border-radius: 20px;
+            padding: 4px 12px; font-size: 0.82rem; font-weight: 600;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .aluno-badge .remove-btn {
+            cursor: pointer; font-weight: 700; line-height: 1;
+            color: #1e40af; opacity: 0.7;
+        }
+        .aluno-badge .remove-btn:hover { opacity: 1; }
     </style>
 
 
@@ -79,12 +93,12 @@
             </div>
 
             <div id="inputMassaArea" class="bulk-insert-area d-none">
-                <label class="form-label fw-bold small text-primary">MATRICULAR EM MASSA (IDs):</label>
-                <div class="input-group">
-                    <input type="text" id="ids_massa" class="form-control" placeholder="Cole aqui os IDs separados por vírgula (ex: 12, 45, 89)">
-                    <button class="btn btn-success fw-bold" id="btnConfirmarMassa">Matricular</button>
-                </div>
-                <small class="text-muted">Atenção: Os alunos devem estar previamente cadastrados na base geral.</small>
+                <label class="form-label fw-bold small text-primary">MATRICULAR ALUNOS:</label>
+                <input type="text" id="inputBuscaAlunoMatricula" class="form-control mb-2" placeholder="Digite o nome do aluno..." oninput="buscarAlunoParaMatricula(this.value)">
+                <div id="listaResultadosBusca" class="list-group mb-3" style="max-height: 200px; overflow-y: auto; display: none;"></div>
+                <div id="alunosSelecionados" class="d-flex flex-wrap gap-2 mb-3"></div>
+                <button class="btn btn-success fw-bold" id="btnConfirmarMatricula" onclick="confirmarMatriculas()">Matricular Selecionados</button>
+                <small class="text-muted d-block mt-2">Atenção: Os alunos devem estar previamente cadastrados na base geral.</small>
             </div>
 
             <div id="listaDinamica"></div>
@@ -132,6 +146,10 @@
         const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let alunosSelecionadosParaMatricula = [];
+        let turmaAtualId = null;
+        let nomeTurmaAtual = '';
 
         const projetosNominais = [
             { id: "1", nome: "Adolescer" }, { id: "2", nome: "Criança Certeza" },
@@ -190,11 +208,19 @@
         }
 
         async function verAlunos(turmaId, nomeTurma) {
+            turmaAtualId = turmaId;
+            nomeTurmaAtual = nomeTurma;
+            alunosSelecionadosParaMatricula = [];
+
             document.getElementById('tituloArea').innerText = `Alunos | ${nomeTurma}`;
             document.getElementById('inputMassaArea').classList.remove('d-none');
             document.getElementById('botoesAcao').innerHTML = `<button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">Voltar</button>`;
-            
-            document.getElementById('btnConfirmarMassa').onclick = () => matricularEmMassa(turmaId, nomeTurma);
+
+            document.getElementById('inputBuscaAlunoMatricula').value = '';
+            document.getElementById('listaResultadosBusca').style.display = 'none';
+            document.getElementById('listaResultadosBusca').innerHTML = '';
+            renderizarSelecionados();
+
             carregarListaMatriculados(turmaId, nomeTurma);
         }
 
@@ -230,25 +256,93 @@
             }
         }
 
-        async function matricularEmMassa(turmaId, nomeTurma) {
-            const input = document.getElementById('ids_massa');
-            if (!input.value) return alert("Insira os IDs.");
-
-            const ids = input.value.split(',').map(id => id.trim()).filter(id => id !== "");
-            const parsedIds = ids.map(id => ({ raw: id, parsed: Number(id) }));
-            const invalidos = parsedIds.filter(item => isNaN(item.parsed)).map(item => item.raw);
-            if (invalidos.length > 0) {
-                return alert(`IDs inválidos (não são números): ${invalidos.join(', ')}`);
+        async function buscarAlunoParaMatricula(termo) {
+            const resDiv = document.getElementById('listaResultadosBusca');
+            if (termo.length < 2) { resDiv.style.display = 'none'; return; }
+            const { data } = await supabaseClient
+                .from('alunos')
+                .select('id, nome, cpf')
+                .ilike('nome', `%${termo}%`)
+                .limit(10);
+            if (data && data.length > 0) {
+                resDiv.innerHTML = data.map(a => `
+                    <button type="button" class="list-group-item list-group-item-action search-result-item"
+                        onclick="selecionarAlunoParaMatricula(${a.id}, '${a.nome.replace(/'/g, "\\'")}', '${(a.cpf || '').replace(/'/g, "\\'")}')">
+                        <span class="fw-medium">${a.nome}</span>
+                        <span class="text-muted small ms-2">CPF: ${a.cpf || '---'}</span>
+                    </button>`).join('');
+                resDiv.style.display = 'block';
+            } else {
+                resDiv.innerHTML = '<div class="list-group-item text-muted small">Nenhum aluno encontrado.</div>';
+                resDiv.style.display = 'block';
             }
-            const objetos = parsedIds.map(item => ({ aluno_id: item.parsed, turma_id: turmaId }));
+        }
 
+        function selecionarAlunoParaMatricula(id, nome, cpf) {
+            if (alunosSelecionadosParaMatricula.find(a => a.id === id)) {
+                alert(`${nome} já está na lista de selecionados.`);
+            } else {
+                alunosSelecionadosParaMatricula.push({ id, nome, cpf });
+            }
+            document.getElementById('inputBuscaAlunoMatricula').value = '';
+            document.getElementById('listaResultadosBusca').style.display = 'none';
+            document.getElementById('listaResultadosBusca').innerHTML = '';
+            renderizarSelecionados();
+        }
+
+        function removerAlunoSelecionado(id) {
+            alunosSelecionadosParaMatricula = alunosSelecionadosParaMatricula.filter(a => a.id !== id);
+            renderizarSelecionados();
+        }
+
+        function renderizarSelecionados() {
+            const container = document.getElementById('alunosSelecionados');
+            if (alunosSelecionadosParaMatricula.length === 0) {
+                container.innerHTML = '<span class="text-muted small">Nenhum aluno selecionado.</span>';
+            } else {
+                container.innerHTML = alunosSelecionadosParaMatricula.map(a => `
+                    <span class="aluno-badge">
+                        ${a.nome}
+                        <span class="remove-btn" onclick="removerAlunoSelecionado(${a.id})" title="Remover">&times;</span>
+                    </span>`).join('');
+            }
+        }
+
+        async function confirmarMatriculas() {
+            if (alunosSelecionadosParaMatricula.length === 0) {
+                return alert('Selecione ao menos um aluno para matricular.');
+            }
+
+            const ids = alunosSelecionadosParaMatricula.map(a => a.id);
+
+            const { data: jaMatriculados } = await supabaseClient
+                .from('matriculas')
+                .select('aluno_id')
+                .eq('turma_id', turmaAtualId)
+                .in('aluno_id', ids);
+
+            if (jaMatriculados && jaMatriculados.length > 0) {
+                const jaIds = new Set(jaMatriculados.map(m => m.aluno_id));
+                const nomes = alunosSelecionadosParaMatricula
+                    .filter(a => jaIds.has(a.id))
+                    .map(a => a.nome)
+                    .join(', ');
+                return alert(`Os seguintes alunos já estão matriculados nesta turma:\n${nomes}\n\nRemova-os da seleção antes de continuar.`);
+            }
+
+            const objetos = alunosSelecionadosParaMatricula.map(a => ({ aluno_id: a.id, turma_id: turmaAtualId }));
             const { error } = await supabaseClient.from('matriculas').insert(objetos);
             if (error) {
                 console.error(error);
-                alert("Erro: " + error.message);
+                if (error.code === '23505') {
+                    alert('Um ou mais alunos já estão matriculados nesta turma.');
+                } else {
+                    alert('Erro ao matricular: ' + error.message);
+                }
             } else {
-                input.value = '';
-                carregarListaMatriculados(turmaId, nomeTurma);
+                alunosSelecionadosParaMatricula = [];
+                renderizarSelecionados();
+                carregarListaMatriculados(turmaAtualId, nomeTurmaAtual);
             }
         }
 
