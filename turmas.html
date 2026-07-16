@@ -157,7 +157,7 @@
         let nomeTurmaAtual = '';
         let projetoAtualId = '';
         let projetoAtualNome = '';
-        let subcategoriaAtual = '';
+        let subcategoriaAtual = null;
 
         function escapeHtml(str) {
             if (str == null) return '';
@@ -172,6 +172,8 @@
         const SUBCATEGORIA_ESPORTE = "Esporte";
         const SUBCATEGORIAS_PADRAO = ["Ballet", "Capoeira", SUBCATEGORIA_ESPORTE];
         // Fallback hardcoded caso a tabela `subcategorias` não exista ainda no Supabase.
+        // Todos os projetos com subcategorias (1-4) usam Ballet, Capoeira e Esporte,
+        // alinhando o fallback com o seed da migration.
         const subcategoriasPorProjeto = {
             "1": SUBCATEGORIAS_PADRAO,
             "2": SUBCATEGORIAS_PADRAO,
@@ -214,6 +216,7 @@
 
             if (error || !data) {
                 // Fallback para lista hardcoded se tabela ainda não existe
+                console.warn('subcategorias: usando fallback hardcoded para projeto', projetoId, error?.message);
                 subcategoriasCache[key] = subcategoriasPorProjeto[key] || [];
             } else {
                 subcategoriasCache[key] = data.map(r => r.nome);
@@ -301,7 +304,7 @@
                 document.getElementById('formNovaTurma').reset();
                 document.getElementById('add_projeto_id').disabled = false;
                 document.getElementById('add_subcategoria').disabled = false;
-                await carregarTurmas(projetoAtualId, projetoAtualNome, subcategoriaAtual || null);
+                await carregarTurmas(projetoAtualId, projetoAtualNome, subcategoriaAtual);
             }
         }
 
@@ -309,7 +312,7 @@
             const nomeProjeto = obterNomeProjeto(idProjeto);
             projetoAtualId = String(idProjeto);
             projetoAtualNome = nomeProjeto;
-            subcategoriaAtual = '';
+            subcategoriaAtual = null;
             turmaAtualId = null;
             nomeTurmaAtual = '';
 
@@ -343,14 +346,14 @@
 
         function selecionarSubcategoria(subcategoria) {
             // subcategoria é null quando "Todas" é clicado
-            subcategoriaAtual = subcategoria || '';
+            subcategoriaAtual = subcategoria;
             document.querySelectorAll('.subcategory-card').forEach(c => c.classList.remove('active'));
             const btnId = subcategoria
                 ? `sub-${projetoAtualId}-${slugifySubcategoria(subcategoria)}`
                 : `sub-${projetoAtualId}-todas`;
             const el = document.getElementById(btnId);
             if (el) el.classList.add('active');
-            carregarTurmas(projetoAtualId, projetoAtualNome, subcategoria || null);
+            carregarTurmas(projetoAtualId, projetoAtualNome, subcategoria);
         }
 
         async function carregarTurmas(idProjeto, nomeProjeto, subcategoria) {

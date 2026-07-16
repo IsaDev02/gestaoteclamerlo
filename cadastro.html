@@ -696,7 +696,7 @@
         // ============================================================
         async function onProjetoChangeCadastro(projetoId) {
             await carregarSubcategoriasCadastro(projetoId);
-            await carregarTurmas(projetoId, '');
+            await carregarTurmas(projetoId, null);
         }
 
         async function carregarSubcategoriasCadastro(projetoId) {
@@ -717,6 +717,7 @@
                 .order('nome');
 
             if (error || !data || data.length === 0) {
+                if (error) console.warn('subcategorias cadastro: erro ao carregar para projeto', projetoId, error.message);
                 col.classList.add('d-none');
                 return;
             }
