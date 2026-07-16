@@ -590,7 +590,7 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Projeto</label>
-                        <select id="select_projeto" class="form-select" onchange="carregarTurmas(this.value)">
+                        <select id="select_projeto" class="form-select" onchange="onProjetoChangeCadastro(this.value)">
                             <option value="">Escolha o Projeto...</option>
                             <option value="1">Adolescer para Crescer</option>
                             <option value="2">Criança Certeza</option>
@@ -598,6 +598,12 @@
                             <option value="4">Valorizando a Infância</option>
                             <option value="5">Clube de Mães</option>
                             <option value="6">Animar e Celebrar</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-none" id="col_subcategoria_cadastro">
+                        <label class="form-label">Subcategoria/Modalidade</label>
+                        <select id="select_subcategoria_cadastro" class="form-select" onchange="carregarTurmas(document.getElementById('select_projeto').value, this.value)">
+                            <option value="">Todas as Subcategorias</option>
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -686,19 +692,64 @@
         }
 
         // ============================================================
-        // TURMAS
+        // TURMAS E SUBCATEGORIAS
         // ============================================================
-        async function carregarTurmas(projetoId) {
-            const selectTurma = document.getElementById('select_turma');
-            selectTurma.innerHTML = '<option value="">Carregando turmas...</option>';
-            if (!projetoId) return;
+        async function onProjetoChangeCadastro(projetoId) {
+            await carregarSubcategoriasCadastro(projetoId);
+            await carregarTurmas(projetoId, '');
+        }
+
+        async function carregarSubcategoriasCadastro(projetoId) {
+            const col = document.getElementById('col_subcategoria_cadastro');
+            const select = document.getElementById('select_subcategoria_cadastro');
+            select.innerHTML = '<option value="">Todas as Subcategorias</option>';
+
+            if (!projetoId) {
+                col.classList.add('d-none');
+                return;
+            }
 
             const { data, error } = await supabaseClient
+                .from('subcategorias')
+                .select('nome')
+                .eq('projeto_id', projetoId)
+                .eq('ativo', true)
+                .order('nome');
+
+            if (error || !data || data.length === 0) {
+                col.classList.add('d-none');
+                return;
+            }
+
+            data.forEach(r => select.add(new Option(r.nome, r.nome)));
+            col.classList.remove('d-none');
+        }
+
+        async function carregarTurmas(projetoId, subcategoria) {
+            const selectTurma = document.getElementById('select_turma');
+            selectTurma.innerHTML = '<option value="">Carregando turmas...</option>';
+            if (!projetoId) {
+                selectTurma.innerHTML = '<option value="">Selecione a Turma...</option>';
+                return;
+            }
+
+            let query = supabaseClient
                 .from('turmas')
                 .select('id, nome_turma')
-                .eq('projeto_id', projetoId);
+                .eq('projeto_id', projetoId)
+                .order('nome_turma');
+
+            if (subcategoria) {
+                query = query.eq('subcategoria', subcategoria);
+            }
+
+            const { data, error } = await query;
 
             selectTurma.innerHTML = '<option value="">Selecione a Turma...</option>';
+            if (error) {
+                selectTurma.innerHTML = '<option value="">Erro ao carregar turmas</option>';
+                return;
+            }
             if (data) data.forEach(t => selectTurma.add(new Option(t.nome_turma, t.id)));
         }
 
