@@ -138,6 +138,11 @@
         let turmaAtualId = null;
         let nomeTurmaAtual = '';
 
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
         const projetosNominais = [
             { id: "1", nome: "Adolescer" }, { id: "2", nome: "Criança Certeza" },
             { id: "3", nome: "Sempre Criança" }, { id: "4", nome: "Valorizando" },
@@ -242,18 +247,18 @@
                 return;
             }
 
-            const alunosMap = new Map((alunos || []).map(a => [a.id, a]));
+            const alunosMap = new Map(alunos ? alunos.map(a => [a.id, a]) : []);
 
             let html = '<table class="table table-hover bg-white rounded shadow-sm"><thead><tr><th>ID</th><th>Nome</th><th>CPF</th><th class="text-end">Ação</th></tr></thead><tbody>';
             matriculas.forEach(m => {
                 const aluno = alunosMap.get(m.aluno_id);
-                const nome = aluno ? aluno.nome : `<span class="text-danger">ID ${m.aluno_id} não encontrado</span>`;
-                const cpf = aluno ? (aluno.cpf || '---') : '---';
+                const nome = aluno ? escapeHtml(aluno.nome) : `<span class="text-danger">ID ${Number(m.aluno_id)} não encontrado</span>`;
+                const cpf = aluno ? escapeHtml(aluno.cpf || '---') : '---';
                 html += `<tr>
-                    <td class="small text-muted">${m.aluno_id}</td>
+                    <td class="small text-muted">${Number(m.aluno_id)}</td>
                     <td class="fw-medium">${nome}</td>
                     <td>${cpf}</td>
-                    <td class="text-end"><button class="btn btn-link text-danger p-0" onclick="removerMatricula(${m.id})"><i class="fas fa-trash-alt"></i></button></td>
+                    <td class="text-end"><button class="btn btn-link text-danger p-0" onclick="removerMatricula(${Number(m.id)})"><i class="fas fa-trash-alt"></i></button></td>
                 </tr>`;
             });
             container.innerHTML = html + '</tbody></table>';
