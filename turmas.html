@@ -94,10 +94,10 @@
 
             <div id="inputMassaArea" class="bulk-insert-area d-none">
                 <label class="form-label fw-bold small text-primary">MATRICULAR ALUNOS:</label>
-                <input type="text" id="inputBuscaAlunoMatricula" class="form-control mb-2" placeholder="Digite o nome do aluno..." oninput="buscarAlunoParaMatricula(this.value)">
+                <input type="text" id="inputBuscaAlunoMatricula" class="form-control mb-2" placeholder="Digite o nome do aluno...">
                 <div id="listaResultadosBusca" class="list-group mb-3" style="max-height: 200px; overflow-y: auto; display: none;"></div>
                 <div id="alunosSelecionados" class="d-flex flex-wrap gap-2 mb-3"></div>
-                <button class="btn btn-success fw-bold" id="btnConfirmarMatricula" onclick="confirmarMatriculas()">Matricular Selecionados</button>
+                <button class="btn btn-success fw-bold" id="btnConfirmarMatricula">Matricular Selecionados</button>
                 <small class="text-muted d-block mt-2">Atenção: Os alunos devem estar previamente cadastrados na base geral.</small>
             </div>
 
@@ -216,7 +216,12 @@
             document.getElementById('inputMassaArea').classList.remove('d-none');
             document.getElementById('botoesAcao').innerHTML = `<button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">Voltar</button>`;
 
-            document.getElementById('inputBuscaAlunoMatricula').value = '';
+            const inputBusca = document.getElementById('inputBuscaAlunoMatricula');
+            inputBusca.value = '';
+            inputBusca.oninput = () => buscarAlunoParaMatricula(inputBusca.value);
+
+            document.getElementById('btnConfirmarMatricula').onclick = confirmarMatriculas;
+
             document.getElementById('listaResultadosBusca').style.display = 'none';
             document.getElementById('listaResultadosBusca').innerHTML = '';
             renderizarSelecionados();
@@ -273,7 +278,7 @@
             if (data && data.length > 0) {
                 resDiv.innerHTML = data.map(a => `
                     <button type="button" class="list-group-item list-group-item-action search-result-item"
-                        data-id="${a.id}" data-nome="${escapeHtml(a.nome)}" data-cpf="${escapeHtml(a.cpf || '')}">
+                        data-id="${escapeHtml(String(a.id))}" data-nome="${escapeHtml(a.nome)}" data-cpf="${escapeHtml(a.cpf || '')}">
                         <span class="fw-medium">${escapeHtml(a.nome)}</span>
                         <span class="text-muted small ms-2">CPF: ${escapeHtml(a.cpf || '---')}</span>
                     </button>`).join('');
@@ -321,7 +326,7 @@
                 container.innerHTML = '<span class="text-muted small">Nenhum aluno selecionado.</span>';
             } else {
                 container.innerHTML = alunosSelecionadosParaMatricula.map(a => `
-                    <span class="aluno-badge" data-id="${a.id}">
+                    <span class="aluno-badge" data-id="${escapeHtml(String(a.id))}">
                         ${escapeHtml(a.nome)}
                         <span class="remove-btn" title="Remover">&times;</span>
                     </span>`).join('');
