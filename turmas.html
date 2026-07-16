@@ -205,7 +205,7 @@
             const projeto = projetosNominais.find(p => p.id === String(idProjeto));
             return projeto ? projeto.nome : '';
         }
-        function slugSubcategoria(value) {
+        function slugificarSubcategoria(value) {
             return String(value || '')
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, '')
@@ -307,7 +307,7 @@
             if (subcategorias.length > 0) {
                 blocoSubcategorias.classList.remove('d-none');
                 gridSubcategorias.innerHTML = subcategorias.map(sub => `
-                    <button type="button" class="subcategory-card" id="sub-${idProjeto}-${slugSubcategoria(sub)}" onclick="selecionarSubcategoria('${escapeForSingleQuote(sub)}')">${escapeHtml(sub)}</button>
+                    <button type="button" class="subcategory-card" id="sub-${idProjeto}-${slugificarSubcategoria(sub)}" onclick="selecionarSubcategoria('${escapeForSingleQuote(sub)}')">${escapeHtml(sub)}</button>
                 `).join('');
                 document.getElementById('tituloArea').innerText = `Turmas: ${nomeProjeto}`;
                 document.getElementById('listaDinamica').innerHTML = '<div class="alert alert-light border">Selecione uma subcategoria para visualizar as turmas.</div>';
@@ -322,7 +322,7 @@
         function selecionarSubcategoria(subcategoria) {
             subcategoriaAtual = subcategoria;
             document.querySelectorAll('.subcategory-card').forEach(c => c.classList.remove('active'));
-            const el = document.getElementById(`sub-${projetoAtualId}-${slugSubcategoria(subcategoria)}`);
+            const el = document.getElementById(`sub-${projetoAtualId}-${slugificarSubcategoria(subcategoria)}`);
             if (el) el.classList.add('active');
             carregarTurmas(projetoAtualId, projetoAtualNome, subcategoriaAtual);
         }
@@ -335,7 +335,8 @@
             const container = document.getElementById('listaDinamica');
             container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary"></div></div>';
 
-            const baseQuery = () => supabaseClient.from('turmas').select('*').eq('projeto_id', idProjeto).order('nome_turma');
+            const camposTurma = 'id, nome_turma, dias_semana, horario_inicio, horario_fim, subcategoria, projeto_id';
+            const baseQuery = () => supabaseClient.from('turmas').select(camposTurma).eq('projeto_id', idProjeto).order('nome_turma');
             let turmas = [];
             let error = null;
 
@@ -353,8 +354,12 @@
                     error = respSub.error || respLegado.error;
                     const turmasComSubcategoria = respSub.data || [];
                     const turmasLegadas = respLegado.data || [];
-                    turmas = [...turmasComSubcategoria, ...turmasLegadas]
-                        .filter((turma, idx, arr) => arr.findIndex(t => t.id === turma.id) === idx);
+                    const idsVistos = new Set();
+                    turmas = [...turmasComSubcategoria, ...turmasLegadas].filter(turma => {
+                        if (idsVistos.has(turma.id)) return false;
+                        idsVistos.add(turma.id);
+                        return true;
+                    });
                 } else {
                     const resp = await baseQuery().eq('subcategoria', subcategoria);
                     turmas = resp.data || [];
