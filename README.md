@@ -10,4 +10,4 @@ Linguagem: HTML/CSS/JS/Bootstrap
 
 Para habilitar o filtro de turmas por projeto + subcategoria/modalidade, execute no Supabase SQL Editor:
 
-`/home/runner/work/gestaoteclamerlo/gestaoteclamerlo/supabase/migrations/20260716_add_subcategoria_to_turmas.sql`
+`supabase/migrations/20260716_add_subcategoria_to_turmas.sql`

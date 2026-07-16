@@ -227,7 +227,7 @@
             }
 
             grupo.classList.remove('d-none');
-            select.innerHTML = '<option value="">Escolha...</option>' + subcategorias.map(s => `<option value="${s}">${s}</option>`).join('');
+            select.innerHTML = '<option value="">Escolha...</option>' + subcategorias.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
             select.value = valorSelecionado && subcategorias.includes(valorSelecionado) ? valorSelecionado : '';
         }
 
@@ -307,7 +307,7 @@
             if (subcategorias.length > 0) {
                 blocoSubcategorias.classList.remove('d-none');
                 gridSubcategorias.innerHTML = subcategorias.map(sub => `
-                    <button type="button" class="subcategory-card" id="sub-${idProjeto}-${slugSubcategoria(sub)}" onclick="selecionarSubcategoria('${escapeForSingleQuote(sub)}')">${sub}</button>
+                    <button type="button" class="subcategory-card" id="sub-${idProjeto}-${slugSubcategoria(sub)}" onclick="selecionarSubcategoria('${escapeForSingleQuote(sub)}')">${escapeHtml(sub)}</button>
                 `).join('');
                 document.getElementById('tituloArea').innerText = `Turmas: ${nomeProjeto}`;
                 document.getElementById('listaDinamica').innerHTML = '<div class="alert alert-light border">Selecione uma subcategoria para visualizar as turmas.</div>';
@@ -335,17 +335,33 @@
             const container = document.getElementById('listaDinamica');
             container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary"></div></div>';
 
-            let query = supabaseClient.from('turmas').select('*').eq('projeto_id', idProjeto).order('nome_turma');
-            if (subcategoria) {
+            const baseQuery = () => supabaseClient.from('turmas').select('*').eq('projeto_id', idProjeto).order('nome_turma');
+            let turmas = [];
+            let error = null;
+
+            if (!subcategoria) {
+                const resp = await baseQuery();
+                turmas = resp.data || [];
+                error = resp.error;
+            } else {
                 const subcategoriaLegada = subcategoriaLegadaPadraoPorProjeto[String(idProjeto)];
                 if (subcategoriaLegada && subcategoria === subcategoriaLegada) {
-                    query = query.or(`subcategoria.eq.${subcategoria},subcategoria.is.null`);
+                    const [respSub, respLegado] = await Promise.all([
+                        baseQuery().eq('subcategoria', subcategoria),
+                        baseQuery().is('subcategoria', null)
+                    ]);
+                    error = respSub.error || respLegado.error;
+                    const turmasComSubcategoria = respSub.data || [];
+                    const turmasLegadas = respLegado.data || [];
+                    turmas = [...turmasComSubcategoria, ...turmasLegadas]
+                        .filter((turma, idx, arr) => arr.findIndex(t => t.id === turma.id) === idx);
                 } else {
-                    query = query.eq('subcategoria', subcategoria);
+                    const resp = await baseQuery().eq('subcategoria', subcategoria);
+                    turmas = resp.data || [];
+                    error = resp.error;
                 }
             }
 
-            const { data: turmas, error } = await query;
             if (error) {
                 container.innerHTML = `<div class="alert alert-danger">Erro ao carregar turmas: ${error.message}</div>`;
                 return;
