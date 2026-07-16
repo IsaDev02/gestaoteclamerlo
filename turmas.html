@@ -169,11 +169,13 @@
             { id: "3", nome: "Sempre Criança" }, { id: "4", nome: "Valorizando" },
             { id: "5", nome: "Clube de Mães" }, { id: "6", nome: "Animar" }
         ];
+        const SUBCATEGORIA_ESPORTE = "Esporte";
+        const SUBCATEGORIAS_PADRAO = ["Ballet", "Capoeira", SUBCATEGORIA_ESPORTE];
         const subcategoriasPorProjeto = {
-            "1": ["Esporte"],
-            "2": ["Ballet", "Capoeira", "Esporte"],
-            "3": ["Ballet", "Capoeira", "Esporte"],
-            "4": ["Ballet", "Capoeira", "Esporte"]
+            "1": [SUBCATEGORIA_ESPORTE],
+            "2": SUBCATEGORIAS_PADRAO,
+            "3": SUBCATEGORIAS_PADRAO,
+            "4": SUBCATEGORIAS_PADRAO
         };
         const projetosComFallbackLegadoEmEsporte = new Set(["1", "2", "3", "4"]);
 
@@ -297,8 +299,8 @@
 
             if (subcategorias.length > 0) {
                 blocoSubcategorias.classList.remove('d-none');
-                gridSubcategorias.innerHTML = subcategorias.map((sub, idx) => `
-                    <button type="button" class="subcategory-card" id="sub-${idProjeto}-${slugifySubcategoria(sub)}" onclick="selecionarSubcategoriaPorIndice(${idx})">${escapeHtml(sub)}</button>
+                gridSubcategorias.innerHTML = subcategorias.map(sub => `
+                    <button type="button" class="subcategory-card" id="sub-${idProjeto}-${slugifySubcategoria(sub)}" onclick='selecionarSubcategoria(${JSON.stringify(sub)})'>${escapeHtml(sub)}</button>
                 `).join('');
                 document.getElementById('tituloArea').innerText = `Turmas: ${nomeProjeto}`;
                 document.getElementById('listaDinamica').innerHTML = '<div class="alert alert-light border">Selecione uma subcategoria para visualizar as turmas.</div>';
@@ -308,13 +310,6 @@
             blocoSubcategorias.classList.add('d-none');
             gridSubcategorias.innerHTML = '';
             carregarTurmas(idProjeto, nomeProjeto, null);
-        }
-
-        function selecionarSubcategoriaPorIndice(indice) {
-            const subcategorias = subcategoriasPorProjeto[String(projetoAtualId)] || [];
-            const subcategoria = subcategorias[Number(indice)];
-            if (!subcategoria) return;
-            selecionarSubcategoria(subcategoria);
         }
 
         function selecionarSubcategoria(subcategoria) {
@@ -343,8 +338,8 @@
                 turmas = resp.data || [];
                 error = resp.error;
             } else {
-                if (subcategoria === 'Esporte' && projetosComFallbackLegadoEmEsporte.has(String(idProjeto))) {
-                    const resp = await baseQuery().or('subcategoria.eq.Esporte,subcategoria.is.null');
+                if (subcategoria === SUBCATEGORIA_ESPORTE && projetosComFallbackLegadoEmEsporte.has(String(idProjeto))) {
+                    const resp = await baseQuery().or(`subcategoria.eq.${SUBCATEGORIA_ESPORTE},subcategoria.is.null`);
                     turmas = resp.data || [];
                     error = resp.error;
                 } else {
