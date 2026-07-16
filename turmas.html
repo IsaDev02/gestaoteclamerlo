@@ -138,6 +138,11 @@
         let turmaAtualId = null;
         let nomeTurmaAtual = '';
 
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
         const projetosNominais = [
             { id: "1", nome: "Adolescer" }, { id: "2", nome: "Criança Certeza" },
             { id: "3", nome: "Sempre Criança" }, { id: "4", nome: "Valorizando" },
@@ -216,32 +221,47 @@
             const container = document.getElementById('listaDinamica');
             container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary"></div></div>';
 
-            const { data: matriculas, error } = await supabaseClient
+            const { data: matriculas, error: errMatriculas } = await supabaseClient
                 .from('matriculas')
-                .select(`id, aluno_id, alunos(id, nome, cpf)`)
+                .select('id, aluno_id')
                 .eq('turma_id', turmaId);
 
-            if (error) {
-                container.innerHTML = `<div class="alert alert-danger">Erro ao carregar nomes. Verifique a Foreign Key no Supabase.</div>`;
+            if (errMatriculas) {
+                container.innerHTML = `<div class="alert alert-danger">Erro ao carregar matrículas: ${errMatriculas.message}</div>`;
                 return;
             }
 
             if (!matriculas || matriculas.length === 0) {
                 container.innerHTML = '<div class="alert alert-info">Nenhum aluno nesta turma.</div>';
-            } else {
-                let html = '<table class="table table-hover bg-white rounded shadow-sm"><thead><tr><th>ID</th><th>Nome</th><th>CPF</th><th class="text-end">Ação</th></tr></thead><tbody>';
-                matriculas.forEach(m => {
-                    const nome = m.alunos ? m.alunos.nome : `<span class="text-danger">ID ${m.aluno_id} não encontrado</span>`;
-                    html += `<tr>
-                        <td class="small text-muted">${m.aluno_id}</td>
-                        <td class="fw-medium">${nome}</td>
-                        <td>${m.alunos?.cpf || '---'}</td>
-                        <td class="text-end"><button class="btn btn-link text-danger p-0" onclick="removerMatricula(${m.id}, ${turmaId}, '${nomeTurma}')"><i class="fas fa-trash-alt"></i></button>
-</td>
-                    </tr>`;
-                });
-                container.innerHTML = html + '</tbody></table>';
+                return;
             }
+
+            const alunoIds = matriculas.map(m => m.aluno_id);
+            const { data: alunos, error: errAlunos } = await supabaseClient
+                .from('alunos')
+                .select('id, nome, cpf')
+                .in('id', alunoIds);
+
+            if (errAlunos) {
+                container.innerHTML = `<div class="alert alert-danger">Erro ao carregar dados dos alunos: ${errAlunos.message}</div>`;
+                return;
+            }
+
+            const alunosMap = new Map(alunos ? alunos.map(a => [a.id, a]) : []);
+
+            let html = '<table class="table table-hover bg-white rounded shadow-sm"><thead><tr><th>ID</th><th>Nome</th><th>CPF</th><th class="text-end">Ação</th></tr></thead><tbody>';
+            matriculas.forEach(m => {
+                const aluno = alunosMap.get(m.aluno_id);
+                const nome = aluno ? escapeHtml(aluno.nome) : `<span class="text-danger">ID ${Number(m.aluno_id)} não encontrado</span>`;
+                const cpf = aluno ? escapeHtml(aluno.cpf || '---') : '---';
+                html += `<tr>
+                    <td class="small text-muted">${Number(m.aluno_id)}</td>
+                    <td class="fw-medium">${nome}</td>
+                    <td>${cpf}</td>
+                    <td class="text-end"><button class="btn btn-link text-danger p-0" onclick="removerMatricula(${Number(m.id)})"><i class="fas fa-trash-alt"></i></button></td>
+                </tr>`;
+            });
+            container.innerHTML = html + '</tbody></table>';
         }
 
         async function matricularPorIds() {
@@ -313,13 +333,13 @@
             status.innerText = msg;
             status.className = (naoEncontrados.length > 0 || erro) ? "mt-2 small fw-bold text-warning" : "mt-2 small fw-bold text-success";
 
-            carregarListaMatriculados(turmaAtualId, nomeTurmaAtual);
+            await carregarListaMatriculados(turmaAtualId, nomeTurmaAtual);
         }
 
-        async function removerMatricula(id, tId, tNome) {
+        async function removerMatricula(id) {
             if (confirm("Remover aluno?")) {
                 await supabaseClient.from('matriculas').delete().eq('id', id);
-                carregarListaMatriculados(tId, tNome);
+                await carregarListaMatriculados(turmaAtualId, nomeTurmaAtual);
             }
         }
 
