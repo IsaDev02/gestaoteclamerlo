@@ -259,18 +259,29 @@
         async function buscarAlunoParaMatricula(termo) {
             const resDiv = document.getElementById('listaResultadosBusca');
             if (termo.length < 2) { resDiv.style.display = 'none'; return; }
-            const { data } = await supabaseClient
+            const { data, error } = await supabaseClient
                 .from('alunos')
                 .select('id, nome, cpf')
                 .ilike('nome', `%${termo}%`)
                 .limit(10);
+            if (error) {
+                console.error(error);
+                resDiv.innerHTML = '<div class="list-group-item text-danger small">Erro ao buscar alunos. Tente novamente.</div>';
+                resDiv.style.display = 'block';
+                return;
+            }
             if (data && data.length > 0) {
                 resDiv.innerHTML = data.map(a => `
                     <button type="button" class="list-group-item list-group-item-action search-result-item"
-                        onclick="selecionarAlunoParaMatricula(${a.id}, '${a.nome.replace(/'/g, "\\'")}', '${(a.cpf || '').replace(/'/g, "\\'")}')">
-                        <span class="fw-medium">${a.nome}</span>
-                        <span class="text-muted small ms-2">CPF: ${a.cpf || '---'}</span>
+                        data-id="${a.id}" data-nome="${escapeHtml(a.nome)}" data-cpf="${escapeHtml(a.cpf || '')}">
+                        <span class="fw-medium">${escapeHtml(a.nome)}</span>
+                        <span class="text-muted small ms-2">CPF: ${escapeHtml(a.cpf || '---')}</span>
                     </button>`).join('');
+                resDiv.querySelectorAll('.search-result-item').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        selecionarAlunoParaMatricula(Number(btn.dataset.id), btn.dataset.nome, btn.dataset.cpf);
+                    });
+                });
                 resDiv.style.display = 'block';
             } else {
                 resDiv.innerHTML = '<div class="list-group-item text-muted small">Nenhum aluno encontrado.</div>';
@@ -295,16 +306,30 @@
             renderizarSelecionados();
         }
 
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function renderizarSelecionados() {
             const container = document.getElementById('alunosSelecionados');
             if (alunosSelecionadosParaMatricula.length === 0) {
                 container.innerHTML = '<span class="text-muted small">Nenhum aluno selecionado.</span>';
             } else {
                 container.innerHTML = alunosSelecionadosParaMatricula.map(a => `
-                    <span class="aluno-badge">
-                        ${a.nome}
-                        <span class="remove-btn" onclick="removerAlunoSelecionado(${a.id})" title="Remover">&times;</span>
+                    <span class="aluno-badge" data-id="${a.id}">
+                        ${escapeHtml(a.nome)}
+                        <span class="remove-btn" title="Remover">&times;</span>
                     </span>`).join('');
+                container.querySelectorAll('.aluno-badge').forEach(badge => {
+                    badge.querySelector('.remove-btn').addEventListener('click', () => {
+                        removerAlunoSelecionado(Number(badge.dataset.id));
+                    });
+                });
             }
         }
 
@@ -315,11 +340,16 @@
 
             const ids = alunosSelecionadosParaMatricula.map(a => a.id);
 
-            const { data: jaMatriculados } = await supabaseClient
+            const { data: jaMatriculados, error: errCheck } = await supabaseClient
                 .from('matriculas')
                 .select('aluno_id')
                 .eq('turma_id', turmaAtualId)
                 .in('aluno_id', ids);
+
+            if (errCheck) {
+                console.error(errCheck);
+                return alert('Erro ao verificar matrículas existentes. Tente novamente.');
+            }
 
             if (jaMatriculados && jaMatriculados.length > 0) {
                 const jaIds = new Set(jaMatriculados.map(m => m.aluno_id));
