@@ -163,10 +163,6 @@
             if (str == null) return '';
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
-        function escapeForSingleQuote(str) {
-            if (str == null) return '';
-            return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        }
 
         const projetosNominais = [
             { id: "1", nome: "Adolescer" }, { id: "2", nome: "Criança Certeza" },
@@ -205,7 +201,7 @@
             const projeto = projetosNominais.find(p => p.id === String(idProjeto));
             return projeto ? projeto.nome : '';
         }
-        function slugificarSubcategoria(value) {
+        function slugifySubcategory(value) {
             return String(value || '')
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, '')
@@ -307,7 +303,7 @@
             if (subcategorias.length > 0) {
                 blocoSubcategorias.classList.remove('d-none');
                 gridSubcategorias.innerHTML = subcategorias.map(sub => `
-                    <button type="button" class="subcategory-card" id="sub-${idProjeto}-${slugificarSubcategoria(sub)}" onclick="selecionarSubcategoria('${escapeForSingleQuote(sub)}')">${escapeHtml(sub)}</button>
+                    <button type="button" class="subcategory-card" id="sub-${idProjeto}-${slugifySubcategory(sub)}" data-subcategoria="${escapeHtml(sub)}" onclick="selecionarSubcategoria(this.dataset.subcategoria)">${escapeHtml(sub)}</button>
                 `).join('');
                 document.getElementById('tituloArea').innerText = `Turmas: ${nomeProjeto}`;
                 document.getElementById('listaDinamica').innerHTML = '<div class="alert alert-light border">Selecione uma subcategoria para visualizar as turmas.</div>';
@@ -322,7 +318,7 @@
         function selecionarSubcategoria(subcategoria) {
             subcategoriaAtual = subcategoria;
             document.querySelectorAll('.subcategory-card').forEach(c => c.classList.remove('active'));
-            const el = document.getElementById(`sub-${projetoAtualId}-${slugificarSubcategoria(subcategoria)}`);
+            const el = document.getElementById(`sub-${projetoAtualId}-${slugifySubcategory(subcategoria)}`);
             if (el) el.classList.add('active');
             carregarTurmas(projetoAtualId, projetoAtualNome, subcategoriaAtual);
         }
@@ -347,19 +343,9 @@
             } else {
                 const subcategoriaLegada = subcategoriaLegadaPadraoPorProjeto[String(idProjeto)];
                 if (subcategoriaLegada && subcategoria === subcategoriaLegada) {
-                    const [respSub, respLegado] = await Promise.all([
-                        baseQuery().eq('subcategoria', subcategoria),
-                        baseQuery().is('subcategoria', null)
-                    ]);
-                    error = respSub.error || respLegado.error;
-                    const turmasComSubcategoria = respSub.data || [];
-                    const turmasLegadas = respLegado.data || [];
-                    const idsVistos = new Set();
-                    turmas = [...turmasComSubcategoria, ...turmasLegadas].filter(turma => {
-                        if (idsVistos.has(turma.id)) return false;
-                        idsVistos.add(turma.id);
-                        return true;
-                    });
+                    const resp = await baseQuery().or('subcategoria.eq.Esporte,subcategoria.is.null');
+                    turmas = resp.data || [];
+                    error = resp.error;
                 } else {
                     const resp = await baseQuery().eq('subcategoria', subcategoria);
                     turmas = resp.data || [];
@@ -384,7 +370,7 @@
                         </div>
                         <div class="d-flex align-items-center">
                             <span class="time-badge">${escapeHtml(t.horario_inicio || '--')} - ${escapeHtml(t.horario_fim || '--')}</span>
-                            <button class="btn btn-primary btn-sm ms-3" onclick="verAlunos(${t.id}, '${escapeForSingleQuote(t.nome_turma || '')}')">Ver Alunos</button>
+                            <button class="btn btn-primary btn-sm ms-3" data-nome-turma="${escapeHtml(t.nome_turma || '')}" onclick="verAlunos(${t.id}, this.dataset.nomeTurma)">Ver Alunos</button>
                         </div>
                     </div>
                 `).join('');
