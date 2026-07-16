@@ -201,7 +201,7 @@
             const projeto = projetosNominais.find(p => p.id === String(idProjeto));
             return projeto ? projeto.nome : '';
         }
-        function slugifySubcategory(value) {
+        function slugifySubcategoria(value) {
             return String(value || '')
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, '')
@@ -302,8 +302,8 @@
 
             if (subcategorias.length > 0) {
                 blocoSubcategorias.classList.remove('d-none');
-                gridSubcategorias.innerHTML = subcategorias.map(sub => `
-                    <button type="button" class="subcategory-card" id="sub-${idProjeto}-${slugifySubcategory(sub)}" data-subcategoria="${escapeHtml(sub)}" onclick="selecionarSubcategoria(this.dataset.subcategoria)">${escapeHtml(sub)}</button>
+                gridSubcategorias.innerHTML = subcategorias.map((sub, idx) => `
+                    <button type="button" class="subcategory-card" id="sub-${idProjeto}-${slugifySubcategoria(sub)}" onclick="selecionarSubcategoriaPorIndice(${idx})">${escapeHtml(sub)}</button>
                 `).join('');
                 document.getElementById('tituloArea').innerText = `Turmas: ${nomeProjeto}`;
                 document.getElementById('listaDinamica').innerHTML = '<div class="alert alert-light border">Selecione uma subcategoria para visualizar as turmas.</div>';
@@ -315,10 +315,17 @@
             carregarTurmas(idProjeto, nomeProjeto, null);
         }
 
+        function selecionarSubcategoriaPorIndice(indice) {
+            const subcategorias = subcategoriasPorProjeto[String(projetoAtualId)] || [];
+            const subcategoria = subcategorias[Number(indice)];
+            if (!subcategoria) return;
+            selecionarSubcategoria(subcategoria);
+        }
+
         function selecionarSubcategoria(subcategoria) {
             subcategoriaAtual = subcategoria;
             document.querySelectorAll('.subcategory-card').forEach(c => c.classList.remove('active'));
-            const el = document.getElementById(`sub-${projetoAtualId}-${slugifySubcategory(subcategoria)}`);
+            const el = document.getElementById(`sub-${projetoAtualId}-${slugifySubcategoria(subcategoria)}`);
             if (el) el.classList.add('active');
             carregarTurmas(projetoAtualId, projetoAtualNome, subcategoriaAtual);
         }
@@ -343,7 +350,7 @@
             } else {
                 const subcategoriaLegada = subcategoriaLegadaPadraoPorProjeto[String(idProjeto)];
                 if (subcategoriaLegada && subcategoria === subcategoriaLegada) {
-                    const resp = await baseQuery().or('subcategoria.eq.Esporte,subcategoria.is.null');
+                    const resp = await baseQuery().or(`subcategoria.eq.${subcategoriaLegada},subcategoria.is.null`);
                     turmas = resp.data || [];
                     error = resp.error;
                 } else {
