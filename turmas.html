@@ -23,13 +23,6 @@
         }
         .project-card:hover { transform: translateY(-5px); border-color: var(--primary); }
         .project-card.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-        .subcategory-card {
-            border: 1px solid #cbd5e1; border-radius: 10px; background: #fff;
-            color: #1e293b; padding: 10px 14px; font-size: 0.9rem; font-weight: 600;
-            transition: 0.2s; cursor: pointer;
-        }
-        .subcategory-card:hover { border-color: var(--primary); color: var(--primary); }
-        .subcategory-card.active { background: #eff6ff; border-color: var(--primary); color: var(--primary); }
 
         .turma-item {
             background: #fff; border-radius: 12px; border-left: 5px solid var(--primary);
@@ -71,18 +64,13 @@
     <main class="main-content">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="fw-bold">Gestão de Turmas</h3>
-            <button class="btn btn-primary fw-bold" onclick="abrirModalNovaTurma()">
+            <button class="btn btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#modalTurma">
                 <i class="fas fa-plus-circle me-2"></i>Nova Turma
             </button>
         </div>
 
         <h6 class="text-muted text-uppercase fw-bold mb-3" style="font-size: 0.75rem;">1. Selecione o Projeto</h6>
         <div class="row g-3 mb-5" id="gridProjetos"></div>
-
-        <div id="blocoSubcategorias" class="d-none mb-4">
-            <h6 class="text-muted text-uppercase fw-bold mb-3" style="font-size: 0.75rem;">2. Selecione a Subcategoria/Modalidade</h6>
-            <div class="d-flex flex-wrap gap-2" id="gridSubcategorias"></div>
-        </div>
 
         <div id="areaConteudo" class="d-none">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -133,12 +121,6 @@
                                 <option value="6">Animar</option>
                             </select>
                         </div>
-                        <div class="mb-3 d-none" id="grupo_add_subcategoria">
-                            <label class="form-label small fw-bold">Subcategoria/Modalidade</label>
-                            <select id="add_subcategoria" class="form-select">
-                                <option value="">Escolha...</option>
-                            </select>
-                        </div>
                     </form>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-primary w-100" onclick="salvarNovaTurma()">Salvar</button></div>
@@ -155,9 +137,6 @@
 
         let turmaAtualId = null;
         let nomeTurmaAtual = '';
-        let projetoAtualId = '';
-        let projetoAtualNome = '';
-        let subcategoriaAtual = null;
 
         function escapeHtml(str) {
             if (str == null) return '';
@@ -169,240 +148,51 @@
             { id: "3", nome: "Sempre Criança" }, { id: "4", nome: "Valorizando" },
             { id: "5", nome: "Clube de Mães" }, { id: "6", nome: "Animar" }
         ];
-        const SUBCATEGORIA_ESPORTE = "Esporte";
-        const SUBCATEGORIAS_PADRAO = ["Ballet", "Capoeira", SUBCATEGORIA_ESPORTE];
-        // Fallback hardcoded caso a tabela `subcategorias` não exista ainda no Supabase.
-        // Todos os projetos com subcategorias (1-4) usam Ballet, Capoeira e Esporte,
-        // alinhando o fallback com o seed da migration.
-        const subcategoriasPorProjeto = {
-            "1": SUBCATEGORIAS_PADRAO,
-            "2": SUBCATEGORIAS_PADRAO,
-            "3": SUBCATEGORIAS_PADRAO,
-            "4": SUBCATEGORIAS_PADRAO
-        };
-        const projetosComFallbackLegadoEmEsporte = new Set(["1", "2", "3", "4"]);
-        // Cache de subcategorias carregadas do Supabase por projeto_id.
-        const subcategoriasCache = {};
 
         function init() {
             const grid = document.getElementById('gridProjetos');
             grid.innerHTML = projetosNominais.map(p => `
                 <div class="col-md-2 col-6">
-                    <div class="project-card shadow-sm" id="card-p-${p.id}" onclick="selecionarProjeto('${p.id}')">
+                    <div class="project-card shadow-sm" id="card-p-${p.id}" onclick="carregarTurmas('${p.id}', '${p.nome}')">
                         <div class="fw-bold small">${p.nome}</div>
                     </div>
                 </div>
             `).join('');
-
-            document.getElementById('add_projeto_id').addEventListener('change', async (e) => {
-                await carregarSubcategoriasParaProjeto(e.target.value);
-                atualizarSubcategoriaModal(e.target.value, '');
-            });
-        }
-
-        // Carrega subcategorias do Supabase para o projeto dado e armazena no cache.
-        // Em caso de erro cai no fallback hardcoded (subcategoriasPorProjeto).
-        async function carregarSubcategoriasParaProjeto(projetoId) {
-            if (!projetoId) return [];
-            const key = String(projetoId);
-            if (subcategoriasCache[key] !== undefined) return subcategoriasCache[key];
-
-            const { data, error } = await supabaseClient
-                .from('subcategorias')
-                .select('nome')
-                .eq('projeto_id', projetoId)
-                .eq('ativo', true)
-                .order('nome');
-
-            if (error || !data) {
-                // Fallback para lista hardcoded se tabela ainda não existe
-                console.warn('subcategorias: usando fallback hardcoded para projeto', projetoId, error?.message);
-                subcategoriasCache[key] = subcategoriasPorProjeto[key] || [];
-            } else {
-                subcategoriasCache[key] = data.map(r => r.nome);
-            }
-            return subcategoriasCache[key];
-        }
-
-        function obterNomeProjeto(idProjeto) {
-            const projeto = projetosNominais.find(p => p.id === String(idProjeto));
-            return projeto ? projeto.nome : '';
-        }
-        function slugifySubcategoria(value) {
-            return String(value || '')
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '');
-        }
-
-        function atualizarSubcategoriaModal(projetoId, valorSelecionado) {
-            const grupo = document.getElementById('grupo_add_subcategoria');
-            const select = document.getElementById('add_subcategoria');
-            const subcategorias = subcategoriasCache[String(projetoId)] || subcategoriasPorProjeto[String(projetoId)] || [];
-
-            if (subcategorias.length === 0) {
-                grupo.classList.add('d-none');
-                select.innerHTML = '<option value="">Sem subcategoria</option>';
-                select.value = '';
-                return;
-            }
-
-            grupo.classList.remove('d-none');
-            select.innerHTML = '<option value="">Escolha...</option>' + subcategorias.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
-            select.value = valorSelecionado && subcategorias.includes(valorSelecionado) ? valorSelecionado : '';
-        }
-
-        function abrirModalNovaTurma() {
-            if (!projetoAtualId) {
-                alert('Selecione um projeto antes de cadastrar turma.');
-                return;
-            }
-
-            const subcategorias = subcategoriasCache[String(projetoAtualId)] || subcategoriasPorProjeto[String(projetoAtualId)] || [];
-            if (subcategorias.length > 0 && !subcategoriaAtual) {
-                alert('Selecione uma subcategoria/modalidade antes de cadastrar turma.');
-                return;
-            }
-
-            document.getElementById('add_projeto_id').value = String(projetoAtualId);
-            document.getElementById('add_projeto_id').disabled = true;
-            atualizarSubcategoriaModal(projetoAtualId, subcategoriaAtual);
-
-            const selectSubcategoria = document.getElementById('add_subcategoria');
-            if (subcategorias.length > 0) {
-                selectSubcategoria.value = subcategoriaAtual;
-                selectSubcategoria.disabled = true;
-            } else {
-                selectSubcategoria.disabled = false;
-            }
-
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalTurma')).show();
         }
 
         async function salvarNovaTurma() {
-            const projetoId = document.getElementById('add_projeto_id').value;
-            const subcategorias = subcategoriasCache[String(projetoId)] || subcategoriasPorProjeto[String(projetoId)] || [];
-            const subcategoria = (document.getElementById('add_subcategoria').value || '').trim();
-
-            if (!projetoId) return alert("Selecione um projeto.");
-            if (subcategorias.length > 0 && !subcategoria) return alert("Selecione a subcategoria/modalidade.");
-
             const dados = {
                 nome_turma: document.getElementById('add_nome_turma').value,
                 dias_semana: document.getElementById('add_dias').value,
                 horario_inicio: document.getElementById('add_h1').value,
                 horario_fim: document.getElementById('add_h2').value,
-                projeto_id: projetoId,
-                subcategoria: subcategoria || null
+                projeto_id: document.getElementById('add_projeto_id').value
             };
             const { error } = await supabaseClient.from('turmas').insert([dados]);
             if (error) alert("Erro: " + error.message);
-            else {
-                bootstrap.Modal.getInstance(document.getElementById('modalTurma'))?.hide();
-                document.getElementById('formNovaTurma').reset();
-                document.getElementById('add_projeto_id').disabled = false;
-                document.getElementById('add_subcategoria').disabled = false;
-                await carregarTurmas(projetoAtualId, projetoAtualNome, subcategoriaAtual);
-            }
+            else location.reload();
         }
 
-        async function selecionarProjeto(idProjeto) {
-            const nomeProjeto = obterNomeProjeto(idProjeto);
-            projetoAtualId = String(idProjeto);
-            projetoAtualNome = nomeProjeto;
-            subcategoriaAtual = null;
-            turmaAtualId = null;
-            nomeTurmaAtual = '';
-
+        async function carregarTurmas(idProjeto, nomeProjeto) {
             document.querySelectorAll('.project-card').forEach(c => c.classList.remove('active'));
             document.getElementById(`card-p-${idProjeto}`).classList.add('active');
             document.getElementById('areaConteudo').classList.remove('d-none');
             document.getElementById('inputMassaArea').classList.add('d-none');
+            document.getElementById('tituloArea').innerText = `Turmas: ${nomeProjeto}`;
             document.getElementById('botoesAcao').innerHTML = '';
 
-            const blocoSubcategorias = document.getElementById('blocoSubcategorias');
-            const gridSubcategorias = document.getElementById('gridSubcategorias');
-
-            // Exibe todas as turmas imediatamente (comportamento legado preservado)
-            carregarTurmas(idProjeto, nomeProjeto, null);
-
-            // Carrega subcategorias do Supabase (com fallback hardcoded)
-            const subcategorias = await carregarSubcategoriasParaProjeto(String(idProjeto));
-
-            if (subcategorias.length > 0) {
-                blocoSubcategorias.classList.remove('d-none');
-                const todasBtn = `<button type="button" class="subcategory-card active" id="sub-${idProjeto}-todas" onclick="selecionarSubcategoria(null)">Todas</button>`;
-                const outrosBtn = subcategorias.map(sub =>
-                    `<button type="button" class="subcategory-card" id="sub-${idProjeto}-${slugifySubcategoria(sub)}" onclick='selecionarSubcategoria(${JSON.stringify(sub)})'>${escapeHtml(sub)}</button>`
-                ).join('');
-                gridSubcategorias.innerHTML = todasBtn + outrosBtn;
-            } else {
-                blocoSubcategorias.classList.add('d-none');
-                gridSubcategorias.innerHTML = '';
-            }
-        }
-
-        function selecionarSubcategoria(subcategoria) {
-            // subcategoria é null quando "Todas" é clicado
-            subcategoriaAtual = subcategoria;
-            document.querySelectorAll('.subcategory-card').forEach(c => c.classList.remove('active'));
-            const btnId = subcategoria
-                ? `sub-${projetoAtualId}-${slugifySubcategoria(subcategoria)}`
-                : `sub-${projetoAtualId}-todas`;
-            const el = document.getElementById(btnId);
-            if (el) el.classList.add('active');
-            carregarTurmas(projetoAtualId, projetoAtualNome, subcategoria);
-        }
-
-        async function carregarTurmas(idProjeto, nomeProjeto, subcategoria) {
-            document.getElementById('inputMassaArea').classList.add('d-none');
-            document.getElementById('tituloArea').innerText = subcategoria ? `Turmas: ${nomeProjeto} | ${subcategoria}` : `Turmas: ${nomeProjeto}`;
-            document.getElementById('botoesAcao').innerHTML = '';
-
+            const { data: turmas } = await supabaseClient.from('turmas').select('*').eq('projeto_id', idProjeto);
             const container = document.getElementById('listaDinamica');
-            container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary"></div></div>';
-
-            const camposTurma = 'id, nome_turma, dias_semana, horario_inicio, horario_fim, subcategoria, projeto_id';
-            const baseQuery = () => supabaseClient.from('turmas').select(camposTurma).eq('projeto_id', idProjeto).order('nome_turma');
-            let turmas = [];
-            let error = null;
-
-            if (!subcategoria) {
-                const resp = await baseQuery();
-                turmas = resp.data || [];
-                error = resp.error;
-            } else {
-                if (subcategoria === SUBCATEGORIA_ESPORTE && projetosComFallbackLegadoEmEsporte.has(String(idProjeto))) {
-                    const resp = await baseQuery().or(`subcategoria.eq.${SUBCATEGORIA_ESPORTE},subcategoria.is.null`);
-                    turmas = resp.data || [];
-                    error = resp.error;
-                } else {
-                    const resp = await baseQuery().eq('subcategoria', subcategoria);
-                    turmas = resp.data || [];
-                    error = resp.error;
-                }
-            }
-
-            if (error) {
-                container.innerHTML = `<div class="alert alert-danger">Erro ao carregar turmas: ${error.message}</div>`;
-                return;
-            }
-
+            
             if (!turmas || turmas.length === 0) {
-                container.innerHTML = '<div class="alert alert-light border">Nenhuma turma para este filtro.</div>';
+                container.innerHTML = '<div class="alert alert-light border">Nenhuma turma para este projeto.</div>';
             } else {
                 container.innerHTML = turmas.map(t => `
                     <div class="turma-item">
-                        <div>
-                            <h5 class="fw-bold mb-1">${escapeHtml(t.nome_turma)}</h5>
-                            <span class="text-muted small">${escapeHtml(t.dias_semana || '')}</span>
-                            ${t.subcategoria ? `<div class="small text-primary fw-semibold mt-1">${escapeHtml(t.subcategoria)}</div>` : ''}
-                        </div>
+                        <div><h5 class="fw-bold mb-1">${t.nome_turma}</h5><span class="text-muted small">${t.dias_semana}</span></div>
                         <div class="d-flex align-items-center">
-                            <span class="time-badge">${escapeHtml(t.horario_inicio || '--')} - ${escapeHtml(t.horario_fim || '--')}</span>
-                            <button class="btn btn-primary btn-sm ms-3" data-nome-turma="${escapeHtml(t.nome_turma || '')}" onclick="verAlunos(${t.id}, this.dataset.nomeTurma)">Ver Alunos</button>
+                            <span class="time-badge">${t.horario_inicio} - ${t.horario_fim}</span>
+                            <button class="btn btn-primary btn-sm ms-3" onclick="verAlunos(${t.id}, '${t.nome_turma}')">Ver Alunos</button>
                         </div>
                     </div>
                 `).join('');
