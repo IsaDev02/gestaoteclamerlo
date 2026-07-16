@@ -239,7 +239,7 @@
             const alunoIds = matriculas.map(m => m.aluno_id);
             const { data: alunos, error: errAlunos } = await supabaseClient
                 .from('alunos')
-                .select('id, nome, cpf')
+                .select('id, nome, data_nascimento')
                 .in('id', alunoIds);
 
             if (errAlunos) {
@@ -249,19 +249,43 @@
 
             const alunosMap = new Map(alunos ? alunos.map(a => [a.id, a]) : []);
 
-            let html = '<table class="table table-hover bg-white rounded shadow-sm"><thead><tr><th>ID</th><th>Nome</th><th>CPF</th><th class="text-end">Ação</th></tr></thead><tbody>';
+            let html = '<table class="table table-hover bg-white rounded shadow-sm"><thead><tr><th>ID</th><th>Nome</th><th>Idade</th><th>Aniversário</th><th class="text-end">Ação</th></tr></thead><tbody>';
             matriculas.forEach(m => {
                 const aluno = alunosMap.get(m.aluno_id);
                 const nome = aluno ? escapeHtml(aluno.nome) : `<span class="text-danger">ID ${Number(m.aluno_id)} não encontrado</span>`;
-                const cpf = aluno ? escapeHtml(aluno.cpf || '---') : '---';
+                const idade = aluno ? calcularIdade(aluno.data_nascimento) : '---';
+                const aniversario = aluno ? formatarAniversario(aluno.data_nascimento) : '---';
                 html += `<tr>
                     <td class="small text-muted">${Number(m.aluno_id)}</td>
                     <td class="fw-medium">${nome}</td>
-                    <td>${cpf}</td>
+                    <td>${idade}</td>
+                    <td>${aniversario}</td>
                     <td class="text-end"><button class="btn btn-link text-danger p-0" onclick="removerMatricula(${Number(m.id)})"><i class="fas fa-trash-alt"></i></button></td>
                 </tr>`;
             });
             container.innerHTML = html + '</tbody></table>';
+        }
+
+        function calcularIdade(dataNascimento) {
+            if (!dataNascimento) return '---';
+            const nasc = new Date(dataNascimento + 'T00:00:00');
+            if (isNaN(nasc.getTime())) return '---';
+            const hoje = new Date();
+            let idade = hoje.getFullYear() - nasc.getFullYear();
+            const aindaNaoFezAniversario =
+                hoje.getMonth() < nasc.getMonth() ||
+                (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate());
+            if (aindaNaoFezAniversario) idade--;
+            return idade + ' anos';
+        }
+
+        function formatarAniversario(dataNascimento) {
+            if (!dataNascimento) return '---';
+            const nasc = new Date(dataNascimento + 'T00:00:00');
+            if (isNaN(nasc.getTime())) return '---';
+            const dia = String(nasc.getDate()).padStart(2, '0');
+            const mes = String(nasc.getMonth() + 1).padStart(2, '0');
+            return `${dia}/${mes}`;
         }
 
         async function matricularPorIds() {
@@ -338,7 +362,12 @@
 
         async function removerMatricula(id) {
             if (confirm("Remover aluno?")) {
-                await supabaseClient.from('matriculas').delete().eq('id', id);
+                const { error } = await supabaseClient.from('matriculas').delete().eq('id', id);
+                if (error) {
+                    alert("Erro ao remover: " + error.message);
+                    console.error(error);
+                    return;
+                }
                 await carregarListaMatriculados(turmaAtualId, nomeTurmaAtual);
             }
         }
