@@ -175,12 +175,7 @@
             "3": ["Ballet", "Capoeira", "Esporte"],
             "4": ["Ballet", "Capoeira", "Esporte"]
         };
-        const subcategoriaLegadaPadraoPorProjeto = {
-            "1": "Esporte",
-            "2": "Esporte",
-            "3": "Esporte",
-            "4": "Esporte"
-        };
+        const projetosComFallbackLegadoEmEsporte = new Set(["1", "2", "3", "4"]);
 
         function init() {
             const grid = document.getElementById('gridProjetos');
@@ -348,9 +343,8 @@
                 turmas = resp.data || [];
                 error = resp.error;
             } else {
-                const subcategoriaLegada = subcategoriaLegadaPadraoPorProjeto[String(idProjeto)];
-                if (subcategoriaLegada && subcategoria === subcategoriaLegada) {
-                    const resp = await baseQuery().or(`subcategoria.eq.${subcategoriaLegada},subcategoria.is.null`);
+                if (subcategoria === 'Esporte' && projetosComFallbackLegadoEmEsporte.has(String(idProjeto))) {
+                    const resp = await baseQuery().or('subcategoria.eq.Esporte,subcategoria.is.null');
                     turmas = resp.data || [];
                     error = resp.error;
                 } else {
