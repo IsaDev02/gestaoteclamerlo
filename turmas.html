@@ -235,11 +235,18 @@
             if (!input.value) return alert("Insira os IDs.");
 
             const ids = input.value.split(',').map(id => id.trim()).filter(id => id !== "");
-            const objetos = ids.map(id => ({ aluno_id: parseInt(id), turma_id: turmaId }));
+            const parsedIds = ids.map(id => ({ raw: id, parsed: Number(id) }));
+            const invalidos = parsedIds.filter(item => isNaN(item.parsed)).map(item => item.raw);
+            if (invalidos.length > 0) {
+                return alert(`IDs inválidos (não são números): ${invalidos.join(', ')}`);
+            }
+            const objetos = parsedIds.map(item => ({ aluno_id: item.parsed, turma_id: turmaId }));
 
             const { error } = await supabaseClient.from('matriculas').insert(objetos);
-            if (error) alert("Erro. Verifique se os IDs existem.");
-            else {
+            if (error) {
+                console.error(error);
+                alert("Erro: " + error.message);
+            } else {
                 input.value = '';
                 carregarListaMatriculados(turmaId, nomeTurma);
             }
