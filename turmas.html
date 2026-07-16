@@ -150,6 +150,7 @@
         let alunosSelecionadosParaMatricula = [];
         let turmaAtualId = null;
         let nomeTurmaAtual = '';
+        let buscaDebounceTimer = null;
 
         const projetosNominais = [
             { id: "1", nome: "Adolescer" }, { id: "2", nome: "Criança Certeza" },
@@ -218,7 +219,10 @@
 
             const inputBusca = document.getElementById('inputBuscaAlunoMatricula');
             inputBusca.value = '';
-            inputBusca.oninput = () => buscarAlunoParaMatricula(inputBusca.value);
+            inputBusca.oninput = () => {
+                clearTimeout(buscaDebounceTimer);
+                buscaDebounceTimer = setTimeout(() => buscarAlunoParaMatricula(inputBusca.value), 300);
+            };
 
             document.getElementById('btnConfirmarMatricula').onclick = confirmarMatriculas;
 
@@ -284,7 +288,9 @@
                     </button>`).join('');
                 resDiv.querySelectorAll('.search-result-item').forEach(btn => {
                     btn.addEventListener('click', () => {
-                        selecionarAlunoParaMatricula(Number(btn.dataset.id), btn.dataset.nome, btn.dataset.cpf);
+                        const parsedId = parseInt(btn.dataset.id, 10);
+                        if (isNaN(parsedId)) return;
+                        selecionarAlunoParaMatricula(parsedId, btn.dataset.nome, btn.dataset.cpf);
                     });
                 });
                 resDiv.style.display = 'block';
@@ -332,7 +338,8 @@
                     </span>`).join('');
                 container.querySelectorAll('.aluno-badge').forEach(badge => {
                     badge.querySelector('.remove-btn').addEventListener('click', () => {
-                        removerAlunoSelecionado(Number(badge.dataset.id));
+                        const parsedId = parseInt(badge.dataset.id, 10);
+                        if (!isNaN(parsedId)) removerAlunoSelecionado(parsedId);
                     });
                 });
             }
