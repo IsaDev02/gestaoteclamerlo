@@ -31,8 +31,21 @@
         .projeto-tag { background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-right: 3px; display: inline-block; }
     </style>
 
-   
-    
+    <script>
+    // Verifica se o usuário está autenticado e tem o papel de admin
+    const token = localStorage.getItem('token'); // Obtém o token do localStorage
+    const role = localStorage.getItem('role'); // Obtém o papel do usuário (admin/professor)
+
+    if (!token) {
+        // Caso o token não exista, redireciona para a página de login
+        alert('Você precisa estar logado para acessar esta página.');
+        window.location.href = 'index.html';
+    } else if (role !== 'admin') {
+        // Se o papel do usuário não for "admin", bloqueia o acesso
+        alert('Apenas administradores podem acessar esta página.');
+        window.location.href = 'dashboard.html';
+    }
+</script>
     
 </head>
 <body>
@@ -68,6 +81,21 @@
                 </button>
             </div>
         </header>
+
+        <!-- Filtro por Projetos -->
+        <div class="card-config">
+            <div class="section-title">
+                <i class="fas fa-folder me-2"></i> Filtrar por Projetos
+                <div class="ms-auto d-flex gap-3">
+                    <button class="select-all-btn" onclick="selecionarTodosProjetos()">Selecionar todos</button>
+                    <button class="select-all-btn text-danger" style="color:#ef4444!important;" onclick="limparSelecaoProjetos()">Limpar</button>
+                </div>
+            </div>
+            <div class="row g-2" id="listaProjetos">
+                <!-- Projetos gerados via JS -->
+            </div>
+            <p class="text-muted small mb-0 mt-3"><i class="fas fa-info-circle me-1"></i>Apenas alunos vinculados a pelo menos um dos projetos marcados entrarão no relatório.</p>
+        </div>
 
         <!-- Seleção de Campos -->
         <div class="card-config">
@@ -146,8 +174,11 @@
             { key: 'etnia',           label: 'Etnia',             icone: 'fa-globe' },
         ];
 
+        const PROJETOS_DISPONIVEIS = Object.entries(nomesDosProjetos).map(([id, nome]) => ({ id, nome }));
+
         let dadosRelatorio = [];
         let camposSelecionados = [];
+        let projetosSelecionados = PROJETOS_DISPONIVEIS.map(p => p.id); // todos marcados por padrão
 
         // ===== RENDER CHECKBOXES =====
         function renderizarCampos() {
@@ -181,6 +212,52 @@
             });
         }
 
+        // ===== RENDER CHECKBOXES DE PROJETOS =====
+        function renderizarProjetos() {
+            const container = document.getElementById('listaProjetos');
+            container.innerHTML = '';
+            PROJETOS_DISPONIVEIS.forEach(projeto => {
+                const col = document.createElement('div');
+                col.className = 'col-6 col-md-4 col-lg-3';
+                col.innerHTML = `
+                    <label class="campo-check w-100 selecionado" id="label-proj-${projeto.id}">
+                        <input type="checkbox" value="${projeto.id}" checked onchange="atualizarSelecaoProjetos()" id="chk-proj-${projeto.id}">
+                        <i class="fas fa-folder text-primary" style="width:16px;"></i>
+                        <span>${projeto.nome}</span>
+                    </label>
+                `;
+                container.appendChild(col);
+            });
+        }
+
+        function atualizarSelecaoProjetos() {
+            projetosSelecionados = [];
+            PROJETOS_DISPONIVEIS.forEach(projeto => {
+                const chk = document.getElementById('chk-proj-' + projeto.id);
+                const label = document.getElementById('label-proj-' + projeto.id);
+                if (chk.checked) {
+                    projetosSelecionados.push(projeto.id);
+                    label.classList.add('selecionado');
+                } else {
+                    label.classList.remove('selecionado');
+                }
+            });
+        }
+
+        function selecionarTodosProjetos() {
+            PROJETOS_DISPONIVEIS.forEach(p => {
+                document.getElementById('chk-proj-' + p.id).checked = true;
+            });
+            atualizarSelecaoProjetos();
+        }
+
+        function limparSelecaoProjetos() {
+            PROJETOS_DISPONIVEIS.forEach(p => {
+                document.getElementById('chk-proj-' + p.id).checked = false;
+            });
+            atualizarSelecaoProjetos();
+        }
+
         function selecionarTodos() {
             CAMPOS_DISPONIVEIS.forEach(c => {
                 document.getElementById('chk-' + c.key).checked = true;
@@ -207,6 +284,11 @@
                 return;
             }
 
+            if (projetosSelecionados.length === 0) {
+                alert('Selecione pelo menos um projeto para gerar o relatório.');
+                return;
+            }
+
             const spinner = document.getElementById('loadingSpinner');
             const btnGerar = document.getElementById('btnGerar');
             spinner.style.display = 'inline-flex';
@@ -223,7 +305,7 @@
 
                 if (error) throw error;
 
-                dadosRelatorio = data || [];
+                dadosRelatorio = (data || []).filter(alunoPertenceAosProjetosSelecionados);
 
                 renderizarTabela(dadosRelatorio, camposSelecionados);
 
@@ -240,6 +322,15 @@
                 spinner.style.display = 'none';
                 btnGerar.disabled = false;
             }
+        }
+
+        // ===== FILTRO DE PROJETOS =====
+        function alunoPertenceAosProjetosSelecionados(aluno) {
+            const val = aluno.projetos;
+            if (!val) return false;
+            const projetosDoAluno = (Array.isArray(val) ? val : String(val).split(','))
+                .map(id => String(id).trim());
+            return projetosDoAluno.some(id => projetosSelecionados.includes(id));
         }
 
         // ===== RENDER TABELA =====
@@ -376,6 +467,7 @@
 
         // ===== INIT =====
         renderizarCampos();
+        renderizarProjetos();
     </script>
 </body>
 </html>
