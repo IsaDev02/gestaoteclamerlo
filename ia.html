@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente IA | Centro Social Irmã Tecla Merlo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-body: #f8fafc; --sidebar-bg: #1e293b; --primary: #3b82f6;
+            --ia-accent: #7c5cff; --ia-accent-light: #f3f0ff; --ia-bg: #faf9f7;
+        }
+        html, body { height: 100%; }
+        body {
+            background-color: var(--bg-body); font-family: 'Inter', sans-serif; color: #1e293b;
+            margin: 0; overflow: hidden;
+        }
+        .sidebar { width: 240px; height: 100vh; position: fixed; background: var(--sidebar-bg); padding: 20px 0; z-index: 100; }
+        .sidebar .nav-link { color: #94a3b8; padding: 12px 25px; text-decoration: none; display: block; font-size: 0.9rem; transition: 0.3s; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.08); }
+        .main-content { margin-left: 240px; height: 100vh; display: flex; flex-direction: column; background: var(--ia-bg); }
+
+        /* HEADER */
+        .ia-header {
+            padding: 18px 30px; border-bottom: 1px solid #ece8e2; background: var(--ia-bg);
+            display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+        }
+        .ia-header h5 { margin: 0; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .ia-avatar-logo {
+            width: 34px; height: 34px; border-radius: 10px;
+            background: linear-gradient(135deg, var(--ia-accent), #a78bfa);
+            display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1rem;
+        }
+        .ia-status { font-size: 0.78rem; color: #64748b; }
+        .ia-status .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; background: #cbd5e1; }
+        .ia-status.pronto .dot { background: #22c55e; }
+
+        /* CHAT AREA */
+        .chat-scroll { flex: 1; overflow-y: auto; }
+        .chat-inner { max-width: 780px; margin: 0 auto; padding: 30px 20px 10px; }
+
+        .welcome-block { text-align: center; padding: 40px 10px 20px; }
+        .welcome-block .ia-avatar-logo { width: 56px; height: 56px; font-size: 1.6rem; margin: 0 auto 18px; border-radius: 16px; }
+        .welcome-block h4 { font-weight: 800; margin-bottom: 6px; }
+        .welcome-block p { color: #64748b; font-size: 0.92rem; max-width: 480px; margin: 0 auto; }
+
+        .chips-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 26px; }
+        @media (max-width: 640px) { .chips-grid { grid-template-columns: 1fr; } }
+        .chip-sugestao {
+            background: #fff; border: 1px solid #e7e3db; border-radius: 12px; padding: 12px 16px;
+            text-align: left; font-size: 0.85rem; color: #334155; cursor: pointer; transition: 0.2s;
+        }
+        .chip-sugestao:hover { border-color: var(--ia-accent); background: var(--ia-accent-light); transform: translateY(-1px); }
+        .chip-sugestao i { color: var(--ia-accent); margin-right: 8px; }
+
+        .msg-row { display: flex; margin-bottom: 26px; gap: 12px; }
+        .msg-row.user { flex-direction: row-reverse; }
+        .msg-avatar {
+            width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #fff; margin-top: 2px;
+        }
+        .msg-avatar.bot { background: linear-gradient(135deg, var(--ia-accent), #a78bfa); }
+        .msg-avatar.user { background: #1e293b; }
+        .msg-bubble { max-width: 78%; }
+        .msg-row.user .msg-bubble {
+            background: #1e293b; color: #fff; padding: 10px 16px; border-radius: 16px 16px 4px 16px; font-size: 0.92rem;
+        }
+        .msg-row.bot .msg-bubble { padding-top: 4px; }
+        .msg-text { font-size: 0.94rem; line-height: 1.65; color: #1e293b; }
+        .msg-text strong { color: var(--ia-accent); }
+
+        .resposta-card {
+            background: #fff; border: 1px solid #ece8e2; border-radius: 14px; padding: 16px 18px; margin-top: 10px;
+        }
+        .resposta-numero { font-size: 2rem; font-weight: 800; color: var(--ia-accent); line-height: 1; }
+        .resposta-legenda { font-size: 0.78rem; color: #64748b; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; margin-top: 4px; }
+
+        .tabela-resultado { margin-top: 14px; font-size: 0.82rem; }
+        .tabela-resultado th { background: #f8f7f4; font-weight: 600; color: #64748b; font-size: 0.72rem; text-transform: uppercase; }
+        .tabela-resultado td, .tabela-resultado th { padding: 8px 10px; vertical-align: middle; }
+        .tabela-resultado tbody tr:hover { background: var(--ia-accent-light); }
+        .badge-status-ativo { background: #dcfce7; color: #16a34a; font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
+        .badge-status-inativo { background: #f1f5f9; color: #64748b; font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
+        .nota-mais { font-size: 0.78rem; color: #94a3b8; margin-top: 8px; }
+
+        .typing-dots span {
+            width: 6px; height: 6px; background: #a78bfa; border-radius: 50%; display: inline-block; margin-right: 3px;
+            animation: blink 1.2s infinite;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+
+        /* INPUT AREA */
+        .ia-input-area { flex-shrink: 0; padding: 14px 20px 20px; background: var(--ia-bg); }
+        .ia-input-wrap {
+            max-width: 780px; margin: 0 auto; background: #fff; border: 1px solid #e2ddd3; border-radius: 20px;
+            padding: 8px 8px 8px 18px; display: flex; align-items: flex-end; gap: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        }
+        .ia-input-wrap:focus-within { border-color: var(--ia-accent); }
+        #inputPergunta {
+            border: none; outline: none; resize: none; flex: 1; font-size: 0.95rem; font-family: 'Inter', sans-serif;
+            max-height: 140px; padding: 10px 0; background: transparent;
+        }
+        .btn-enviar-ia {
+            background: var(--ia-accent); border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.2s;
+        }
+        .btn-enviar-ia:hover { background: #6d4ff2; }
+        .btn-enviar-ia:disabled { background: #cbd5e1; }
+        .rodape-nota { text-align: center; font-size: 0.72rem; color: #94a3b8; margin-top: 8px; max-width: 780px; margin-left: auto; margin-right: auto; }
+        .btn-limpar { font-size: 0.78rem; color: #64748b; background: none; border: none; }
+        .btn-limpar:hover { color: var(--ia-accent); }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="px-4 mb-5 text-white fw-bold"><h5><i class="fas fa-graduation-cap me-2"></i>Centro Social Irmã Tecla Merlo</h5></div>
+        <nav class="nav flex-column">
+            <a class="nav-link" href="dashboard.html"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
+            <a class="nav-link" href="lista_geral.html"><i class="fas fa-list me-2"></i> Lista Geral</a>
+            <a class="nav-link" href="projetos.html"><i class="fas fa-folder me-2"></i> Projetos</a>
+            <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
+            <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
+            <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
+            <a class="nav-link" href="relatorios.html"><i class="fas fa-file-alt me-2"></i> Relatórios</a>
+            <a class="nav-link active" href="ia.html"><i class="fas fa-robot me-2"></i> Assistente IA</a>
+
+            <div class="mt-5 px-4">
+                <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+
+        <div class="ia-header">
+            <h5><span class="ia-avatar-logo"><i class="fas fa-wand-magic-sparkles"></i></span> Assistente IA — Base de Alunos</h5>
+            <div class="d-flex align-items-center gap-3">
+                <span class="ia-status" id="statusBase"><span class="dot"></span>Carregando base...</span>
+                <button class="btn-limpar" onclick="limparConversa()"><i class="fas fa-eraser me-1"></i>Limpar conversa</button>
+            </div>
+        </div>
+
+        <div class="chat-scroll" id="chatScroll">
+            <div class="chat-inner" id="chatInner">
+                <div class="welcome-block" id="welcomeBlock">
+                    <div class="ia-avatar-logo"><i class="fas fa-wand-magic-sparkles"></i></div>
+                    <h4>Pergunte sobre os alunos</h4>
+                    <p>Eu leio a base de alunos do Supabase e respondo perguntas em português — contagens, filtros e listas, cruzando qualquer campo cadastrado (sexo, status, etnia, situação dos pais, projeto, bairro, idade e mais).</p>
+
+                    <div class="chips-grid">
+                        <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-venus"></i>Quantas alunas do sexo feminino estão ativas?</button>
+                        <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-users"></i>Quantos alunos foram cadastrados no total?</button>
+                        <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-house-user"></i>Quantos alunos têm o pai ou a mãe ausente?</button>
+                        <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-globe"></i>Quantos alunos são de etnia parda?</button>
+                        <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-folder"></i>Quantos alunos ativos estão no projeto Sempre Criança?</button>
+                        <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-birthday-cake"></i>Quantos alunos ativos têm mais de 12 anos?</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ia-input-area">
+            <div class="ia-input-wrap">
+                <textarea id="inputPergunta" rows="1" placeholder="Pergunte algo sobre os alunos... (Ex: quantos meninos ativos no projeto Adolescer?)" onkeydown="tratarTecla(event)" oninput="autoResize(this)"></textarea>
+                <button class="btn-enviar-ia" id="btnEnviar" onclick="enviarPergunta()" disabled title="Carregando base...">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+            </div>
+            <p class="rodape-nota">Respostas geradas por filtros automáticos sobre os dados reais da tabela <code>alunos</code>. Sempre confira os números críticos na Lista Geral.</p>
+        </div>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://paadzisqttrkbscehcmh.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const nomesDosProjetos = {
+            "1": "Adolescer para Crescer",
+            "2": "Criança Certeza",
+            "3": "Sempre Criança",
+            "4": "Valorizando a Infância",
+            "5": "Clube de Mães",
+            "6": "Animar e Celebrar"
+        };
+
+        let alunosCache = null;
+
+        // ============================================================
+        // CARREGAMENTO DA BASE
+        // ============================================================
+        async function carregarBase() {
+            let todos = [];
+            let inicio = 0;
+            const tamanhoPagina = 1000;
+            let fim = false;
+
+            while (!fim) {
+                const { data, error } = await supabaseClient
+                    .from('alunos')
+                    .select('*')
+                    .range(inicio, inicio + tamanhoPagina - 1);
+
+                if (error) {
+                    document.getElementById('statusBase').innerHTML = '<span class="dot" style="background:#dc3545"></span>Erro ao carregar base';
+                    console.error(error);
+                    return;
+                }
+                if (data && data.length > 0) {
+                    todos = todos.concat(data);
+                    inicio += tamanhoPagina;
+                } else {
+                    fim = true;
+                }
+            }
+
+            alunosCache = todos;
+            const statusEl = document.getElementById('statusBase');
+            statusEl.classList.add('pronto');
+            statusEl.innerHTML = `<span class="dot"></span>Base carregada — ${todos.length} alunos`;
+            document.getElementById('btnEnviar').disabled = false;
+            document.getElementById('btnEnviar').title = 'Enviar';
+        }
+
+        // ============================================================
+        // HELPERS DE DADOS
+        // ============================================================
+        function normalizar(s) {
+            return (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        }
+
+        function isAtivo(a) {
+            if (typeof a.ativo === 'boolean') return a.ativo;
+            const s = normalizar(a.ativo);
+            return ['sim', 'true', 'ativo', '1', 's', 't'].includes(s);
+        }
+
+        function calcularIdadeAluno(a) {
+            if (a.data_nascimento) {
+                const nasc = new Date(a.data_nascimento + 'T00:00:00');
+                if (!isNaN(nasc.getTime())) {
+                    const hoje = new Date();
+                    let idade = hoje.getFullYear() - nasc.getFullYear();
+                    if (hoje.getMonth() < nasc.getMonth() || (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate())) idade--;
+                    return idade;
+                }
+            }
+            return a.idade || null;
+        }
+
+        function matchSituacao(valor, alvo) {
+            return normalizar(valor).startsWith(alvo);
+        }
+
+        function extrairSituacao(txtN, quem) {
+            const re = new RegExp(quem + '[^.?!]{0,25}?(ausent|faleci|presente)');
+            const m = txtN.match(re);
+            if (m) return m[1] === 'faleci' ? 'faleci' : (m[1] === 'ausent' ? 'ausente' : 'presente');
+            return null;
+        }
+
+        function extrairApos(txtN, chave) {
+            const idx = txtN.indexOf(chave);
+            if (idx === -1) return null;
+            let resto = txtN.slice(idx + chave.length).trim();
+            resto = resto.replace(/^(do|da|de)\s+/, '');
+            resto = resto.split(/\s+(e|que|com|ativ|inativ|masculin|feminin)\b/)[0];
+            resto = resto.replace(/[?.!,]/g, '').trim();
+            return resto.length > 1 ? resto : null;
+        }
+
+        function alunoTemProjeto(a, id) {
+            const arr = Array.isArray(a.projetos) ? a.projetos.map(String) : (a.projetos ? String(a.projetos).split(',') : []);
+            return arr.map(x => x.trim()).includes(String(id));
+        }
+
+        // ============================================================
+        // INTERPRETADOR DE PERGUNTAS
+        // ============================================================
+        function interpretarPergunta(perguntaOriginal) {
+            const txtN = normalizar(perguntaOriginal);
+            const filtros = [];
+            const labels = [];
+
+            // status ativo / inativo
+            if (/inativ|desativad/.test(txtN)) {
+                filtros.push(a => !isAtivo(a));
+                labels.push('inativos');
+            } else if (/\bativ/.test(txtN)) {
+                filtros.push(a => isAtivo(a));
+                labels.push('ativos');
+            }
+
+            // genero
+            if (/feminin|\bmenina|garotas?|mulheres/.test(txtN)) {
+                filtros.push(a => normalizar(a.genero).startsWith('f'));
+                labels.push('sexo feminino');
+            } else if (/masculin|\bmenino|garotos?|homens?/.test(txtN)) {
+                filtros.push(a => normalizar(a.genero).startsWith('m'));
+                labels.push('sexo masculino');
+            }
+
+            // etnia
+            if (/\bpard/.test(txtN)) {
+                filtros.push(a => /pard/.test(normalizar(a.etnia)));
+                labels.push('etnia parda');
+            } else if (/\bnegr/.test(txtN)) {
+                filtros.push(a => /negr/.test(normalizar(a.etnia)));
+                labels.push('etnia negra');
+            } else if (/\bbranc/.test(txtN)) {
+                filtros.push(a => /branc/.test(normalizar(a.etnia)));
+                labels.push('etnia branca');
+            }
+
+            // situação mãe / pai (com suporte a "pai ou mãe")
+            if (/pai\s+ou\s+mae|mae\s+ou\s+pai/.test(txtN)) {
+                let situ = null;
+                if (/faleci/.test(txtN)) situ = 'faleci';
+                else if (/ausent/.test(txtN)) situ = 'ausente';
+                else if (/presente/.test(txtN)) situ = 'presente';
+                if (situ) {
+                    filtros.push(a => matchSituacao(a.situacao_mae, situ) || matchSituacao(a.situacao_pai, situ));
+                    labels.push(`pai ou mãe ${situ === 'faleci' ? 'falecido(a)' : situ}`);
+                }
+            } else {
+                const situMae = extrairSituacao(txtN, 'mae');
+                const situPai = extrairSituacao(txtN, 'pai');
+                if (situMae) { filtros.push(a => matchSituacao(a.situacao_mae, situMae)); labels.push(`mãe ${situMae === 'faleci' ? 'falecida' : situMae}`); }
+                if (situPai) { filtros.push(a => matchSituacao(a.situacao_pai, situPai)); labels.push(`pai ${situPai === 'faleci' ? 'falecido' : situPai}`); }
+            }
+
+            // projeto (por nome)
+            Object.entries(nomesDosProjetos).forEach(([id, nome]) => {
+                if (txtN.includes(normalizar(nome))) {
+                    filtros.push(a => alunoTemProjeto(a, id));
+                    labels.push(`projeto ${nome}`);
+                }
+            });
+            // projeto por número, se ainda não identificado por nome
+            const mProj = txtN.match(/projeto\s*(\d)/);
+            if (mProj && !labels.some(l => l.startsWith('projeto')) && nomesDosProjetos[mProj[1]]) {
+                filtros.push(a => alunoTemProjeto(a, mProj[1]));
+                labels.push(`projeto ${nomesDosProjetos[mProj[1]]}`);
+            }
+
+            // bairro / escola / cidade / período
+            const bairroVal = extrairApos(txtN, 'bairro');
+            if (bairroVal) { filtros.push(a => normalizar(a.bairro).includes(bairroVal)); labels.push(`bairro "${bairroVal}"`); }
+
+            const escolaVal = extrairApos(txtN, 'escola');
+            if (escolaVal) { filtros.push(a => normalizar(a.escola).includes(escolaVal)); labels.push(`escola "${escolaVal}"`); }
+
+            const cidadeVal = extrairApos(txtN, 'cidade');
+            if (cidadeVal) { filtros.push(a => normalizar(a.cidade).includes(cidadeVal)); labels.push(`cidade "${cidadeVal}"`); }
+
+            const periodoMap = { manha: 'Matutino', matutino: 'Matutino', tarde: 'Vespertino', vespertino: 'Vespertino', noite: 'Noturno', noturno: 'Noturno', integral: 'Integral' };
+            if (/periodo|turno/.test(txtN)) {
+                for (const chave in periodoMap) {
+                    if (txtN.includes(chave)) {
+                        const alvo = periodoMap[chave];
+                        filtros.push(a => normalizar(a.periodo) === normalizar(alvo));
+                        labels.push(`período ${alvo}`);
+                        break;
+                    }
+                }
+            }
+
+            // idade
+            let m;
+            if (m = txtN.match(/entre (\d+) e (\d+) anos/)) {
+                const min = +m[1], max = +m[2];
+                filtros.push(a => { const i = calcularIdadeAluno(a); return i != null && i >= min && i <= max; });
+                labels.push(`entre ${min} e ${max} anos`);
+            } else if (m = txtN.match(/maior(?:es)? de (\d+) anos/)) {
+                const n = +m[1];
+                filtros.push(a => { const i = calcularIdadeAluno(a); return i != null && i > n; });
+                labels.push(`mais de ${n} anos`);
+            } else if (m = txtN.match(/menor(?:es)? de (\d+) anos/)) {
+                const n = +m[1];
+                filtros.push(a => { const i = calcularIdadeAluno(a); return i != null && i < n; });
+                labels.push(`menos de ${n} anos`);
+            } else if (m = txtN.match(/com (\d+) anos/)) {
+                const n = +m[1];
+                filtros.push(a => calcularIdadeAluno(a) === n);
+                labels.push(`com ${n} anos`);
+            }
+
+            // foto / whatsapp
+            if (/sem foto/.test(txtN)) { filtros.push(a => !a.foto); labels.push('sem foto cadastrada'); }
+            else if (/com foto/.test(txtN)) { filtros.push(a => !!a.foto); labels.push('com foto cadastrada'); }
+
+            if (/sem whatsapp/.test(txtN)) { filtros.push(a => !a.whatsapp); labels.push('sem WhatsApp cadastrado'); }
+            else if (/com whatsapp/.test(txtN)) { filtros.push(a => !!a.whatsapp); labels.push('com WhatsApp cadastrado'); }
+
+            // autorização de imagem
+            if (/autoriza.{0,15}imagem|imagem.{0,15}autoriza/.test(txtN)) {
+                if (/nao autoriz|não autoriz/.test(txtN)) { filtros.push(a => !a.autorizacao_imagem); labels.push('sem autorização de imagem'); }
+                else { filtros.push(a => !!a.autorizacao_imagem); labels.push('com autorização de imagem'); }
+            }
+
+            const perguntaEntendida = filtros.length > 0 || /quant|liste|listar|quais|nomes|mostr|total/.test(txtN);
+            const modoLista = /quem|quais|liste|listar|nomes|mostr/.test(txtN);
+
+            return { filtros, labels, perguntaEntendida, modoLista };
+        }
+
+        function responderPergunta(perguntaOriginal) {
+            if (!alunosCache) {
+                return { texto: 'Ainda estou carregando a base de dados — aguarde um instante e tente novamente.', resultado: null };
+            }
+
+            const { filtros, labels, perguntaEntendida } = interpretarPergunta(perguntaOriginal);
+
+            if (!perguntaEntendida) {
+                return {
+                    texto: 'Não consegui identificar um filtro claro nessa pergunta. Tente algo como <strong>"quantos alunos ativos do sexo feminino"</strong> ou <strong>"quantos alunos com a mãe ausente"</strong>. Posso filtrar por: sexo, status (ativo/inativo), etnia, situação de mãe/pai, projeto, bairro, escola, cidade, período e faixa etária.',
+                    resultado: null
+                };
+            }
+
+            const resultado = alunosCache.filter(a => filtros.every(f => f(a)));
+            const descricaoFiltro = labels.length ? labels.join(', ') : 'todos os alunos cadastrados na base';
+
+            const texto = `Encontrei <strong>${resultado.length}</strong> aluno${resultado.length === 1 ? '' : 's'} com o filtro: ${descricaoFiltro}.`;
+
+            return { texto, resultado };
+        }
+
+        // ============================================================
+        // RENDERIZAÇÃO DO CHAT
+        // ============================================================
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function renderizarNomeProjeto(aluno) {
+            if (!aluno.projetos) return '—';
+            const arr = Array.isArray(aluno.projetos) ? aluno.projetos : String(aluno.projetos).split(',');
+            return arr.map(id => nomesDosProjetos[String(id).trim()] || String(id).trim()).join(', ') || '—';
+        }
+
+        function adicionarMensagemUsuario(texto) {
+            document.getElementById('welcomeBlock')?.remove();
+            const chatInner = document.getElementById('chatInner');
+            const div = document.createElement('div');
+            div.className = 'msg-row user';
+            div.innerHTML = `
+                <div class="msg-avatar user"><i class="fas fa-user"></i></div>
+                <div class="msg-bubble">${escapeHtml(texto)}</div>`;
+            chatInner.appendChild(div);
+            scrollParaBaixo();
+        }
+
+        function adicionarTypingIndicator() {
+            const chatInner = document.getElementById('chatInner');
+            const div = document.createElement('div');
+            div.className = 'msg-row bot';
+            div.id = 'typingIndicator';
+            div.innerHTML = `
+                <div class="msg-avatar bot"><i class="fas fa-wand-magic-sparkles"></i></div>
+                <div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+            chatInner.appendChild(div);
+            scrollParaBaixo();
+        }
+
+        function removerTypingIndicator() {
+            document.getElementById('typingIndicator')?.remove();
+        }
+
+        function adicionarRespostaBot(resposta) {
+            const chatInner = document.getElementById('chatInner');
+            const div = document.createElement('div');
+            div.className = 'msg-row bot';
+
+            let html = `
+                <div class="msg-avatar bot"><i class="fas fa-wand-magic-sparkles"></i></div>
+                <div class="msg-bubble">
+                    <div class="msg-text">${resposta.texto}</div>`;
+
+            if (resposta.resultado) {
+                html += `
+                    <div class="resposta-card">
+                        <div class="resposta-numero">${resposta.resultado.length}</div>
+                        <div class="resposta-legenda">aluno${resposta.resultado.length === 1 ? '' : 's'} encontrado${resposta.resultado.length === 1 ? '' : 's'}</div>`;
+
+                if (resposta.resultado.length > 0) {
+                    const limite = 20;
+                    const lista = resposta.resultado.slice(0, limite);
+                    html += `
+                        <div class="table-responsive tabela-resultado">
+                            <table class="table table-sm mb-0">
+                                <thead><tr><th>ID</th><th>Nome</th><th>Projeto</th><th>Status</th></tr></thead>
+                                <tbody>
+                                    ${lista.map(a => `
+                                        <tr onclick="window.location.href='editar_aluno.html?id=${a.id}'" style="cursor:pointer">
+                                            <td>#${a.id}</td>
+                                            <td class="fw-medium">${escapeHtml(a.nome || 'Sem nome')}</td>
+                                            <td>${escapeHtml(renderizarNomeProjeto(a))}</td>
+                                            <td>${isAtivo(a) ? '<span class="badge-status-ativo">Ativo</span>' : '<span class="badge-status-inativo">Inativo</span>'}</td>
+                                        </tr>`).join('')}
+                                </tbody>
+                            </table>
+                        </div>`;
+                    if (resposta.resultado.length > limite) {
+                        html += `<p class="nota-mais">Mostrando ${limite} de ${resposta.resultado.length} resultados. Refine a pergunta para ver um grupo mais específico.</p>`;
+                    }
+                }
+                html += `</div>`;
+            }
+
+            html += `</div>`;
+            div.innerHTML = html;
+            chatInner.appendChild(div);
+            scrollParaBaixo();
+        }
+
+        function scrollParaBaixo() {
+            const scroll = document.getElementById('chatScroll');
+            scroll.scrollTop = scroll.scrollHeight;
+        }
+
+        // ============================================================
+        // ENVIO DE PERGUNTAS
+        // ============================================================
+        async function enviarPergunta() {
+            const input = document.getElementById('inputPergunta');
+            const texto = input.value.trim();
+            if (!texto || !alunosCache) return;
+
+            adicionarMensagemUsuario(texto);
+            input.value = '';
+            autoResize(input);
+
+            adicionarTypingIndicator();
+
+            setTimeout(() => {
+                removerTypingIndicator();
+                const resposta = responderPergunta(texto);
+                adicionarRespostaBot(resposta);
+            }, 450 + Math.random() * 350);
+        }
+
+        function usarSugestao(el) {
+            document.getElementById('inputPergunta').value = el.innerText.trim();
+            enviarPergunta();
+        }
+
+        function tratarTecla(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                enviarPergunta();
+            }
+        }
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+        }
+
+        function limparConversa() {
+            location.reload();
+        }
+
+        function logout() {
+            window.location.href = 'index.html';
+        }
+
+        carregarBase();
+    </script>
+</body>
+</html>
