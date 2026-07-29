@@ -194,6 +194,27 @@
 
         let alunosCache = null;
 
+        // URL da Edge Function que interpreta a pergunta via Claude (tool use)
+        // e consulta a base real no Supabase. Ajuste o nome se você renomear
+        // a função no Supabase (padrão: functions/v1/<nome-da-funcao>).
+        const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/ia-alunos`;
+
+        // Guarda as últimas trocas para permitir perguntas de acompanhamento
+        // (ex: "e dessas, quantas têm foto?")
+        let historicoConversa = [];
+
+        // ============================================================
+        // SESSÃO
+        // ============================================================
+        async function verificarSessao() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = 'index.html';
+                return null;
+            }
+            return session;
+        }
+
         // ============================================================
         // CARREGAMENTO DA BASE
         // ============================================================
@@ -431,7 +452,45 @@
 
             const texto = `Encontrei <strong>${resultado.length}</strong> aluno${resultado.length === 1 ? '' : 's'} com o filtro: ${descricaoFiltro}.`;
 
-            return { texto, resultado };
+            return { texto, total: resultado.length, amostra: resultado.slice(0, 20) };
+        }
+
+        // ============================================================
+        // ASSISTENTE IA (Edge Function + Claude) COM FALLBACK LOCAL
+        // ============================================================
+        async function chamarAssistenteIA(pergunta) {
+            try {
+                const session = await verificarSessao();
+                if (!session) throw new Error('Sessão expirada');
+
+                const resp = await fetch(EDGE_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'apikey': SUPABASE_KEY
+                    },
+                    body: JSON.stringify({
+                        pergunta,
+                        historico: historicoConversa.slice(-6)
+                    })
+                });
+
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                if (data.erro) throw new Error(data.erro);
+
+                historicoConversa.push({ role: 'user', content: pergunta });
+                historicoConversa.push({ role: 'assistant', content: data.resumo_filtro || '' });
+
+                const texto = `Encontrei <strong>${data.total}</strong> aluno${data.total === 1 ? '' : 's'} com o filtro: ${data.resumo_filtro}.`;
+                return { texto, total: data.total, amostra: data.amostra, viaIA: true };
+
+            } catch (err) {
+                console.warn('Assistente IA indisponível, usando interpretador local:', err.message);
+                const local = responderPergunta(pergunta);
+                return { ...local, viaIA: false };
+            }
         }
 
         // ============================================================
@@ -486,21 +545,23 @@
                 <div class="msg-bubble">
                     <div class="msg-text">${resposta.texto}</div>`;
 
-            if (resposta.resultado) {
+            if (resposta.viaIA === false) {
+                html += `<p class="nota-mais"><i class="fas fa-plug-circle-xmark me-1"></i>Assistente IA indisponível no momento — resposta gerada pelo interpretador local (offline).</p>`;
+            }
+
+            if (resposta.total != null && resposta.amostra) {
                 html += `
                     <div class="resposta-card">
-                        <div class="resposta-numero">${resposta.resultado.length}</div>
-                        <div class="resposta-legenda">aluno${resposta.resultado.length === 1 ? '' : 's'} encontrado${resposta.resultado.length === 1 ? '' : 's'}</div>`;
+                        <div class="resposta-numero">${resposta.total}</div>
+                        <div class="resposta-legenda">aluno${resposta.total === 1 ? '' : 's'} encontrado${resposta.total === 1 ? '' : 's'}</div>`;
 
-                if (resposta.resultado.length > 0) {
-                    const limite = 20;
-                    const lista = resposta.resultado.slice(0, limite);
+                if (resposta.amostra.length > 0) {
                     html += `
                         <div class="table-responsive tabela-resultado">
                             <table class="table table-sm mb-0">
                                 <thead><tr><th>ID</th><th>Nome</th><th>Projeto</th><th>Status</th></tr></thead>
                                 <tbody>
-                                    ${lista.map(a => `
+                                    ${resposta.amostra.map(a => `
                                         <tr onclick="window.location.href='editar_aluno.html?id=${a.id}'" style="cursor:pointer">
                                             <td>#${a.id}</td>
                                             <td class="fw-medium">${escapeHtml(a.nome || 'Sem nome')}</td>
@@ -510,8 +571,8 @@
                                 </tbody>
                             </table>
                         </div>`;
-                    if (resposta.resultado.length > limite) {
-                        html += `<p class="nota-mais">Mostrando ${limite} de ${resposta.resultado.length} resultados. Refine a pergunta para ver um grupo mais específico.</p>`;
+                    if (resposta.total > resposta.amostra.length) {
+                        html += `<p class="nota-mais">Mostrando ${resposta.amostra.length} de ${resposta.total} resultados. Refine a pergunta para ver um grupo mais específico.</p>`;
                     }
                 }
                 html += `</div>`;
@@ -542,11 +603,9 @@
 
             adicionarTypingIndicator();
 
-            setTimeout(() => {
-                removerTypingIndicator();
-                const resposta = responderPergunta(texto);
-                adicionarRespostaBot(resposta);
-            }, 450 + Math.random() * 350);
+            const resposta = await chamarAssistenteIA(texto);
+            removerTypingIndicator();
+            adicionarRespostaBot(resposta);
         }
 
         function usarSugestao(el) {
@@ -574,7 +633,10 @@
             window.location.href = 'index.html';
         }
 
-        carregarBase();
+        (async function iniciar() {
+            const session = await verificarSessao();
+            if (session) carregarBase();
+        })();
     </script>
 </body>
 </html>
