@@ -160,6 +160,7 @@
                         <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-globe"></i>Quantos alunos são de etnia parda?</button>
                         <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-folder"></i>Quantos alunos ativos estão no projeto Sempre Criança?</button>
                         <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-birthday-cake"></i>Quantos alunos ativos têm mais de 12 anos?</button>
+                        <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-trophy"></i>Qual o aluno mais velho ativo?</button>
                     </div>
                 </div>
             </div>
@@ -427,10 +428,23 @@
                 else { filtros.push(a => !!a.autorizacao_imagem); labels.push('com autorização de imagem'); }
             }
 
-            const perguntaEntendida = filtros.length > 0 || /quant|liste|listar|quais|nomes|mostr|total/.test(txtN);
+            // ranking por idade (mais velho / mais novo)
+            let ordenarPor = null;
+            let quantidade = 1;
+            if (/mais velh|maior idade|mais idoso/.test(txtN)) {
+                ordenarPor = 'idade_desc';
+            } else if (/mais nov|mais jovem|menor idade/.test(txtN)) {
+                ordenarPor = 'idade_asc';
+            }
+            if (ordenarPor) {
+                const mQtd = txtN.match(/\b(\d+)\b/);
+                if (mQtd) quantidade = Math.max(1, parseInt(mQtd[1], 10));
+            }
+
+            const perguntaEntendida = filtros.length > 0 || !!ordenarPor || /quant|liste|listar|quais|nomes|mostr|total/.test(txtN);
             const modoLista = /quem|quais|liste|listar|nomes|mostr/.test(txtN);
 
-            return { filtros, labels, perguntaEntendida, modoLista };
+            return { filtros, labels, perguntaEntendida, modoLista, ordenarPor, quantidade };
         }
 
         function responderPergunta(perguntaOriginal) {
@@ -438,19 +452,43 @@
                 return { texto: 'Ainda estou carregando a base de dados — aguarde um instante e tente novamente.', resultado: null };
             }
 
-            const { filtros, labels, perguntaEntendida } = interpretarPergunta(perguntaOriginal);
+            const { filtros, labels, perguntaEntendida, ordenarPor, quantidade } = interpretarPergunta(perguntaOriginal);
 
             if (!perguntaEntendida) {
                 return {
-                    texto: 'Não consegui identificar um filtro claro nessa pergunta. Tente algo como <strong>"quantos alunos ativos do sexo feminino"</strong> ou <strong>"quantos alunos com a mãe ausente"</strong>. Posso filtrar por: sexo, status (ativo/inativo), etnia, situação de mãe/pai, projeto, bairro, escola, cidade, período e faixa etária.',
+                    texto: 'Não consegui identificar um filtro claro nessa pergunta. Tente algo como <strong>"quantos alunos ativos do sexo feminino"</strong>, <strong>"quantos alunos com a mãe ausente"</strong> ou <strong>"qual o aluno mais velho"</strong>. Posso filtrar por: sexo, status (ativo/inativo), etnia, situação de mãe/pai, projeto, bairro, escola, cidade, período, faixa etária e ranking por idade.',
                     resultado: null
                 };
             }
 
-            const resultado = alunosCache.filter(a => filtros.every(f => f(a)));
-            const descricaoFiltro = labels.length ? labels.join(', ') : 'todos os alunos cadastrados na base';
+            let resultado = alunosCache.filter(a => filtros.every(f => f(a)));
+            const descricaoFiltro = labels.length ? labels.join(', ') : '';
 
-            const texto = `Encontrei <strong>${resultado.length}</strong> aluno${resultado.length === 1 ? '' : 's'} com o filtro: ${descricaoFiltro}.`;
+            if (ordenarPor) {
+                const comIdade = resultado.filter(a => calcularIdadeAluno(a) != null);
+                comIdade.sort((a, b) => {
+                    const ia = calcularIdadeAluno(a), ib = calcularIdadeAluno(b);
+                    return ordenarPor === 'idade_desc' ? ib - ia : ia - ib;
+                });
+                const top = comIdade.slice(0, quantidade);
+
+                if (top.length === 0) {
+                    return {
+                        texto: `Não encontrei alunos${descricaoFiltro ? ' (' + descricaoFiltro + ')' : ''} com data de nascimento cadastrada para calcular a idade.`,
+                        resultado: null
+                    };
+                }
+
+                const rotulo = ordenarPor === 'idade_desc' ? 'mais velho' : 'mais novo';
+                const rotuloPlural = ordenarPor === 'idade_desc' ? 'mais velhos' : 'mais novos';
+                const texto = top.length === 1
+                    ? `O${labels.some(l => l.includes('feminino')) ? 'a aluna' : ' aluno'} ${rotulo}${descricaoFiltro ? ' (' + descricaoFiltro + ')' : ''} é <strong>${escapeHtml(top[0].nome)}</strong>, com <strong>${calcularIdadeAluno(top[0])} anos</strong>.`
+                    : `Aqui estão os <strong>${top.length}</strong> alunos ${rotuloPlural}${descricaoFiltro ? ' (' + descricaoFiltro + ')' : ''}:`;
+
+                return { texto, total: top.length, amostra: top };
+            }
+
+            const texto = `Encontrei <strong>${resultado.length}</strong> aluno${resultado.length === 1 ? '' : 's'} com o filtro: ${descricaoFiltro || 'todos os alunos cadastrados na base'}.`;
 
             return { texto, total: resultado.length, amostra: resultado.slice(0, 20) };
         }
@@ -483,7 +521,17 @@
                 historicoConversa.push({ role: 'user', content: pergunta });
                 historicoConversa.push({ role: 'assistant', content: data.resumo_filtro || '' });
 
-                const texto = `Encontrei <strong>${data.total}</strong> aluno${data.total === 1 ? '' : 's'} com o filtro: ${data.resumo_filtro}.`;
+                let texto;
+                if (data.modo === 'ranking' && Array.isArray(data.amostra) && data.amostra.length > 0) {
+                    const rotulo = data.ordenar_por === 'idade_desc' ? 'mais velho' : 'mais novo';
+                    const rotuloPlural = data.ordenar_por === 'idade_desc' ? 'mais velhos' : 'mais novos';
+                    texto = data.amostra.length === 1
+                        ? `O aluno ${rotulo}${data.resumo_filtro ? ' (' + data.resumo_filtro + ')' : ''} é <strong>${escapeHtml(data.amostra[0].nome)}</strong>, com <strong>${data.amostra[0].idade ?? '?'} anos</strong>.`
+                        : `Aqui estão os <strong>${data.amostra.length}</strong> alunos ${rotuloPlural}${data.resumo_filtro ? ' (' + data.resumo_filtro + ')' : ''}:`;
+                } else {
+                    texto = `Encontrei <strong>${data.total}</strong> aluno${data.total === 1 ? '' : 's'} com o filtro: ${data.resumo_filtro}.`;
+                }
+
                 return { texto, total: data.total, amostra: data.amostra, viaIA: true };
 
             } catch (err) {
@@ -559,15 +607,19 @@
                     html += `
                         <div class="table-responsive tabela-resultado">
                             <table class="table table-sm mb-0">
-                                <thead><tr><th>ID</th><th>Nome</th><th>Projeto</th><th>Status</th></tr></thead>
+                                <thead><tr><th>ID</th><th>Nome</th><th>Idade</th><th>Projeto</th><th>Status</th></tr></thead>
                                 <tbody>
-                                    ${resposta.amostra.map(a => `
+                                    ${resposta.amostra.map(a => {
+                                        const idade = a.idade != null ? a.idade : calcularIdadeAluno(a);
+                                        return `
                                         <tr onclick="window.location.href='editar_aluno.html?id=${a.id}'" style="cursor:pointer">
                                             <td>#${a.id}</td>
                                             <td class="fw-medium">${escapeHtml(a.nome || 'Sem nome')}</td>
+                                            <td>${idade != null ? idade + ' anos' : '—'}</td>
                                             <td>${escapeHtml(renderizarNomeProjeto(a))}</td>
                                             <td>${isAtivo(a) ? '<span class="badge-status-ativo">Ativo</span>' : '<span class="badge-status-inativo">Inativo</span>'}</td>
-                                        </tr>`).join('')}
+                                        </tr>`;
+                                    }).join('')}
                                 </tbody>
                             </table>
                         </div>`;
