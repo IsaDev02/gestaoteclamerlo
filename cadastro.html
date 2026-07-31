@@ -116,7 +116,6 @@
             <a class="nav-link active" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
             <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
             <a class="nav-link" href="relatorios.html"><i class="fas fa-file-alt me-2"></i> Relatórios</a>
-            <a class="nav-link" href="ia.html"><i class="fas fa-robot me-2"></i> Assistente IA</a>
             
             <div class="mt-5 px-4">
                 <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
@@ -234,6 +233,14 @@
                     <div class="col-md-3">
                         <label class="form-label">Série</label>
                         <input type="text" id="serie" class="form-control" placeholder="Ex: 1º ano / 5ª série / Ensino Médio">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Tipo de Escola</label>
+                        <select id="tipo_escola" class="form-select">
+                            <option value="">Selecione</option>
+                            <option value="Estadual">Estadual</option>
+                            <option value="Municipal">Municipal (Prefeitura)</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -1008,6 +1015,7 @@
                 escola: document.getElementById('escola') ? (document.getElementById('escola').value || null) : null,
                 periodo: document.getElementById('periodo') ? (document.getElementById('periodo').value || null) : null,
                 serie: document.getElementById('serie') ? (document.getElementById('serie').value || null) : null,
+                tipo_escola: document.getElementById('tipo_escola') ? (document.getElementById('tipo_escola').value || null) : null,
                 cep: document.getElementById('cep').value,
                 rua: document.getElementById('rua').value,
                 numero: document.getElementById('numero').value,
