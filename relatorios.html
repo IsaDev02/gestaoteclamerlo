@@ -20,18 +20,24 @@
         .campo-check:hover { border-color: var(--primary); background: #eff6ff; }
         .campo-check.selecionado { border-color: var(--primary); background: #eff6ff; color: var(--primary); font-weight: 600; }
         .campo-check input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
-        .btn-export { min-width: 160px; font-weight: 600; border-radius: 8px; padding: 10px 20px; }
+        .btn-export { min-width: 160px; font-weight: 600; border-radius: 8px; padding: 10px 20px; white-space: nowrap; }
         #tabelaPreview { font-size: 0.88rem; }
         #tabelaPreview th { background: #1e293b; color: #fff; font-weight: 600; white-space: nowrap; }
         #tabelaPreview td { white-space: nowrap; }
         .badge-ativo { background: #dcfce7; color: #16a34a; font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
         .badge-inativo { background: #f1f5f9; color: #64748b; font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
         .select-all-btn { font-size: 0.82rem; cursor: pointer; color: var(--primary); text-decoration: underline; background: none; border: none; padding: 0; }
-        #loadingSpinner { display: none; }
+        #loadingSpinner, #loadingSpinnerEspecial { display: none; }
         .projeto-tag { background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-right: 3px; display: inline-block; }
+
+        /* Relatório especial */
+        .card-especial { border-left: 5px solid #f59e0b; }
+        .badge-ja12 { background: #fee2e2; color: #b91c1c; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+        .badge-vai12 { background: #fef3c7; color: #b45309; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+        .resumo-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 18px; }
+        .resumo-item .num { font-size: 1.4rem; font-weight: 700; line-height: 1.1; }
+        .resumo-item .rot { font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 600; }
     </style>
-
-
 </head>
 <body>
 
@@ -45,7 +51,6 @@
             <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
             <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
             <a class="nav-link active" href="relatorios.html"><i class="fas fa-file-alt me-2"></i> Relatórios</a>
-            <a class="nav-link" href="ia.html"><i class="fas fa-robot me-2"></i> Assistente IA</a>
             <div class="mt-5 px-4">
                 <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
             </div>
@@ -56,9 +61,12 @@
         <header class="mb-4 d-flex justify-content-between align-items-center">
             <div>
                 <h3 class="fw-bold mb-1">Relatórios</h3>
-                <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>O relatório exporta apenas alunos <strong>ativos</strong>.</p>
+                <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>Os relatórios exportam apenas alunos <strong>ativos</strong>.</p>
             </div>
             <div class="d-flex gap-2">
+                <a href="transicao_projetos.html" class="btn btn-warning btn-export">
+                    <i class="fas fa-right-left me-2"></i>Transição de Projetos
+                </a>
                 <button class="btn btn-danger btn-export" onclick="exportarPDF()" id="btnPDF" disabled>
                     <i class="fas fa-file-pdf me-2"></i>Exportar PDF
                 </button>
@@ -68,10 +76,32 @@
             </div>
         </header>
 
+        <!-- RELATÓRIO PRONTO: Criança Certeza -> Adolescer -->
+        <div class="card-config card-especial">
+            <div class="section-title" style="color:#b45309; border-bottom-color:#fef3c7;">
+                <i class="fas fa-arrow-up-right-dots me-2"></i> Relatório Pronto: Criança Certeza &rarr; Adolescer
+            </div>
+            <p class="text-muted small mb-3">
+                Lista os alunos ativos do <strong>Criança Certeza</strong> que <strong>já têm 12 anos ou mais</strong> ou que
+                <strong>completam 12 anos até fevereiro do próximo ano</strong> (<span id="textoCorte"></span>).
+            </p>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <button class="btn btn-warning fw-bold px-4" onclick="gerarRelatorioAdolescer()" id="btnGerarAdolescer">
+                    <i class="fas fa-search me-2"></i>Gerar Relatório
+                </button>
+                <div id="loadingSpinnerEspecial">
+                    <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
+                    <span class="ms-2 text-muted small">Buscando dados...</span>
+                </div>
+            </div>
+            <div id="resumoEspecial" class="d-flex gap-3 flex-wrap mt-3"></div>
+            <div id="avisoSemData" class="alert alert-warning small mt-3 mb-0 d-none"></div>
+        </div>
+
         <!-- Filtro por Projetos -->
         <div class="card-config">
             <div class="section-title">
-                <i class="fas fa-folder me-2"></i> Filtrar por Projetos
+                <i class="fas fa-folder me-2"></i> Relatório Personalizado: Filtrar por Projetos
                 <div class="ms-auto d-flex gap-3">
                     <button class="select-all-btn" onclick="selecionarTodosProjetos()">Selecionar todos</button>
                     <button class="select-all-btn text-danger" style="color:#ef4444!important;" onclick="limparSelecaoProjetos()">Limpar</button>
@@ -109,7 +139,7 @@
 
         <!-- Preview da Tabela -->
         <div class="card-config d-none" id="areaPreview">
-            <div class="section-title"><i class="fas fa-table me-2"></i> Pré-visualização</div>
+            <div class="section-title"><i class="fas fa-table me-2"></i> <span id="tituloPreview">Pré-visualização</span></div>
             <div class="table-responsive">
                 <table class="table table-hover table-bordered" id="tabelaPreview">
                     <thead id="theadPreview"></thead>
@@ -156,14 +186,200 @@
             { key: 'ativo',           label: 'Ativo',             icone: 'fa-toggle-on' },
             { key: 'situacao_mae',    label: 'Situação Mãe',      icone: 'fa-female' },
             { key: 'situacao_pai',    label: 'Situação Pai',      icone: 'fa-male' },
+            { key: 'projetos',        label: 'Projetos',          icone: 'fa-folder' },
             { key: 'etnia',           label: 'Etnia',             icone: 'fa-globe' },
         ];
 
         const PROJETOS_DISPONIVEIS = Object.entries(nomesDosProjetos).map(([id, nome]) => ({ id, nome }));
 
+        // Relatório atual (usado pelos botões de exportar, vale para qualquer relatório gerado)
+        // { titulo, subtitulo, cabecalho: [...], linhas: [[...]], arquivo }
+        let relAtual = null;
+
         let dadosRelatorio = [];
         let camposSelecionados = [];
         let projetosSelecionados = PROJETOS_DISPONIVEIS.map(p => p.id); // todos marcados por padrão
+
+        // ===== BUSCA TODOS OS ALUNOS ATIVOS (paginado, pois o Supabase limita 1000 por consulta) =====
+        async function buscarAlunosAtivos() {
+            let todos = [];
+            let inicio = 0;
+            const tamanho = 1000;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('alunos')
+                    .select('*')
+                    .eq('ativo', true)
+                    .order('nome', { ascending: true })
+                    .range(inicio, inicio + tamanho - 1);
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+                todos = todos.concat(data);
+                if (data.length < tamanho) break;
+                inicio += tamanho;
+            }
+            return todos;
+        }
+
+        function idsProjetosDoAluno(aluno) {
+            const val = aluno.projetos;
+            if (!val) return [];
+            return (Array.isArray(val) ? val : String(val).split(/[,;]/))
+                .map(id => String(id).trim())
+                .filter(Boolean);
+        }
+
+        function habilitarExportacao(habilitar) {
+            document.getElementById('btnPDF').disabled = !habilitar;
+            document.getElementById('btnExcel').disabled = !habilitar;
+        }
+
+        // ============================================================
+        // RELATÓRIO PRONTO: CRIANÇA CERTEZA -> ADOLESCER
+        // ============================================================
+        const PROJETO_ORIGEM = '2';   // Criança Certeza
+        const IDADE_ALVO = 12;
+
+        function parseDataISO(str) {
+            if (!str) return null;
+            const [y, m, d] = String(str).substring(0, 10).split('-').map(Number);
+            if (!y || !m || !d) return null;
+            return new Date(y, m - 1, d);
+        }
+
+        function idadeEm(nasc, ref) {
+            let idade = ref.getFullYear() - nasc.getFullYear();
+            if (ref.getMonth() < nasc.getMonth() ||
+               (ref.getMonth() === nasc.getMonth() && ref.getDate() < nasc.getDate())) idade--;
+            return idade;
+        }
+
+        function fmtData(d) {
+            return d.toLocaleDateString('pt-BR');
+        }
+
+        // Data de corte: último dia de fevereiro do próximo ano
+        function dataCorte() {
+            const hoje = new Date();
+            return new Date(hoje.getFullYear() + 1, 2, 0);
+        }
+
+        function atualizarTextoCorte() {
+            document.getElementById('textoCorte').innerText = `até ${fmtData(dataCorte())}`;
+        }
+
+        async function gerarRelatorioAdolescer() {
+            const spinner = document.getElementById('loadingSpinnerEspecial');
+            const btn = document.getElementById('btnGerarAdolescer');
+            spinner.style.display = 'inline-flex';
+            btn.disabled = true;
+            document.getElementById('resumoEspecial').innerHTML = '';
+            document.getElementById('avisoSemData').classList.add('d-none');
+
+            try {
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+                const corte = dataCorte();
+
+                const todos = await buscarAlunosAtivos();
+                const doProjeto = todos.filter(a => idsProjetosDoAluno(a).includes(PROJETO_ORIGEM));
+
+                const aptos = [];
+                const semData = [];
+
+                doProjeto.forEach(a => {
+                    const nasc = parseDataISO(a.data_nascimento);
+                    if (!nasc) { semData.push(a); return; }
+                    if (idadeEm(nasc, corte) >= IDADE_ALVO) {
+                        const idadeHoje = idadeEm(nasc, hoje);
+                        const aniv12 = new Date(nasc.getFullYear() + IDADE_ALVO, nasc.getMonth(), nasc.getDate());
+                        aptos.push({
+                            id: a.id,
+                            nome: a.nome,
+                            nasc,
+                            idadeHoje,
+                            jaTem: idadeHoje >= IDADE_ALVO,
+                            aniv12,
+                            projetos: idsProjetosDoAluno(a).map(id => nomesDosProjetos[id] || id).join(', ')
+                        });
+                    }
+                });
+
+                // Mais velhos primeiro
+                aptos.sort((x, y) => x.nasc - y.nasc);
+
+                const totalJa = aptos.filter(a => a.jaTem).length;
+                const totalVai = aptos.length - totalJa;
+
+                const cabecalho = ['ID', 'Nome', 'Data de Nasc.', 'Idade hoje', 'Situação', 'Projetos'];
+                const textoSituacao = a => a.jaTem
+                    ? `Já tem ${a.idadeHoje} anos`
+                    : `Faz ${IDADE_ALVO} anos em ${fmtData(a.aniv12)}`;
+
+                const linhas = aptos.map(a => [
+                    a.id, a.nome, fmtData(a.nasc), `${a.idadeHoje} anos`, textoSituacao(a), a.projetos
+                ]);
+
+                relAtual = {
+                    titulo: 'Criança Certeza -> Adolescer: alunos com 12 anos ou que completam até fevereiro',
+                    subtitulo: `Critério: ${IDADE_ALVO} anos completos até ${fmtData(corte)}  |  Gerado em: ${fmtData(new Date())}  |  Total: ${aptos.length}`,
+                    cabecalho,
+                    linhas,
+                    arquivo: 'criancacerteza_para_adolescer'
+                };
+
+                // Preview com badges
+                document.getElementById('tituloPreview').innerText = 'Criança Certeza → Adolescer';
+                document.getElementById('theadPreview').innerHTML =
+                    '<tr>' + cabecalho.map(h => `<th>${h}</th>`).join('') + '</tr>';
+
+                const tbody = document.getElementById('tbodyPreview');
+                if (aptos.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="${cabecalho.length}" class="text-center py-4 text-muted">Nenhum aluno do Criança Certeza se enquadra no critério.</td></tr>`;
+                } else {
+                    tbody.innerHTML = aptos.map(a => `
+                        <tr>
+                            <td>${a.id}</td>
+                            <td class="fw-medium">${escapeHtml(a.nome)}</td>
+                            <td>${fmtData(a.nasc)}</td>
+                            <td>${a.idadeHoje} anos</td>
+                            <td><span class="${a.jaTem ? 'badge-ja12' : 'badge-vai12'}">${textoSituacao(a)}</span></td>
+                            <td>${escapeHtml(a.projetos)}</td>
+                        </tr>`).join('');
+                }
+
+                document.getElementById('resumoEspecial').innerHTML = `
+                    <div class="resumo-item"><div class="num">${doProjeto.length}</div><div class="rot">Ativos no Criança Certeza</div></div>
+                    <div class="resumo-item"><div class="num" style="color:#b91c1c">${totalJa}</div><div class="rot">Já têm ${IDADE_ALVO}+ anos</div></div>
+                    <div class="resumo-item"><div class="num" style="color:#b45309">${totalVai}</div><div class="rot">Completam ${IDADE_ALVO} até fev.</div></div>
+                    <div class="resumo-item"><div class="num">${aptos.length}</div><div class="rot">Total para o Adolescer</div></div>`;
+
+                if (semData.length > 0) {
+                    const aviso = document.getElementById('avisoSemData');
+                    aviso.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>${semData.length}</strong> aluno(s) do Criança Certeza estão <strong>sem data de nascimento</strong> e não puderam ser avaliados:
+                        ${semData.map(a => `#${a.id} ${escapeHtml(a.nome)}`).join(', ')}.`;
+                    aviso.classList.remove('d-none');
+                }
+
+                document.getElementById('contadorAlunos').innerText = '';
+                document.getElementById('areaPreview').classList.remove('d-none');
+                habilitarExportacao(aptos.length > 0);
+                document.getElementById('areaPreview').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            } catch (err) {
+                alert('Erro ao gerar relatório: ' + err.message);
+                console.error(err);
+            } finally {
+                spinner.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
 
         // ===== RENDER CHECKBOXES =====
         function renderizarCampos() {
@@ -257,12 +473,12 @@
             atualizarSelecao();
             document.getElementById('areaPreview').classList.add('d-none');
             document.getElementById('contadorAlunos').innerText = '';
-            document.getElementById('btnPDF').disabled = true;
-            document.getElementById('btnExcel').disabled = true;
+            habilitarExportacao(false);
             dadosRelatorio = [];
+            relAtual = null;
         }
 
-        // ===== GERAR RELATÓRIO =====
+        // ===== GERAR RELATÓRIO PERSONALIZADO =====
         async function gerarRelatorio() {
             if (camposSelecionados.length === 0) {
                 alert('Selecione pelo menos um campo para gerar o relatório.');
@@ -281,24 +497,27 @@
             document.getElementById('contadorAlunos').innerText = '';
 
             try {
-                // Sempre busca todos os campos necessários, filtra ativo=true
-                const { data, error } = await supabaseClient
-                    .from('alunos')
-                    .select('*')
-                    .eq('ativo', true)
-                    .order('nome', { ascending: true });
+                const todos = await buscarAlunosAtivos();
+                dadosRelatorio = todos.filter(alunoPertenceAosProjetosSelecionados);
 
-                if (error) throw error;
-
-                dadosRelatorio = (data || []).filter(alunoPertenceAosProjetosSelecionados);
-
+                document.getElementById('tituloPreview').innerText = 'Pré-visualização';
                 renderizarTabela(dadosRelatorio, camposSelecionados);
 
+                const hoje = new Date().toLocaleDateString('pt-BR');
+                relAtual = {
+                    titulo: 'Relatório de Alunos Ativos',
+                    subtitulo: `Gerado em: ${hoje}  |  Total de alunos: ${dadosRelatorio.length}`,
+                    cabecalho: camposSelecionados.map(k => getLabelCampo(k)),
+                    linhas: dadosRelatorio.map(aluno => camposSelecionados.map(k => formatarValor(k, aluno[k]))),
+                    arquivo: 'relatorio_alunos'
+                };
+
+                document.getElementById('resumoEspecial').innerHTML = '';
+                document.getElementById('avisoSemData').classList.add('d-none');
                 document.getElementById('contadorAlunos').innerText =
                     `${dadosRelatorio.length} aluno(s) ativo(s) encontrado(s)`;
                 document.getElementById('areaPreview').classList.remove('d-none');
-                document.getElementById('btnPDF').disabled = dadosRelatorio.length === 0;
-                document.getElementById('btnExcel').disabled = dadosRelatorio.length === 0;
+                habilitarExportacao(dadosRelatorio.length > 0);
 
             } catch (err) {
                 alert('Erro ao buscar dados: ' + err.message);
@@ -311,11 +530,7 @@
 
         // ===== FILTRO DE PROJETOS =====
         function alunoPertenceAosProjetosSelecionados(aluno) {
-            const val = aluno.projetos;
-            if (!val) return false;
-            const projetosDoAluno = (Array.isArray(val) ? val : String(val).split(','))
-                .map(id => String(id).trim());
-            return projetosDoAluno.some(id => projetosSelecionados.includes(id));
+            return idsProjetosDoAluno(aluno).some(id => projetosSelecionados.includes(id));
         }
 
         // ===== RENDER TABELA =====
@@ -335,7 +550,6 @@
                 } catch { return val; }
             }
             if (key === 'projetos') {
-                if (!val) return '—';
                 const arr = Array.isArray(val) ? val : String(val).split(',');
                 return arr.map(id => nomesDosProjetos[String(id).trim()] || String(id).trim()).join(', ');
             }
@@ -357,21 +571,18 @@
                 } catch { return val; }
             }
             if (key === 'projetos') {
-                if (!val) return '<span class="text-muted">—</span>';
                 const arr = Array.isArray(val) ? val : String(val).split(',');
                 return arr.map(id => `<span class="projeto-tag">${nomesDosProjetos[String(id).trim()] || String(id).trim()}</span>`).join('');
             }
-            return String(val);
+            return escapeHtml(String(val));
         }
 
         function renderizarTabela(dados, campos) {
             const thead = document.getElementById('theadPreview');
             const tbody = document.getElementById('tbodyPreview');
 
-            // Header
             thead.innerHTML = '<tr>' + campos.map(k => `<th>${getLabelCampo(k)}</th>`).join('') + '</tr>';
 
-            // Body
             if (dados.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="${campos.length}" class="text-center py-4 text-muted">Nenhum aluno ativo encontrado.</td></tr>`;
                 return;
@@ -382,31 +593,25 @@
             ).join('');
         }
 
-        // ===== EXPORTAR PDF =====
+        // ===== EXPORTAR PDF (serve para qualquer relatório gerado) =====
         function exportarPDF() {
-            if (!dadosRelatorio.length || !camposSelecionados.length) return;
+            if (!relAtual || !relAtual.linhas.length) return;
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(14);
-            doc.text('Centro Social Irmã Tecla Merlo — Relatório de Alunos Ativos', 14, 14);
+            doc.text('Centro Social Irmã Tecla Merlo - ' + relAtual.titulo, 14, 14);
             doc.setFontSize(9);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(100);
-            const hoje = new Date().toLocaleDateString('pt-BR');
-            doc.text(`Gerado em: ${hoje}  |  Total de alunos: ${dadosRelatorio.length}`, 14, 20);
+            doc.text(relAtual.subtitulo, 14, 20);
             doc.setTextColor(0);
 
-            const cabecalho = camposSelecionados.map(k => getLabelCampo(k));
-            const linhas = dadosRelatorio.map(aluno =>
-                camposSelecionados.map(k => formatarValor(k, aluno[k]))
-            );
-
             doc.autoTable({
-                head: [cabecalho],
-                body: linhas,
+                head: [relAtual.cabecalho],
+                body: relAtual.linhas,
                 startY: 25,
                 styles: { fontSize: 8, cellPadding: 2 },
                 headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
@@ -414,33 +619,27 @@
                 margin: { left: 14, right: 14 },
             });
 
-            doc.save(`relatorio_alunos_${hoje.replace(/\//g, '-')}.pdf`);
+            const hoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+            doc.save(`${relAtual.arquivo}_${hoje}.pdf`);
         }
 
-        // ===== EXPORTAR EXCEL =====
+        // ===== EXPORTAR EXCEL (serve para qualquer relatório gerado) =====
         function exportarExcel() {
-            if (!dadosRelatorio.length || !camposSelecionados.length) return;
+            if (!relAtual || !relAtual.linhas.length) return;
 
-            const cabecalho = camposSelecionados.map(k => getLabelCampo(k));
-            const linhas = dadosRelatorio.map(aluno =>
-                camposSelecionados.map(k => formatarValor(k, aluno[k]))
-            );
+            const { cabecalho, linhas } = relAtual;
+            const ws = XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
 
-            const wsData = [cabecalho, ...linhas];
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-            // Largura automática das colunas
-            const colWidths = cabecalho.map((h, i) => {
-                const maxLen = Math.max(h.length, ...linhas.map(r => String(r[i] || '').length));
+            ws['!cols'] = cabecalho.map((h, i) => {
+                const maxLen = Math.max(h.length, ...linhas.map(r => String(r[i] ?? '').length));
                 return { wch: Math.min(maxLen + 2, 40) };
             });
-            ws['!cols'] = colWidths;
 
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Alunos Ativos');
+            XLSX.utils.book_append_sheet(wb, ws, 'Relatorio');
 
             const hoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-            XLSX.writeFile(wb, `relatorio_alunos_${hoje}.xlsx`);
+            XLSX.writeFile(wb, `${relAtual.arquivo}_${hoje}.xlsx`);
         }
 
         // ===== LOGOUT =====
@@ -453,7 +652,7 @@
         // ===== INIT =====
         renderizarCampos();
         renderizarProjetos();
+        atualizarTextoCorte();
     </script>
 </body>
 </html>
-
