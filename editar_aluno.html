@@ -92,10 +92,17 @@
             color: white;
             border-color: #10b981;
         }
+        .topo-linha { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+        .topo-titulo { min-width: 0; }
+        .topo-titulo h3 { white-space: nowrap; }
+        #nome_titulo { display: block; max-width: 520px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .topo-acoes { display: flex; align-items: center; gap: 10px; }
+        .topo-acoes .btn { white-space: nowrap; }
+        .topo-acoes .btn-salvar { padding: 10px 28px; }
+        .topo-barra { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .topo-barra .btn, .topo-barra .status-badge-wrapper { height: 42px; display: inline-flex; align-items: center; white-space: nowrap; }
+        .topo-barra .status-badge-wrapper { padding: 0 16px; }
     </style>
-
-
-    
 </head>
 <body>
 
@@ -110,8 +117,6 @@
             <a class="nav-link" href="turmas.html"><i class="fas fa-users me-2"></i> Turmas</a>
             <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
             <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
-            <a class="nav-link" href="relatorios.html"><i class="fas fa-file-alt me-2"></i> Relatórios</a>
-            <a class="nav-link" href="ia.html"><i class="fas fa-robot me-2"></i> Assistente IA</a>
             <div class="mt-5 px-4">
                 <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
             </div>
@@ -119,12 +124,19 @@
     </aside>
 
     <main class="main-content">
-        <header class="mb-4 d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-3">
-                <div>
+        <header class="mb-4">
+            <div class="topo-linha">
+                <div class="topo-titulo">
                     <h3 class="fw-bold mb-0">Editar Aluno</h3>
                     <span id="nome_titulo" class="text-primary fw-medium small">Carregando...</span>
                 </div>
+                <div class="topo-acoes">
+                    <a href="lista_geral.html" class="btn btn-light border">Sair sem salvar</a>
+                    <button type="button" id="btnSalvar" class="btn btn-primary btn-salvar" onclick="atualizarCadastro()">Salvar Alterações</button>
+                </div>
+            </div>
+
+            <div class="topo-barra">
                 <div class="status-badge-wrapper d-flex align-items-center gap-2">
                     <span class="form-label mb-0">STATUS:</span>
                     <div class="form-check form-switch mb-0">
@@ -135,10 +147,9 @@
                 <button type="button" id="btnConcluiu" class="btn btn-concluiu" onclick="registrarConclusao()">
                     <i class="fas fa-check me-1"></i> <span id="textoConcluiu">CONCLUIU</span>
                 </button>
-            </div>
-            <div>
-                <a href="lista_geral.html" class="btn btn-light border me-2">Sair sem salvar</a>
-                <button type="button" id="btnSalvar" class="btn btn-primary btn-salvar" onclick="atualizarCadastro()">Salvar Alterações</button>
+                <button type="button" id="btnDesbloquear" class="btn btn-warning fw-bold">
+                    <i class="fas fa-lock me-1"></i> Desbloquear edição
+                </button>
             </div>
         </header>
 
@@ -281,13 +292,11 @@
                     <!-- Assinatura da Mãe -->
                     <div class="col-md-6">
                         <label class="form-label">Assinatura da Mãe / Responsável 1</label>
-                        <!-- Imagem atual (carregada do Supabase) -->
                         <div id="preview_assinatura_mae" class="mb-2" style="display:none;">
                             <p class="text-muted small mb-1">Assinatura atual:</p>
                             <img id="img_assinatura_mae" src="" alt="Assinatura da Mãe"
                                  style="max-width:100%; max-height:120px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; display:block;">
                         </div>
-                        <!-- Canvas para nova assinatura -->
                         <canvas id="canvas_assinatura_mae" class="signature-canvas-edit"></canvas>
                         <div class="d-flex gap-2 mt-2">
                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="limparAssinaturaEdit('mae')">
@@ -299,13 +308,11 @@
                     <!-- Assinatura do Pai -->
                     <div class="col-md-6">
                         <label class="form-label">Assinatura do Pai / Responsável 2</label>
-                        <!-- Imagem atual (carregada do Supabase) -->
                         <div id="preview_assinatura_pai" class="mb-2" style="display:none;">
                             <p class="text-muted small mb-1">Assinatura atual:</p>
                             <img id="img_assinatura_pai" src="" alt="Assinatura do Pai"
                                  style="max-width:100%; max-height:120px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; display:block;">
                         </div>
-                        <!-- Canvas para nova assinatura -->
                         <canvas id="canvas_assinatura_pai" class="signature-canvas-edit"></canvas>
                         <div class="d-flex gap-2 mt-2">
                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="limparAssinaturaEdit('pai')">
@@ -488,6 +495,26 @@
         </form>
     </main>
 
+    <!-- Modal: senha de edição -->
+    <div class="modal fade" id="modalSenha" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h6 class="modal-title fw-bold"><i class="fas fa-lock me-2"></i>Senha de edição</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="password" id="inputSenhaEdicao" class="form-control" placeholder="Digite a senha" autocomplete="off">
+                    <div id="erroSenha" class="text-danger small fw-bold mt-2 d-none">Senha incorreta.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary w-100" id="btnConfirmarSenha" onclick="confirmarSenha()">Desbloquear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- SUPABASE: Execute no SQL Editor do Supabase para criar a tabela concluiu:
          CREATE TABLE concluiu (
@@ -552,6 +579,56 @@
             label.style.color = isChecked ? "#10b981" : "#dc3545";
         }
 
+        // ── CONTROLE DE EDIÇÃO (SENHA) ─────────────────────────────
+        let editaLiberado = false;
+        let travaTimer = null;
+        let modalSenha = null;
+        const ELEMENTOS_EDITAVEIS = '#formEdicao input, #formEdicao select, #formEdicao textarea, #formEdicao button, #ativo, #btnConcluiu, #btnSalvar';
+
+        function aplicarBloqueio(bloquear) {
+            editaLiberado = !bloquear;
+            document.querySelectorAll(ELEMENTOS_EDITAVEIS).forEach(el => el.disabled = bloquear);
+            document.querySelectorAll('canvas.signature-canvas-edit').forEach(c => c.style.pointerEvents = bloquear ? 'none' : 'auto');
+
+            const b = document.getElementById('btnDesbloquear');
+            if (bloquear) {
+                b.className = 'btn btn-warning fw-bold';
+                b.innerHTML = '<i class="fas fa-lock me-1"></i> Desbloquear edição';
+                b.onclick = pedirSenha;
+            } else {
+                b.className = 'btn btn-outline-success fw-bold';
+                b.innerHTML = '<i class="fas fa-lock-open me-1"></i> Bloquear';
+                b.onclick = () => aplicarBloqueio(true);
+            }
+
+            clearTimeout(travaTimer);
+            if (!bloquear) travaTimer = setTimeout(() => aplicarBloqueio(true), 15 * 60 * 1000); // trava após 15 min
+        }
+
+        function pedirSenha() {
+            document.getElementById('inputSenhaEdicao').value = '';
+            document.getElementById('erroSenha').classList.add('d-none');
+            modalSenha.show();
+            setTimeout(() => document.getElementById('inputSenhaEdicao').focus(), 300);
+        }
+
+        async function confirmarSenha() {
+            const senha = document.getElementById('inputSenhaEdicao').value;
+            if (!senha) return;
+            const btn = document.getElementById('btnConfirmarSenha');
+            btn.disabled = true;
+
+            const { data, error } = await supabaseClient.rpc('verificar_senha_edicao', { senha });
+
+            btn.disabled = false;
+            if (error || data !== true) {
+                document.getElementById('erroSenha').classList.remove('d-none');
+                return;
+            }
+            modalSenha.hide();
+            aplicarBloqueio(false);
+        }
+
         // ── CONCLUSÃO ──────────────────────────────────────────────
         async function verificarConclusao() {
             const { data } = await supabaseClient.from('concluiu').select('*').eq('aluno_id', alunoIdInt).limit(1);
@@ -570,6 +647,8 @@
         }
 
         async function registrarConclusao() {
+            if (!editaLiberado) return pedirSenha();
+
             const btnConcluiu = document.getElementById('btnConcluiu');
             const temConclusao = btnConcluiu.classList.contains('ativo');
 
@@ -737,6 +816,8 @@
         }
 
         async function atualizarCadastro() {
+            if (!editaLiberado) return pedirSenha();
+
             const btn = document.getElementById('btnSalvar');
             btn.disabled = true;
             btn.innerText = "Salvando...";
@@ -829,7 +910,7 @@
                 console.error(err);
                 alert("Erro ao salvar: " + err.message);
             } finally {
-                btn.disabled = false;
+                btn.disabled = !editaLiberado;
                 btn.innerText = "Salvar Alterações";
             }
         }
@@ -951,10 +1032,16 @@
         }
 
         window.onload = async function() {
+            modalSenha = new bootstrap.Modal(document.getElementById('modalSenha'));
+            document.getElementById('inputSenhaEdicao').addEventListener('keydown', e => {
+                if (e.key === 'Enter') { e.preventDefault(); confirmarSenha(); }
+            });
+
             await carregarDados();
             inicializarCanvasAssinaturaEdit('canvas_assinatura_mae');
             inicializarCanvasAssinaturaEdit('canvas_assinatura_pai');
             inicializarCanvasAssinaturaEdit('canvas_assinatura_rematricula');
+            aplicarBloqueio(true); // abre sempre bloqueado
         };
 
         // ── REMATRÍCULA ────────────────────────────────────────────────
@@ -1044,6 +1131,8 @@
         }
 
         async function salvarRematricula() {
+            if (!editaLiberado) return pedirSenha();
+
             const dataRematricula = document.getElementById('rematricula_data').value;
 
             if (!dataRematricula) {
@@ -1106,7 +1195,7 @@
                 console.error(err);
                 alert('Erro ao salvar rematrícula: ' + err.message);
             } finally {
-                btn.disabled = false;
+                btn.disabled = !editaLiberado;
                 btn.innerText = 'Confirmar Rematrícula';
             }
         }
