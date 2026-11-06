@@ -27,16 +27,8 @@
         .badge-ativo { background: #dcfce7; color: #16a34a; font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
         .badge-inativo { background: #f1f5f9; color: #64748b; font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
         .select-all-btn { font-size: 0.82rem; cursor: pointer; color: var(--primary); text-decoration: underline; background: none; border: none; padding: 0; }
-        #loadingSpinner, #loadingSpinnerEspecial { display: none; }
+        #loadingSpinner { display: none; }
         .projeto-tag { background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-right: 3px; display: inline-block; }
-
-        /* Relatório especial */
-        .card-especial { border-left: 5px solid #f59e0b; }
-        .badge-ja12 { background: #fee2e2; color: #b91c1c; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
-        .badge-vai12 { background: #fef3c7; color: #b45309; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
-        .resumo-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 18px; }
-        .resumo-item .num { font-size: 1.4rem; font-weight: 700; line-height: 1.1; }
-        .resumo-item .rot { font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -75,28 +67,6 @@
                 </button>
             </div>
         </header>
-
-        <!-- RELATÓRIO PRONTO: Criança Certeza -> Adolescer -->
-        <div class="card-config card-especial">
-            <div class="section-title" style="color:#b45309; border-bottom-color:#fef3c7;">
-                <i class="fas fa-arrow-up-right-dots me-2"></i> Relatório Pronto: Criança Certeza &rarr; Adolescer
-            </div>
-            <p class="text-muted small mb-3">
-                Lista os alunos ativos do <strong>Criança Certeza</strong> que <strong>já têm 12 anos ou mais</strong> ou que
-                <strong>completam 12 anos até fevereiro do próximo ano</strong> (<span id="textoCorte"></span>).
-            </p>
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-                <button class="btn btn-warning fw-bold px-4" onclick="gerarRelatorioAdolescer()" id="btnGerarAdolescer">
-                    <i class="fas fa-search me-2"></i>Gerar Relatório
-                </button>
-                <div id="loadingSpinnerEspecial">
-                    <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
-                    <span class="ms-2 text-muted small">Buscando dados...</span>
-                </div>
-            </div>
-            <div id="resumoEspecial" class="d-flex gap-3 flex-wrap mt-3"></div>
-            <div id="avisoSemData" class="alert alert-warning small mt-3 mb-0 d-none"></div>
-        </div>
 
         <!-- Filtro por Projetos -->
         <div class="card-config">
@@ -232,148 +202,6 @@
         function habilitarExportacao(habilitar) {
             document.getElementById('btnPDF').disabled = !habilitar;
             document.getElementById('btnExcel').disabled = !habilitar;
-        }
-
-        // ============================================================
-        // RELATÓRIO PRONTO: CRIANÇA CERTEZA -> ADOLESCER
-        // ============================================================
-        const PROJETO_ORIGEM = '2';   // Criança Certeza
-        const IDADE_ALVO = 12;
-
-        function parseDataISO(str) {
-            if (!str) return null;
-            const [y, m, d] = String(str).substring(0, 10).split('-').map(Number);
-            if (!y || !m || !d) return null;
-            return new Date(y, m - 1, d);
-        }
-
-        function idadeEm(nasc, ref) {
-            let idade = ref.getFullYear() - nasc.getFullYear();
-            if (ref.getMonth() < nasc.getMonth() ||
-               (ref.getMonth() === nasc.getMonth() && ref.getDate() < nasc.getDate())) idade--;
-            return idade;
-        }
-
-        function fmtData(d) {
-            return d.toLocaleDateString('pt-BR');
-        }
-
-        // Data de corte: último dia de fevereiro do próximo ano
-        function dataCorte() {
-            const hoje = new Date();
-            return new Date(hoje.getFullYear() + 1, 2, 0);
-        }
-
-        function atualizarTextoCorte() {
-            document.getElementById('textoCorte').innerText = `até ${fmtData(dataCorte())}`;
-        }
-
-        async function gerarRelatorioAdolescer() {
-            const spinner = document.getElementById('loadingSpinnerEspecial');
-            const btn = document.getElementById('btnGerarAdolescer');
-            spinner.style.display = 'inline-flex';
-            btn.disabled = true;
-            document.getElementById('resumoEspecial').innerHTML = '';
-            document.getElementById('avisoSemData').classList.add('d-none');
-
-            try {
-                const hoje = new Date();
-                hoje.setHours(0, 0, 0, 0);
-                const corte = dataCorte();
-
-                const todos = await buscarAlunosAtivos();
-                const doProjeto = todos.filter(a => idsProjetosDoAluno(a).includes(PROJETO_ORIGEM));
-
-                const aptos = [];
-                const semData = [];
-
-                doProjeto.forEach(a => {
-                    const nasc = parseDataISO(a.data_nascimento);
-                    if (!nasc) { semData.push(a); return; }
-                    if (idadeEm(nasc, corte) >= IDADE_ALVO) {
-                        const idadeHoje = idadeEm(nasc, hoje);
-                        const aniv12 = new Date(nasc.getFullYear() + IDADE_ALVO, nasc.getMonth(), nasc.getDate());
-                        aptos.push({
-                            id: a.id,
-                            nome: a.nome,
-                            nasc,
-                            idadeHoje,
-                            jaTem: idadeHoje >= IDADE_ALVO,
-                            aniv12,
-                            projetos: idsProjetosDoAluno(a).map(id => nomesDosProjetos[id] || id).join(', ')
-                        });
-                    }
-                });
-
-                // Mais velhos primeiro
-                aptos.sort((x, y) => x.nasc - y.nasc);
-
-                const totalJa = aptos.filter(a => a.jaTem).length;
-                const totalVai = aptos.length - totalJa;
-
-                const cabecalho = ['ID', 'Nome', 'Data de Nasc.', 'Idade hoje', 'Situação', 'Projetos'];
-                const textoSituacao = a => a.jaTem
-                    ? `Já tem ${a.idadeHoje} anos`
-                    : `Faz ${IDADE_ALVO} anos em ${fmtData(a.aniv12)}`;
-
-                const linhas = aptos.map(a => [
-                    a.id, a.nome, fmtData(a.nasc), `${a.idadeHoje} anos`, textoSituacao(a), a.projetos
-                ]);
-
-                relAtual = {
-                    titulo: 'Criança Certeza -> Adolescer: alunos com 12 anos ou que completam até fevereiro',
-                    subtitulo: `Critério: ${IDADE_ALVO} anos completos até ${fmtData(corte)}  |  Gerado em: ${fmtData(new Date())}  |  Total: ${aptos.length}`,
-                    cabecalho,
-                    linhas,
-                    arquivo: 'criancacerteza_para_adolescer'
-                };
-
-                // Preview com badges
-                document.getElementById('tituloPreview').innerText = 'Criança Certeza → Adolescer';
-                document.getElementById('theadPreview').innerHTML =
-                    '<tr>' + cabecalho.map(h => `<th>${h}</th>`).join('') + '</tr>';
-
-                const tbody = document.getElementById('tbodyPreview');
-                if (aptos.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="${cabecalho.length}" class="text-center py-4 text-muted">Nenhum aluno do Criança Certeza se enquadra no critério.</td></tr>`;
-                } else {
-                    tbody.innerHTML = aptos.map(a => `
-                        <tr>
-                            <td>${a.id}</td>
-                            <td class="fw-medium">${escapeHtml(a.nome)}</td>
-                            <td>${fmtData(a.nasc)}</td>
-                            <td>${a.idadeHoje} anos</td>
-                            <td><span class="${a.jaTem ? 'badge-ja12' : 'badge-vai12'}">${textoSituacao(a)}</span></td>
-                            <td>${escapeHtml(a.projetos)}</td>
-                        </tr>`).join('');
-                }
-
-                document.getElementById('resumoEspecial').innerHTML = `
-                    <div class="resumo-item"><div class="num">${doProjeto.length}</div><div class="rot">Ativos no Criança Certeza</div></div>
-                    <div class="resumo-item"><div class="num" style="color:#b91c1c">${totalJa}</div><div class="rot">Já têm ${IDADE_ALVO}+ anos</div></div>
-                    <div class="resumo-item"><div class="num" style="color:#b45309">${totalVai}</div><div class="rot">Completam ${IDADE_ALVO} até fev.</div></div>
-                    <div class="resumo-item"><div class="num">${aptos.length}</div><div class="rot">Total para o Adolescer</div></div>`;
-
-                if (semData.length > 0) {
-                    const aviso = document.getElementById('avisoSemData');
-                    aviso.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>
-                        <strong>${semData.length}</strong> aluno(s) do Criança Certeza estão <strong>sem data de nascimento</strong> e não puderam ser avaliados:
-                        ${semData.map(a => `#${a.id} ${escapeHtml(a.nome)}`).join(', ')}.`;
-                    aviso.classList.remove('d-none');
-                }
-
-                document.getElementById('contadorAlunos').innerText = '';
-                document.getElementById('areaPreview').classList.remove('d-none');
-                habilitarExportacao(aptos.length > 0);
-                document.getElementById('areaPreview').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-            } catch (err) {
-                alert('Erro ao gerar relatório: ' + err.message);
-                console.error(err);
-            } finally {
-                spinner.style.display = 'none';
-                btn.disabled = false;
-            }
         }
 
         function escapeHtml(str) {
@@ -512,8 +340,6 @@
                     arquivo: 'relatorio_alunos'
                 };
 
-                document.getElementById('resumoEspecial').innerHTML = '';
-                document.getElementById('avisoSemData').classList.add('d-none');
                 document.getElementById('contadorAlunos').innerText =
                     `${dadosRelatorio.length} aluno(s) ativo(s) encontrado(s)`;
                 document.getElementById('areaPreview').classList.remove('d-none');
@@ -652,7 +478,6 @@
         // ===== INIT =====
         renderizarCampos();
         renderizarProjetos();
-        atualizarTextoCorte();
     </script>
 </body>
 </html>
