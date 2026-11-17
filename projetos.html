@@ -26,8 +26,6 @@
         .aluno-inativo { color: #dc3545 !important; font-weight: 600; }
         .badge-inativo { font-size: 0.65rem; background: #fee2e2; color: #dc3545; padding: 2px 6px; border-radius: 4px; margin-left: 8px; text-transform: uppercase; }
     </style>
-    
-
 </head>
 <body>
 
@@ -41,8 +39,7 @@
             <a class="nav-link" href="cadastro.html"><i class="fas fa-user-plus me-2"></i> Novo Aluno</a>
             <a class="nav-link" href="enviar_mensagens.html"><i class="fab fa-whatsapp me-2"></i> Transmissão</a>
             <a class="nav-link" href="relatorios.html"><i class="fas fa-file-alt me-2"></i> Relatórios</a>
-            <a class="nav-link" href="ia.html"><i class="fas fa-robot me-2"></i> Assistente IA</a>
-            
+
             <div class="mt-5 px-4">
                 <button class="btn btn-sm btn-outline-light w-100 opacity-50" onclick="logout()">Sair do Sistema</button>
             </div>
@@ -65,7 +62,12 @@
                     <h5 class="fw-bold mb-0 text-uppercase" id="tituloProjetoSelecionado">---</h5>
                     <small class="text-primary fw-bold">PROJETOS</small>
                 </div>
-                <button class="btn btn-close btn-sm" onclick="fecharLista()"></button>
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-outline-primary btn-sm fw-bold" onclick="abrirRematricula()" title="Abrir as fichas de rematrícula de todos os alunos deste projeto">
+                        <i class="fas fa-file-alt me-1"></i>Rematrícula
+                    </button>
+                    <button class="btn btn-close btn-sm" onclick="fecharLista()"></button>
+                </div>
             </div>
 
             <div class="insert-section">
@@ -133,6 +135,12 @@
             atualizarListaAlunos();
         }
 
+        // Abre as fichas de rematrícula de TODOS os alunos do projeto selecionado
+        function abrirRematricula() {
+            if (!projetoAtivoId) return;
+            window.open('rematricula.html?projeto=' + encodeURIComponent(projetoAtivoId), '_blank');
+        }
+
         async function atualizarListaAlunos() {
             const listaDiv = document.getElementById('listaAlunos');
             listaDiv.innerHTML = '<div class="p-4 text-center"><div class="spinner-border text-primary"></div></div>';
@@ -144,7 +152,7 @@
                 .order('nome');
 
             listaDiv.innerHTML = aData && aData.length ? '' : '<div class="p-4 text-center text-muted">Nenhum aluno neste projeto.</div>';
-            
+
             if (aData) {
                 aData.forEach(aluno => {
                     const isInativo = aluno.ativo === false;
@@ -157,6 +165,7 @@
                                 ${isInativo ? '<span class="badge-inativo">Inativo</span>' : ''}
                             </span>
                             <div class="d-flex align-items-center">
+                                <button class="btn btn-sm btn-outline-primary border-0 me-1" title="Ficha de rematrícula deste aluno" onclick="event.stopPropagation(); window.open('rematricula.html?id=${aluno.id}', '_blank')"><i class="fas fa-print"></i></button>
                                 <button class="btn btn-sm btn-outline-danger border-0 me-3" onclick="removerDoProjeto(event, ${aluno.id})"><i class="fas fa-times"></i></button>
                                 <i class="fas fa-chevron-right text-muted small"></i>
                             </div>
