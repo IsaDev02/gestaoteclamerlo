@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ficha de Rematrícula | Centro Social Irmã Tecla Merlo</title>
+<style>
+*{box-sizing:border-box}
+body{background:#e5e7eb;margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}
+.bar{position:sticky;top:0;z-index:9;background:#1e293b;color:#fff;padding:10px 20px;display:flex;gap:14px;align-items:center;font-size:14px}
+.bar button,.bar a{background:#3b82f6;color:#fff;border:0;border-radius:6px;padding:8px 16px;font-weight:700;cursor:pointer;text-decoration:none;font-size:13px}
+.bar a{background:#475569}.bar label{font-size:13px;display:flex;gap:6px;align-items:center}
+.pg{width:210mm;min-height:297mm;margin:14px auto;background:#fff;padding:7mm 8mm;font-size:10px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.2);page-break-after:always}
+.r{display:flex;gap:6px;margin:4px 0;align-items:stretch}
+.c{display:flex;align-items:stretch;min-width:0}
+.l{background:#c0c0c0;border:1px solid;border-color:#fff #555 #555 #fff;padding:2px 5px;white-space:nowrap;display:flex;align-items:center}
+.v{border:1px solid #000;padding:2px 5px;flex:1;min-height:16px;overflow:hidden;white-space:nowrap;display:flex;align-items:center;min-width:0}
+.v.ct{justify-content:center}
+.top{display:grid;grid-template-columns:1fr 46mm;gap:8px}
+.tit{display:flex;align-items:center;gap:10px}
+.tit img{width:62px}.tit div{text-align:center;flex:1}
+.tit small{font-size:13px;display:block}.tit b{font-size:19px;display:block}
+.fic{display:flex;justify-content:center;margin:8px 0}
+.fic .c{width:62mm}
+.st{padding:2px 6px;border:1px solid #000;font-weight:700}
+.prox{display:flex;gap:4px;align-items:flex-start;margin-top:6px}
+.prox>span{padding-top:4px}
+.pg6{flex:1;display:grid;grid-template-columns:repeat(6,1fr);border:1px solid #000}
+.pg6 div{border-right:1px solid #000;border-bottom:1px solid #000;height:22px;padding:1px 2px}
+.pg6 div:nth-child(6n){border-right:0}.pg6 div:nth-last-child(-n+6){border-bottom:0}
+.lst{border:1px solid #000;border-collapse:collapse;font-size:8.5px;width:100%;height:max-content}
+.lst td{border-bottom:1px solid #000;padding:1px 3px;height:16.5px;overflow:hidden;white-space:nowrap;max-width:38mm}
+.lst td+td{width:24px;border-left:1px solid #000;text-align:right}
+.box{border:1px solid #000;padding:12px 4px 4px;position:relative;margin-top:18px}
+.box>.t{position:absolute;top:-9px;left:40px;background:#c0c0c0;border:1px solid;border-color:#fff #555 #555 #fff;padding:2px 26px}
+.pes{display:grid;grid-template-columns:1fr 36mm;gap:8px}
+.foto{display:flex;flex-direction:column;gap:3px}
+.foto .l{justify-content:center}
+.foto .im{flex:1;border:1px solid #000;min-height:38mm;background:center/cover no-repeat}
+.foto p{margin:2px 0 0;text-align:center;font-size:11px}
+.obs{display:flex;gap:6px;margin-top:22px;align-items:flex-start}
+.ln{border-bottom:1px solid #bbb;height:26px;flex:1}
+.obsl .ln{flex:none}
+.ln.k{border-color:#000}
+.obsl{flex:1;display:flex;flex-direction:column}
+.ass{margin-top:30px;display:flex;gap:6px;align-items:flex-end}
+.ass .ln{flex:0 0 55mm}.ass.w .ln{flex:1}
+@media print{@page{size:A4;margin:0}body{background:#fff}.bar{display:none}.pg{margin:0;box-shadow:none;padding:7mm 8mm;height:297mm;overflow:hidden}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <a href="projetos.html">← Voltar</a>
+  <span id="info">Carregando fichas...</span>
+  <label><input type="checkbox" id="chkInativos" checked onchange="carregar()"> Incluir inativos</label>
+  <button onclick="window.print()">🖨 Imprimir</button>
+</div>
+<div id="fichas"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const supabaseClient = supabase.createClient('https://paadzisqttrkbscehcmh.supabase.co','sb_publishable_FQsB5Jx26X9H6eD77heXtw_jzda0lcC');
+const NOMES = {1:'ADOLESCER PARA CRESCER',2:'CRIANÇA CERTEZA',3:'SEMPRE CRIANÇA',4:'VALORIZANDO A INFÂNCIA',5:'CLUBE DE MÃES',6:'ANIMAR E CELEBRAR'};
+const PERIODO = {Matutino:'MANHÃ',Vespertino:'TARDE',Noturno:'NOITE',Integral:'INTEGRAL'};
+const qs = new URLSearchParams(location.search);
+const ID = qs.get('id'), PROJ = qs.get('projeto');
+
+const esc = s => s==null ? '' : String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const up = s => esc(s).toUpperCase();
+const fd = d => { if(!d) return ''; const [y,m,dd]=String(d).slice(0,10).split('-'); return `${dd}/${m}/${y}`; };
+const L = t => `<span class="l">${t}</span>`;
+const cell = (lab,val,fx=1,ct=false) => `<div class="c" style="flex:${fx}">${lab?L(lab):''}<span class="v${ct?' ct':''}">${val??''}</span></div>`;
+const row = (...cs) => `<div class="r">${cs.join('')}</div>`;
+
+function idadeExata(d){
+  if(!d) return null;
+  const n=new Date(String(d).slice(0,10)+'T00:00:00'), h=new Date();
+  let a=h.getFullYear()-n.getFullYear(), m=h.getMonth()-n.getMonth(), di=h.getDate()-n.getDate();
+  if(di<0){ m--; di+=new Date(h.getFullYear(),h.getMonth(),0).getDate(); }
+  if(m<0){ a--; m+=12; }
+  return {a,m,d:di};
+}
+const idadeAnos = d => { const i=idadeExata(d); return i?i.a:''; };
+
+function fichaHTML(a){
+  const ativo = a.ativo===true || ['true','sim','1','t'].includes(String(a.ativo).toLowerCase());
+  const fem = String(a.genero||'').toUpperCase().startsWith('F');
+  const stTxt = ativo ? (fem?'ATIVA':'ATIVO') : (fem?'DESATIVADA':'DESATIVADO');
+  const stCss = ativo ? 'background:#d1fae5;color:#047857' : 'background:#ffd9c2;color:#e11d1d';
+  const ficha = String(a.id).padStart(5,'0');
+  let ids = Array.isArray(a.projetos) ? a.projetos : (a.projetos ? String(a.projetos).split(',') : []);
+  ids = ids.map(x=>String(x).trim()).filter(Boolean);
+  const horas = ['004','112','075'];
+  let lista = '';
+  for(let i=0;i<12;i++){
+    const nome = ids[i] ? (NOMES[ids[i]]||ids[i]) : '';
+    lista += `<tr><td><b>${i+1}-</b> ${esc(nome)}</td><td>${i>=8?'000':''}</td></tr>`;
+  }
+  let prox='';
+  for(let i=1;i<=12;i++) prox += `<div>${i}-</div>`;
+  const id = idadeExata(a.data_nascimento);
+  const idTxt = id ? `${id.a} Ano(s) ${id.m}<br>Mês(es) ${id.d} Dia(s)` : '';
+  const end = [a.rua||a.logradouro, a.numero].filter(Boolean).join(', ');
+  const per = PERIODO[a.periodo] || a.periodo || '';
+  const outroLab = a.parentesco_outro ? up(a.parentesco_outro) : '';
+  const fil = (lab,nome,st,dn,rg,cpf,labCss='') => 
+    row(`<div class="c" style="flex:1">${lab?L(lab):'<span class="l" style="width:68px"></span>'}<span class="v">${nome}</span></div>`,
+        `<div class="c" style="width:48mm">${L('Status:')}<span class="v ct">${st}</span></div>`)
+  + row(cell('Data Nasc.:',fd(dn),2.2,true),cell('Idade:',dn?idadeAnos(dn):'-',1.3,true),cell('RG:',up(rg),2.6,true),cell('CPF:',up(cpf),2.6,true));
+
+  return `<section class="pg">
+  <div class="top">
+    <div>
+      <div class="tit"><img src="logo_paulinas.png" alt=""><div><small>CENTRO DE PROMOÇÃO HUMANA IRMÃ TECLA MERLO</small><b>REMATRÍCULA DE BENEFICIÁRIOS</b></div></div>
+      <div class="fic"><div class="c">${L('FICHA').replace('class="l"','class="l" style="flex:1;justify-content:center"')}<span class="v ct" style="color:#1d3fd8;flex:1">${ficha}</span><span class="v ct" style="${stCss};flex:1.3">${stTxt}</span></div></div>
+      <div class="prox"><span>Próx.:</span><div class="pg6">${prox}</div></div>
+    </div>
+    <table class="lst">${lista}</table>
+  </div>
+
+  <div class="box"><span class="t">Dados Pessoais</span>
+   <div class="pes"><div>
+    ${row(cell('Nome do Benefic.:',up(a.nome),4),cell('Gênero:',up(a.genero),2,true))}
+    ${row(cell('End.:',up(end),5),cell('Bairro:',up(a.bairro),2.4),cell('Cep:',up(a.cep),1.8))}
+    ${row(cell('Cidade:',up(a.cidade),2.2),cell('UF - Estado:',up(a.uf),2,true),cell('Data Nasc.:',fd(a.data_nascimento),2),cell('Idade:',id?id.a:'',1,true))}
+    ${row(cell('Etnia:',up(a.etnia),2),cell('RG:',up(a.rg),2.5),cell('CPF:',up(a.cpf),2.5))}
+    ${row(cell('Telefone:',up(a.telefone),3,true),cell('Celular:',up(a.whatsapp),3,true))}
+   </div>
+   <div class="foto">${L('FOTO:')}<div class="im" style="${a.foto?`background-image:url('${esc(a.foto)}')`:''}"></div><p>${idTxt}</p></div>
+   </div>
+  </div>
+
+  <div class="box"><span class="t">Dados Escolares</span>
+    ${row(cell('Escola:',up(a.escola),1))}
+    ${row(cell('Série Esc.:',up(a.serie),2),cell('Período Esc.:',up(per),2,true))}
+  </div>
+
+  <div class="box"><span class="t">Filiação / Responsáveis</span>
+    ${fil('Nome da Mãe:',up(a.nome_mae),up(a.situacao_mae),a.data_nasc_mae,a.rg_mae,a.cpf_mae)}
+    ${fil('Nome do Pai:',up(a.nome_pai),up(a.situacao_pai),a.data_nasc_pai,a.rg_pai,a.cpf_pai)}
+    ${fil(outroLab,up(a.nome_outro),'',a.data_nasc_outro,a.rg_outro,a.cpf_outro)}
+  </div>
+
+  <div class="obs"><span class="l">Observações</span><div class="obsl"><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln k"></div></div></div>
+  <div class="ass"><span class="l">Data</span><div class="ln"></div></div>
+  <div class="ass w"><span class="l">Assinatura</span><div class="ln"></div></div>
+  </section>`;
+}
+
+async function carregar(){
+  const out = document.getElementById('fichas'), info = document.getElementById('info');
+  out.innerHTML = ''; info.textContent = 'Carregando fichas...';
+  let lista = [];
+  if(ID){
+    const {data,error} = await supabaseClient.from('alunos').select('*').eq('id',parseInt(ID,10));
+    if(error){ info.textContent='Erro: '+error.message; return; }
+    lista = data||[];
+  } else if(PROJ){
+    for(let ini=0;;ini+=1000){
+      const {data,error} = await supabaseClient.from('alunos').select('*').contains('projetos',[parseInt(PROJ,10)]).order('nome').range(ini,ini+999);
+      if(error){ info.textContent='Erro: '+error.message; return; }
+      lista = lista.concat(data||[]);
+      if(!data || data.length<1000) break;
+    }
+    if(!document.getElementById('chkInativos').checked) lista = lista.filter(a=>a.ativo===true);
+  } else { info.textContent='Informe ?id= ou ?projeto= na URL.'; return; }
+  out.innerHTML = lista.map(fichaHTML).join('');
+  info.textContent = PROJ ? `${NOMES[PROJ]||'Projeto '+PROJ} — ${lista.length} ficha(s)` : (lista[0] ? `Ficha ${String(lista[0].id).padStart(5,'0')}` : 'Aluno não encontrado');
+  if(ID) document.getElementById('chkInativos').parentElement.style.display='none';
+}
+carregar();
+</script>
+</body>
+</html>
