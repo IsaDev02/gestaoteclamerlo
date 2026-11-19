@@ -1,23 +1,37 @@
 // supabase/functions/ia-alunos/index.ts
+// Deploy:  supabase functions deploy ia-alunos
+// Segredo: supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 //
-// Edge Function que recebe uma pergunta em português sobre a base de alunos,
-// pede para a Claude (via tool use) traduzi-la em filtros estruturados, e então
-// consulta a tabela `alunos` no Supabase (com a service role key, sem expor
-// nenhuma chave no navegador) para calcular a resposta real.
-//
-// Deploy:
-//   supabase functions deploy ia-alunos
-//
-// Secrets necessárias (a SUPABASE_URL e a SUPABASE_SERVICE_ROLE_KEY já ficam
-// disponíveis automaticamente dentro de toda Edge Function — não precisa configurar):
-//   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+// Fluxo: pergunta -> Claude (tool use) -> consulta estruturada validada
+//        -> execução no Supabase COM o JWT do usuário (RLS vale) -> resultado.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// ======================= CONFIGURAÇÃO (AJUSTE AQUI) =======================
+const MODELO = Deno.env.get("MODELO_IA") ?? "claude-haiku-5-5";
+
+// Colunas da tabela `alunos` que a IA pode filtrar e o tipo de cada uma.
+// Ajuste conforme o seu esquema real.
+const COLUNAS: Record<string, "texto" | "booleano" | "data" | "presenca" | "projetos"> = {
+  nome: "texto",
+  genero: "texto",
+  etnia: "texto",
+  situacao_mae: "texto",
+  situacao_pai: "texto",
+  bairro: "texto",
+  escola: "texto",
+  cidade: "texto",
+  periodo: "texto",
+  ativo: "booleano",
+  autorizacao_imagem: "booleano",
+  foto: "presenca",
+  whatsapp: "presenca",
+  data_nascimento: "data",
+  projetos: "projetos",
 };
+
+// "array" se `projetos` é text[]/jsonb; "texto" se for "1,3,5".
+const PROJETOS_TIPO: "array" | "texto" = "array";
 
 const NOMES_PROJETOS: Record<string, string> = {
   "1": "Adolescer para Crescer",
@@ -28,253 +42,305 @@ const NOMES_PROJETOS: Record<string, string> = {
   "6": "Animar e Celebrar",
 };
 
-// ── Ferramenta que a Claude deve preencher a partir da pergunta ──────────
-const TOOL_BUSCAR_ALUNOS = {
-  name: "buscar_alunos",
-  description:
-    "Filtra a base de alunos do Centro Social de acordo com os critérios identificados na pergunta do usuário.",
-  input_schema: {
-    type: "object",
-    properties: {
-      ativo: {
-        type: ["boolean", "null"],
-        description: "true = somente ativos, false = somente inativos, null = não filtrar por status",
-      },
-      genero: { type: ["string", "null"], enum: ["MASCULINO", "FEMININO", null] },
-      etnia_contem: {
-        type: ["string", "null"],
-        description: "trecho a procurar no campo etnia, ex: 'pardo', 'negro', 'branco'",
-      },
-      situacao_mae: { type: ["string", "null"], enum: ["PRESENTE", "AUSENTE", "FALECIDA", null] },
-      situacao_pai: { type: ["string", "null"], enum: ["PRESENTE", "AUSENTE", "FALECIDO", null] },
-      situacao_pai_ou_mae: {
-        type: ["string", "null"],
-        description: "usar quando a pergunta disser 'pai OU mãe' com a mesma condição, em vez de preencher os dois campos acima",
-        enum: ["PRESENTE", "AUSENTE", "FALECIDO", null],
-      },
-      projeto_id: { type: ["string", "null"], enum: ["1", "2", "3", "4", "5", "6", null] },
-      idade_min: { type: ["number", "null"] },
-      idade_max: { type: ["number", "null"] },
-      bairro_contem: { type: ["string", "null"] },
-      escola_contem: { type: ["string", "null"] },
-      cidade_contem: { type: ["string", "null"] },
-      periodo: { type: ["string", "null"], enum: ["Matutino", "Vespertino", "Noturno", "Integral", null] },
-      tem_foto: { type: ["boolean", "null"] },
-      tem_whatsapp: { type: ["boolean", "null"] },
-      autorizacao_imagem: { type: ["boolean", "null"] },
-      resumo_filtro: {
-        type: "string",
-        description: "frase curta e natural em português descrevendo o filtro aplicado, para mostrar ao usuário",
-      },
-    },
-    required: ["resumo_filtro"],
-  },
+// Colunas devolvidas na lista de resultados.
+const COLUNAS_AMOSTRA = "id,nome,data_nascimento,projetos,ativo";
+// ==========================================================================
+
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 
-// ── Helpers de dados (mesma lógica usada no front-end) ────────────────────
-function normalizar(s: unknown): string {
-  return (s ?? "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+// ----------------------------- datas / idade -----------------------------
+function dataHaAnos(n: number): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - n);
+  return d.toISOString().slice(0, 10);
+}
+function idadeDe(nasc: string | null): number | null {
+  if (!nasc) return null;
+  const n = new Date(nasc + "T00:00:00");
+  if (isNaN(n.getTime())) return null;
+  const h = new Date();
+  let i = h.getFullYear() - n.getFullYear();
+  if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) i--;
+  return i;
 }
 
-function isAtivo(a: any): boolean {
-  if (typeof a.ativo === "boolean") return a.ativo;
-  return ["sim", "true", "ativo", "1", "s", "t"].includes(normalizar(a.ativo));
-}
+// ------------------------------- filtros ---------------------------------
+type Filtro = { campo: string; operador: string; valor?: string };
 
-function calcularIdade(a: any): number | null {
-  if (a.data_nascimento) {
-    const nasc = new Date(a.data_nascimento + "T00:00:00");
-    if (!isNaN(nasc.getTime())) {
-      const hoje = new Date();
-      let idade = hoje.getFullYear() - nasc.getFullYear();
-      if (
-        hoje.getMonth() < nasc.getMonth() ||
-        (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate())
-      ) {
-        idade--;
-      }
-      return idade;
+// deno-lint-ignore no-explicit-any
+function aplicarFiltro(q: any, f: Filtro) {
+  const { campo, operador } = f;
+  const valor = f.valor ?? "";
+
+  if (campo === "idade") {
+    const n = Number(valor);
+    if (!Number.isFinite(n)) throw new Error("Valor de idade inválido");
+    q = q.not("data_nascimento", "is", null);
+    switch (operador) {
+      case "igual": return q.gt("data_nascimento", dataHaAnos(n + 1)).lte("data_nascimento", dataHaAnos(n));
+      case "maior": return q.lte("data_nascimento", dataHaAnos(n + 1));
+      case "maior_igual": return q.lte("data_nascimento", dataHaAnos(n));
+      case "menor": return q.gt("data_nascimento", dataHaAnos(n));
+      case "menor_igual": return q.gt("data_nascimento", dataHaAnos(n + 1));
+      default: throw new Error(`Operador ${operador} não vale para idade`);
     }
   }
-  return a.idade ?? null;
-}
 
-function alunoTemProjeto(a: any, id: string): boolean {
-  const arr = Array.isArray(a.projetos) ? a.projetos.map(String) : a.projetos ? String(a.projetos).split(",") : [];
-  return arr.map((x: string) => x.trim()).includes(String(id));
-}
+  const tipo = COLUNAS[campo];
+  if (!tipo) throw new Error(`Campo não permitido: ${campo}`);
 
-function aplicarFiltros(alunos: any[], f: any) {
-  return alunos.filter((a) => {
-    if (f.ativo === true && !isAtivo(a)) return false;
-    if (f.ativo === false && isAtivo(a)) return false;
-    if (f.genero && normalizar(a.genero) !== normalizar(f.genero)) return false;
-    if (f.etnia_contem && !normalizar(a.etnia).includes(normalizar(f.etnia_contem))) return false;
-    if (f.situacao_mae && !normalizar(a.situacao_mae).startsWith(normalizar(f.situacao_mae).slice(0, 5))) return false;
-    if (f.situacao_pai && !normalizar(a.situacao_pai).startsWith(normalizar(f.situacao_pai).slice(0, 5))) return false;
-    if (f.situacao_pai_ou_mae) {
-      const alvo = normalizar(f.situacao_pai_ou_mae).slice(0, 5);
-      const okMae = normalizar(a.situacao_mae).startsWith(alvo);
-      const okPai = normalizar(a.situacao_pai).startsWith(alvo);
-      if (!okMae && !okPai) return false;
-    }
-    if (f.projeto_id && !alunoTemProjeto(a, f.projeto_id)) return false;
-    if (f.idade_min != null || f.idade_max != null) {
-      const idade = calcularIdade(a);
-      if (idade == null) return false;
-      if (f.idade_min != null && idade < f.idade_min) return false;
-      if (f.idade_max != null && idade > f.idade_max) return false;
-    }
-    if (f.bairro_contem && !normalizar(a.bairro).includes(normalizar(f.bairro_contem))) return false;
-    if (f.escola_contem && !normalizar(a.escola).includes(normalizar(f.escola_contem))) return false;
-    if (f.cidade_contem && !normalizar(a.cidade).includes(normalizar(f.cidade_contem))) return false;
-    if (f.periodo && normalizar(a.periodo) !== normalizar(f.periodo)) return false;
-    if (f.tem_foto === true && !a.foto) return false;
-    if (f.tem_foto === false && a.foto) return false;
-    if (f.tem_whatsapp === true && !a.whatsapp) return false;
-    if (f.tem_whatsapp === false && a.whatsapp) return false;
-    if (f.autorizacao_imagem === true && !a.autorizacao_imagem) return false;
-    if (f.autorizacao_imagem === false && a.autorizacao_imagem) return false;
-    return true;
-  });
-}
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  if (tipo === "presenca") {
+    if (operador === "vazio") return q.or(`${campo}.is.null,${campo}.eq.`);
+    if (operador === "preenchido") return q.not(campo, "is", null).neq(campo, "");
+    throw new Error(`Operador ${operador} não vale para ${campo}`);
   }
 
-  try {
-    const { pergunta, historico } = await req.json();
+  if (tipo === "booleano") {
+    const b = ["true", "sim", "1"].includes(valor.toLowerCase());
+    return operador === "diferente" ? q.eq(campo, !b) : q.eq(campo, b);
+  }
 
-    if (!pergunta || typeof pergunta !== "string") {
-      return new Response(JSON.stringify({ erro: "Campo 'pergunta' é obrigatório." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+  if (tipo === "projetos") {
+    if (!NOMES_PROJETOS[valor]) throw new Error("ID de projeto inválido");
+    const cond = PROJETOS_TIPO === "array"
+      ? (x: any) => x.contains("projetos", [valor])
+      : (x: any) => x.ilike("projetos", `%${valor}%`);
+    return operador === "diferente" ? q.not("projetos", PROJETOS_TIPO === "array" ? "cs" : "ilike", PROJETOS_TIPO === "array" ? `{${valor}}` : `%${valor}%`) : cond(q);
+  }
 
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) {
-      return new Response(
-        JSON.stringify({ erro: "ANTHROPIC_API_KEY não configurada. Rode: supabase secrets set ANTHROPIC_API_KEY=..." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
+  // texto / data
+  switch (operador) {
+    case "igual": return tipo === "texto" ? q.ilike(campo, valor) : q.eq(campo, valor);
+    case "diferente": return tipo === "texto" ? q.not(campo, "ilike", valor) : q.neq(campo, valor);
+    case "contem": return q.ilike(campo, `%${valor}%`);
+    case "maior": return q.gt(campo, valor);
+    case "maior_igual": return q.gte(campo, valor);
+    case "menor": return q.lt(campo, valor);
+    case "menor_igual": return q.lte(campo, valor);
+    case "vazio": return q.or(`${campo}.is.null,${campo}.eq.`);
+    case "preenchido": return q.not(campo, "is", null).neq(campo, "");
+    default: throw new Error(`Operador desconhecido: ${operador}`);
+  }
+}
 
-    // ── 1) Pede para a Claude traduzir a pergunta em filtros estruturados ──
-    const hojeStr = new Date().toISOString().slice(0, 10);
-    const listaProjetos = Object.entries(NOMES_PROJETOS)
-      .map(([id, nome]) => `${id}: ${nome}`)
-      .join("\n");
+// deno-lint-ignore no-explicit-any
+function aplicarFiltros(q: any, filtros: Filtro[]) {
+  for (const f of filtros) q = aplicarFiltro(q, f);
+  return q;
+}
 
-    const systemPrompt = `Você é um interpretador de perguntas para o sistema de gestão do Centro Social Irmã Tecla Merlo (projeto social infantil no Brasil).
-Sua única tarefa é analisar a pergunta do usuário sobre a base de alunos e chamar a ferramenta "buscar_alunos" com os filtros corretos. Não responda em texto livre, apenas chame a ferramenta.
+// ------------------- valores reais das colunas categóricas ----------------
+let cacheValores: { quando: number; texto: string } | null = null;
 
-Data de hoje: ${hojeStr}.
+// deno-lint-ignore no-explicit-any
+async function valoresDistintos(supa: any): Promise<string> {
+  if (cacheValores && Date.now() - cacheValores.quando < 10 * 60 * 1000) return cacheValores.texto;
+  const cats = ["genero", "etnia", "situacao_mae", "situacao_pai", "periodo", "bairro", "escola", "cidade"];
+  const sets: Record<string, Set<string>> = Object.fromEntries(cats.map((c) => [c, new Set<string>()]));
+  for (let ini = 0; ini < 20000; ini += 1000) {
+    const { data, error } = await supa.from("alunos").select(cats.join(",")).range(ini, ini + 999);
+    if (error || !data?.length) break;
+    for (const r of data) for (const c of cats) if (r[c]) sets[c].add(String(r[c]));
+    if (data.length < 1000) break;
+  }
+  const linhas = cats
+    .filter((c) => sets[c].size > 0 && sets[c].size <= 40)
+    .map((c) => `- ${c}: ${[...sets[c]].map((v) => JSON.stringify(v)).join(", ")}`);
+  const texto = linhas.join("\n");
+  cacheValores = { quando: Date.now(), texto };
+  return texto;
+}
 
-Projetos disponíveis (id: nome):
-${listaProjetos}
+// ------------------------------ ferramentas ------------------------------
+const CAMPOS_FILTRO = [...Object.keys(COLUNAS).filter((c) => c !== "data_nascimento"), "idade"];
+const CAMPOS_AGRUPAR = ["genero", "etnia", "situacao_mae", "situacao_pai", "periodo", "bairro", "escola", "cidade", "ativo", "projetos", "idade"];
+
+const TOOLS = [
+  {
+    name: "consultar_alunos",
+    description: "Consulta a tabela de alunos aplicando filtros e devolve contagem, lista, ranking ou agrupamento.",
+    input_schema: {
+      type: "object",
+      properties: {
+        modo: {
+          type: "string",
+          enum: ["contagem", "lista", "ranking", "agrupamento"],
+          description: "contagem = 'quantos'; lista = 'quais/quem/liste'; ranking = mais velho/mais novo; agrupamento = 'por bairro', 'distribuição de'.",
+        },
+        filtros: {
+          type: "array",
+          description: "Todos os filtros são combinados com E. Vazio = todos os alunos.",
+          items: {
+            type: "object",
+            properties: {
+              campo: { type: "string", enum: CAMPOS_FILTRO },
+              operador: {
+                type: "string",
+                enum: ["igual", "diferente", "contem", "maior", "maior_igual", "menor", "menor_igual", "vazio", "preenchido"],
+              },
+              valor: { type: "string", description: "Texto. Booleano: 'true'/'false'. Idade: número. Projeto: ID '1' a '6'." },
+            },
+            required: ["campo", "operador"],
+          },
+        },
+        ordenar_por: { type: "string", enum: ["idade_desc", "idade_asc", "nome"], description: "Para ranking (idade_desc = mais velho) ou lista." },
+        limite: { type: "integer", description: "Itens na lista/ranking. Padrão 20, máximo 100." },
+        agrupar_por: { type: "string", enum: CAMPOS_AGRUPAR, description: "Só para modo agrupamento." },
+        resumo_filtro: { type: "string", description: "Descrição curta em português do filtro aplicado. Ex: 'ativos, sexo feminino, projeto Sempre Criança'." },
+      },
+      required: ["modo", "filtros", "resumo_filtro"],
+    },
+  },
+  {
+    name: "nao_consigo_responder",
+    description: "Use quando a pergunta não é sobre os dados dos alunos ou está ambígua demais para consultar.",
+    input_schema: {
+      type: "object",
+      properties: { mensagem: { type: "string", description: "Resposta curta em português explicando o que falta ou o que posso responder." } },
+      required: ["mensagem"],
+    },
+  },
+];
+
+function montarSistema(valores: string): string {
+  const hoje = new Date().toISOString().slice(0, 10);
+  return `Você é o assistente de dados do Centro Social Irmã Tecla Merlo. Converta a pergunta do usuário em UMA chamada de ferramenta sobre a tabela "alunos". Hoje é ${hoje}.
+
+Campos: nome, genero, etnia, situacao_mae, situacao_pai (presente/ausente/falecido), bairro, escola, cidade, periodo, ativo (booleano), autorizacao_imagem (booleano), foto e whatsapp (preenchido/vazio), projetos (ID 1 a 6) e idade (calculada).
+Projetos: ${Object.entries(NOMES_PROJETOS).map(([id, n]) => `${id}=${n}`).join("; ")}.
+
+Valores reais encontrados na base (use-os EXATAMENTE como estão; para variações use operador "contem" com um trecho):
+${valores || "(sem valores categóricos disponíveis)"}
 
 Regras:
-- Preencha SOMENTE os campos que a pergunta realmente menciona ou implica claramente. Deixe os demais como null.
-- Se a pergunta mencionar "pai ou mãe" com a mesma condição (ex: "pai ou mãe ausente"), use o campo situacao_pai_ou_mae e NÃO preencha situacao_pai/situacao_mae separadamente.
-- Palavras como "cadastrados", "no total", "no geral" normalmente significam que NÃO há filtro de status — deixe "ativo" como null.
-- Considere o histórico da conversa para perguntas de acompanhamento (ex: "e dessas, quantas têm foto?" deve herdar o filtro da pergunta anterior).
-- Sempre preencha "resumo_filtro" com uma frase curta e natural em português descrevendo o filtro aplicado (ex.: "alunas ativas do sexo feminino").`;
+- "ativos" => ativo igual 'true'; "inativos" => ativo igual 'false'. Se a pergunta não disser, NÃO filtre por status.
+- "pai ou mãe ausente" não tem OU nativo: use o campo mais provável e explique em resumo_filtro; se precisar dos dois, prefira responder com nao_consigo_responder pedindo para perguntar separadamente.
+- Idade: "mais de 12 anos" => idade maior 12; "12 anos ou mais" => maior_igual; "entre 8 e 10" => dois filtros (maior_igual 8 e menor_igual 10).
+- "Quantos" => contagem. "Quais/quem/liste" => lista. "Mais velho/novo" => ranking com limite 1 (ou o número pedido).
+- Perguntas de acompanhamento ("e dessas...", "e só as ativas?") herdam os filtros da consulta anterior, que aparece no histórico como "Consulta executada: {...}".
+- Nunca invente campos. Se a pergunta não for sobre alunos, use nao_consigo_responder.`;
+}
 
-    const mensagens: { role: string; content: string }[] = [];
-    if (Array.isArray(historico)) {
-      for (const h of historico.slice(-6)) {
-        if (h && typeof h.content === "string") {
-          mensagens.push({ role: h.role === "user" ? "user" : "assistant", content: h.content });
-        }
-      }
-    }
-    mensagens.push({ role: "user", content: pergunta });
+// --------------------------------- handler -------------------------------
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
-    const claudeResp = await fetch("https://api.anthropic.com/v1/messages", {
+  try {
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (!token) return json({ erro: "Não autenticado" }, 401);
+
+    const supa = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: { user }, error: erroAuth } = await supa.auth.getUser(token);
+    if (erroAuth || !user) return json({ erro: "Sessão inválida" }, 401);
+
+    const { pergunta, historico } = await req.json();
+    if (!pergunta || typeof pergunta !== "string" || pergunta.length > 1000) return json({ erro: "Pergunta inválida" }, 400);
+
+    const valores = await valoresDistintos(supa);
+
+    const msgs = (Array.isArray(historico) ? historico : [])
+      .filter((m: any) => m && ["user", "assistant"].includes(m.role) && typeof m.content === "string" && m.content.trim())
+      .slice(-6)
+      .map((m: any) => ({ role: m.role, content: m.content.slice(0, 2000) }));
+    while (msgs.length && msgs[0].role !== "user") msgs.shift();
+    msgs.push({ role: "user", content: pergunta });
+
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
+        "x-api-key": Deno.env.get("ANTHROPIC_API_KEY")!,
         "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: MODELO,
         max_tokens: 1024,
-        system: systemPrompt,
-        messages: mensagens,
-        tools: [TOOL_BUSCAR_ALUNOS],
-        tool_choice: { type: "tool", name: "buscar_alunos" },
+        system: montarSistema(valores),
+        tools: TOOLS,
+        tool_choice: { type: "any" },
+        messages: msgs,
       }),
     });
+    if (!r.ok) {
+      const corpo = await r.text();
+      console.error("Anthropic respondeu", r.status, corpo);
+      return json({ erro: `Falha na IA (${r.status}): ${corpo.slice(0, 300)}` }, 502);
+    }
+    const resp = await r.json();
+    const uso = resp.content?.find((b: any) => b.type === "tool_use");
+    if (!uso) return json({ modo: "mensagem", mensagem: "Não consegui interpretar a pergunta." });
 
-    if (!claudeResp.ok) {
-      const errText = await claudeResp.text();
-      console.error("Erro Claude API:", errText);
-      return new Response(JSON.stringify({ erro: "Erro ao consultar a Claude API.", detalhe: errText }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (uso.name === "nao_consigo_responder") return json({ modo: "mensagem", mensagem: uso.input.mensagem });
+
+    const c = uso.input;
+    const filtros: Filtro[] = Array.isArray(c.filtros) ? c.filtros : [];
+    const limite = Math.min(Math.max(Number(c.limite) || 20, 1), 100);
+    const base = (sel: string, opts?: Record<string, unknown>) => aplicarFiltros(supa.from("alunos").select(sel, opts), filtros);
+
+    // ---- contagem ----
+    if (c.modo === "contagem") {
+      const { count, error } = await base("id", { count: "exact", head: true });
+      if (error) throw error;
+      return json({ modo: "contagem", total: count ?? 0, amostra: [], resumo_filtro: c.resumo_filtro, consulta: c });
     }
 
-    const claudeData = await claudeResp.json();
-    const toolUse = (claudeData.content || []).find((b: any) => b.type === "tool_use" && b.name === "buscar_alunos");
-
-    if (!toolUse) {
-      return new Response(JSON.stringify({ erro: "A IA não retornou um filtro estruturado." }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const filtros = toolUse.input || {};
-
-    // ── 2) Consulta a base real no Supabase (service role — bypassa RLS) ──
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabaseAdmin = createClient(supabaseUrl, serviceKey);
-
-    let todos: any[] = [];
-    let inicio = 0;
-    const tamanhoPagina = 1000;
-    while (true) {
-      const { data, error } = await supabaseAdmin.from("alunos").select("*").range(inicio, inicio + tamanhoPagina - 1);
-      if (error) {
-        return new Response(JSON.stringify({ erro: "Erro ao consultar Supabase.", detalhe: error.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    // ---- agrupamento ----
+    if (c.modo === "agrupamento") {
+      const g = c.agrupar_por;
+      if (!CAMPOS_AGRUPAR.includes(g)) return json({ modo: "mensagem", mensagem: "Não sei agrupar por esse campo." });
+      const coluna = g === "idade" ? "data_nascimento" : g;
+      const contagem = new Map<string, number>();
+      let total = 0;
+      for (let ini = 0; ini < 20000; ini += 1000) {
+        const { data, error } = await base(`id,${coluna}`).order("id").range(ini, ini + 999);
+        if (error) throw error;
+        if (!data?.length) break;
+        for (const row of data) {
+          total++;
+          let chaves: string[];
+          if (g === "idade") chaves = [String(idadeDe(row.data_nascimento) ?? "Sem data")];
+          else if (g === "projetos") {
+            const arr = Array.isArray(row.projetos) ? row.projetos : String(row.projetos ?? "").split(",");
+            chaves = arr.map((x: unknown) => NOMES_PROJETOS[String(x).trim()] ?? "").filter(Boolean);
+            if (!chaves.length) chaves = ["Sem projeto"];
+          } else if (g === "ativo") chaves = [row.ativo ? "Ativo" : "Inativo"];
+          else chaves = [row[g] ? String(row[g]) : "Não informado"];
+          for (const k of chaves) contagem.set(k, (contagem.get(k) ?? 0) + 1);
+        }
+        if (data.length < 1000) break;
       }
-      if (!data || data.length === 0) break;
-      todos = todos.concat(data);
-      if (data.length < tamanhoPagina) break;
-      inicio += tamanhoPagina;
+      const grupos = [...contagem.entries()].map(([nome, qtd]) => ({ nome, qtd })).sort((a, b) => b.qtd - a.qtd);
+      return json({ modo: "agrupamento", total, grupos, agrupar_por: g, amostra: [], resumo_filtro: c.resumo_filtro, consulta: c });
     }
 
-    const resultadoCompleto = aplicarFiltros(todos, filtros);
-    const amostra = resultadoCompleto.slice(0, 20).map((a) => ({
-      id: a.id,
-      nome: a.nome,
-      projetos: a.projetos,
-      ativo: isAtivo(a),
-    }));
-
-    return new Response(
-      JSON.stringify({
-        resumo_filtro: filtros.resumo_filtro || "critério identificado",
-        total: resultadoCompleto.length,
-        amostra,
-        filtros_aplicados: filtros,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
-  } catch (err) {
-    console.error(err);
-    return new Response(JSON.stringify({ erro: "Erro interno na função.", detalhe: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // ---- lista / ranking ----
+    let q = base(COLUNAS_AMOSTRA, { count: "exact" });
+    if (c.modo === "ranking" || c.ordenar_por?.startsWith("idade")) {
+      q = q.not("data_nascimento", "is", null).order("data_nascimento", { ascending: c.ordenar_por !== "idade_asc" });
+    } else {
+      q = q.order("nome");
+    }
+    const { data, count, error } = await q.limit(limite);
+    if (error) throw error;
+    const amostra = (data ?? []).map((a: any) => ({ ...a, idade: idadeDe(a.data_nascimento) }));
+    return json({
+      modo: c.modo === "ranking" ? "ranking" : "lista",
+      ordenar_por: c.ordenar_por ?? null,
+      total: count ?? amostra.length,
+      amostra,
+      resumo_filtro: c.resumo_filtro,
+      consulta: c,
     });
+  } catch (e) {
+    console.error(e);
+    return json({ erro: String((e as Error).message ?? e) }, 500);
   }
 });
