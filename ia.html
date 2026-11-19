@@ -81,6 +81,7 @@
         .tabela-resultado th { background: #f8f7f4; font-weight: 600; color: #64748b; font-size: 0.72rem; text-transform: uppercase; }
         .tabela-resultado td, .tabela-resultado th { padding: 8px 10px; vertical-align: middle; }
         .tabela-resultado tbody tr:hover { background: var(--ia-accent-light); }
+        .barra-grupo { height: 6px; border-radius: 3px; background: var(--ia-accent); opacity: .7; min-width: 2px; }
         .badge-status-ativo { background: #dcfce7; color: #16a34a; font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
         .badge-status-inativo { background: #f1f5f9; color: #64748b; font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
         .nota-mais { font-size: 0.78rem; color: #94a3b8; margin-top: 8px; }
@@ -151,16 +152,17 @@
                 <div class="welcome-block" id="welcomeBlock">
                     <div class="ia-avatar-logo"><i class="fas fa-wand-magic-sparkles"></i></div>
                     <h4>Pergunte sobre os alunos</h4>
-                    <p>Eu leio a base de alunos do Supabase e respondo perguntas em português — contagens, filtros e listas, cruzando qualquer campo cadastrado (sexo, status, etnia, situação dos pais, projeto, bairro, idade e mais).</p>
+                    <p>Eu entendo sua pergunta em português, consulto a base de alunos no Supabase e respondo com contagens, listas, rankings e distribuições, cruzando qualquer campo cadastrado (sexo, status, etnia, situação dos pais, projeto, bairro, idade e mais).</p>
 
                     <div class="chips-grid">
                         <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-venus"></i>Quantas alunas do sexo feminino estão ativas?</button>
                         <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-users"></i>Quantos alunos foram cadastrados no total?</button>
-                        <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-house-user"></i>Quantos alunos têm o pai ou a mãe ausente?</button>
+                        <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-house-user"></i>Quantos alunos têm a mãe ausente?</button>
                         <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-globe"></i>Quantos alunos são de etnia parda?</button>
                         <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-folder"></i>Quantos alunos ativos estão no projeto Sempre Criança?</button>
                         <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-birthday-cake"></i>Quantos alunos ativos têm mais de 12 anos?</button>
                         <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-trophy"></i>Qual o aluno mais velho ativo?</button>
+                        <button class="chip-sugestao" onclick="usarSugestao(this)"><i class="fas fa-chart-pie"></i>Quantos alunos ativos por bairro?</button>
                     </div>
                 </div>
             </div>
@@ -173,7 +175,7 @@
                     <i class="fas fa-arrow-up"></i>
                 </button>
             </div>
-            <p class="rodape-nota">Respostas geradas por filtros automáticos sobre os dados reais da tabela <code>alunos</code>. Sempre confira os números críticos na Lista Geral.</p>
+            <p class="rodape-nota">Respostas geradas por consultas automáticas sobre os dados reais da tabela <code>alunos</code>. Sempre confira os números críticos na Lista Geral.</p>
         </div>
 
     </main>
@@ -193,16 +195,18 @@
             "6": "Animar e Celebrar"
         };
 
+        // Base completa usada APENAS pelo interpretador local (fallback offline).
         let alunosCache = null;
 
-        // URL da Edge Function que interpreta a pergunta via Claude (tool use)
-        // e consulta a base real no Supabase. Ajuste o nome se você renomear
-        // a função no Supabase (padrão: functions/v1/<nome-da-funcao>).
+        // Edge Function: Claude converte a pergunta em consulta estruturada
+        // e o Supabase executa o filtro (código em supabase/functions/ia-alunos).
         const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/ia-alunos`;
 
-        // Guarda as últimas trocas para permitir perguntas de acompanhamento
-        // (ex: "e dessas, quantas têm foto?")
+        // Histórico para perguntas de acompanhamento ("e só as ativas?")
         let historicoConversa = [];
+
+        // Guarda o bloco de boas-vindas para restaurar ao limpar a conversa
+        const welcomeHTML = document.getElementById('chatInner').innerHTML;
 
         // ============================================================
         // SESSÃO
@@ -217,7 +221,7 @@
         }
 
         // ============================================================
-        // CARREGAMENTO DA BASE
+        // CARREGAMENTO DA BASE (fallback local)
         // ============================================================
         async function carregarBase() {
             let todos = [];
@@ -305,7 +309,7 @@
         }
 
         // ============================================================
-        // INTERPRETADOR DE PERGUNTAS
+        // INTERPRETADOR LOCAL (FALLBACK OFFLINE)
         // ============================================================
         function interpretarPergunta(perguntaOriginal) {
             const txtN = normalizar(perguntaOriginal);
@@ -313,16 +317,16 @@
             const labels = [];
 
             // status ativo / inativo
-            if (/inativ|desativad/.test(txtN)) {
+            if (/\binativ|\bdesativad/.test(txtN)) {
                 filtros.push(a => !isAtivo(a));
                 labels.push('inativos');
-            } else if (/\bativ/.test(txtN)) {
+            } else if (/\bativ(o|a|os|as)\b/.test(txtN)) {
                 filtros.push(a => isAtivo(a));
                 labels.push('ativos');
             }
 
             // genero
-            if (/feminin|\bmenina|garotas?|mulheres/.test(txtN)) {
+            if (/feminin|\bmenina|garotas?|mulheres|\balunas?\b/.test(txtN)) {
                 filtros.push(a => normalizar(a.genero).startsWith('f'));
                 labels.push('sexo feminino');
             } else if (/masculin|\bmenino|garotos?|homens?/.test(txtN)) {
@@ -401,15 +405,15 @@
                 const min = +m[1], max = +m[2];
                 filtros.push(a => { const i = calcularIdadeAluno(a); return i != null && i >= min && i <= max; });
                 labels.push(`entre ${min} e ${max} anos`);
-            } else if (m = txtN.match(/maior(?:es)? de (\d+) anos/)) {
+            } else if (m = txtN.match(/(?:maior(?:es)?|mais) de (\d+) anos/)) {
                 const n = +m[1];
                 filtros.push(a => { const i = calcularIdadeAluno(a); return i != null && i > n; });
                 labels.push(`mais de ${n} anos`);
-            } else if (m = txtN.match(/menor(?:es)? de (\d+) anos/)) {
+            } else if (m = txtN.match(/(?:menor(?:es)?|menos) de (\d+) anos/)) {
                 const n = +m[1];
                 filtros.push(a => { const i = calcularIdadeAluno(a); return i != null && i < n; });
                 labels.push(`menos de ${n} anos`);
-            } else if (m = txtN.match(/com (\d+) anos/)) {
+            } else if (m = txtN.match(/(?:com|tem|têm|tem) (\d+) anos/)) {
                 const n = +m[1];
                 filtros.push(a => calcularIdadeAluno(a) === n);
                 labels.push(`com ${n} anos`);
@@ -424,7 +428,7 @@
 
             // autorização de imagem
             if (/autoriza.{0,15}imagem|imagem.{0,15}autoriza/.test(txtN)) {
-                if (/nao autoriz|não autoriz/.test(txtN)) { filtros.push(a => !a.autorizacao_imagem); labels.push('sem autorização de imagem'); }
+                if (/nao autoriz/.test(txtN)) { filtros.push(a => !a.autorizacao_imagem); labels.push('sem autorização de imagem'); }
                 else { filtros.push(a => !!a.autorizacao_imagem); labels.push('com autorização de imagem'); }
             }
 
@@ -479,10 +483,11 @@
                     };
                 }
 
-                const rotulo = ordenarPor === 'idade_desc' ? 'mais velho' : 'mais novo';
+                const feminino = labels.some(l => l.includes('feminino'));
+                const rotulo = ordenarPor === 'idade_desc' ? (feminino ? 'mais velha' : 'mais velho') : (feminino ? 'mais nova' : 'mais novo');
                 const rotuloPlural = ordenarPor === 'idade_desc' ? 'mais velhos' : 'mais novos';
                 const texto = top.length === 1
-                    ? `O${labels.some(l => l.includes('feminino')) ? 'a aluna' : ' aluno'} ${rotulo}${descricaoFiltro ? ' (' + descricaoFiltro + ')' : ''} é <strong>${escapeHtml(top[0].nome)}</strong>, com <strong>${calcularIdadeAluno(top[0])} anos</strong>.`
+                    ? `${feminino ? 'A aluna' : 'O aluno'} ${rotulo}${descricaoFiltro ? ' (' + descricaoFiltro + ')' : ''} é <strong>${escapeHtml(top[0].nome)}</strong>, com <strong>${calcularIdadeAluno(top[0])} anos</strong>.`
                     : `Aqui estão os <strong>${top.length}</strong> alunos ${rotuloPlural}${descricaoFiltro ? ' (' + descricaoFiltro + ')' : ''}:`;
 
                 return { texto, total: top.length, amostra: top };
@@ -518,21 +523,39 @@
                 const data = await resp.json();
                 if (data.erro) throw new Error(data.erro);
 
+                // Guarda a consulta executada para perguntas de acompanhamento
                 historicoConversa.push({ role: 'user', content: pergunta });
-                historicoConversa.push({ role: 'assistant', content: data.resumo_filtro || '' });
+                historicoConversa.push({
+                    role: 'assistant',
+                    content: data.consulta ? 'Consulta executada: ' + JSON.stringify(data.consulta) : (data.mensagem || data.resumo_filtro || 'ok')
+                });
 
+                // Pergunta fora do escopo / ambígua
+                if (data.modo === 'mensagem') {
+                    return { texto: escapeHtml(data.mensagem), total: null, amostra: null, viaIA: true };
+                }
+
+                // Agrupamento (ex: "quantos alunos por bairro?")
+                if (data.modo === 'agrupamento') {
+                    return {
+                        texto: `Distribuição por <strong>${escapeHtml(data.agrupar_por)}</strong>${data.resumo_filtro ? ' (' + escapeHtml(data.resumo_filtro) + ')' : ''}:`,
+                        total: data.total, amostra: [], grupos: data.grupos, viaIA: true
+                    };
+                }
+
+                const filtroTxt = data.resumo_filtro ? escapeHtml(data.resumo_filtro) : 'todos os alunos cadastrados na base';
                 let texto;
                 if (data.modo === 'ranking' && Array.isArray(data.amostra) && data.amostra.length > 0) {
                     const rotulo = data.ordenar_por === 'idade_desc' ? 'mais velho' : 'mais novo';
                     const rotuloPlural = data.ordenar_por === 'idade_desc' ? 'mais velhos' : 'mais novos';
                     texto = data.amostra.length === 1
-                        ? `O aluno ${rotulo}${data.resumo_filtro ? ' (' + data.resumo_filtro + ')' : ''} é <strong>${escapeHtml(data.amostra[0].nome)}</strong>, com <strong>${data.amostra[0].idade ?? '?'} anos</strong>.`
-                        : `Aqui estão os <strong>${data.amostra.length}</strong> alunos ${rotuloPlural}${data.resumo_filtro ? ' (' + data.resumo_filtro + ')' : ''}:`;
+                        ? `O aluno ${rotulo}${data.resumo_filtro ? ' (' + filtroTxt + ')' : ''} é <strong>${escapeHtml(data.amostra[0].nome)}</strong>, com <strong>${data.amostra[0].idade ?? '?'} anos</strong>.`
+                        : `Aqui estão os <strong>${data.amostra.length}</strong> alunos ${rotuloPlural}${data.resumo_filtro ? ' (' + filtroTxt + ')' : ''}:`;
                 } else {
-                    texto = `Encontrei <strong>${data.total}</strong> aluno${data.total === 1 ? '' : 's'} com o filtro: ${data.resumo_filtro}.`;
+                    texto = `Encontrei <strong>${data.total}</strong> aluno${data.total === 1 ? '' : 's'} com o filtro: ${filtroTxt}.`;
                 }
 
-                return { texto, total: data.total, amostra: data.amostra, viaIA: true };
+                return { texto, total: data.total, amostra: data.amostra || [], viaIA: true };
 
             } catch (err) {
                 console.warn('Assistente IA indisponível, usando interpretador local:', err.message);
@@ -603,6 +626,26 @@
                         <div class="resposta-numero">${resposta.total}</div>
                         <div class="resposta-legenda">aluno${resposta.total === 1 ? '' : 's'} encontrado${resposta.total === 1 ? '' : 's'}</div>`;
 
+                // Tabela de agrupamento
+                if (resposta.grupos && resposta.grupos.length > 0) {
+                    const max = Math.max(...resposta.grupos.map(g => g.qtd));
+                    html += `
+                        <div class="table-responsive tabela-resultado">
+                            <table class="table table-sm mb-0">
+                                <thead><tr><th>Grupo</th><th style="width:90px">Alunos</th><th style="width:35%"></th></tr></thead>
+                                <tbody>
+                                    ${resposta.grupos.map(g => `
+                                        <tr>
+                                            <td class="fw-medium">${escapeHtml(g.nome)}</td>
+                                            <td>${g.qtd}</td>
+                                            <td><div class="barra-grupo" style="width:${Math.max(2, Math.round(g.qtd / max * 100))}%"></div></td>
+                                        </tr>`).join('')}
+                                </tbody>
+                            </table>
+                        </div>`;
+                }
+
+                // Tabela de alunos
                 if (resposta.amostra.length > 0) {
                     html += `
                         <div class="table-responsive tabela-resultado">
@@ -612,8 +655,8 @@
                                     ${resposta.amostra.map(a => {
                                         const idade = a.idade != null ? a.idade : calcularIdadeAluno(a);
                                         return `
-                                        <tr onclick="window.location.href='editar_aluno.html?id=${a.id}'" style="cursor:pointer">
-                                            <td>#${a.id}</td>
+                                        <tr onclick="window.location.href='editar_aluno.html?id=${encodeURIComponent(a.id)}'" style="cursor:pointer">
+                                            <td>#${escapeHtml(a.id)}</td>
                                             <td class="fw-medium">${escapeHtml(a.nome || 'Sem nome')}</td>
                                             <td>${idade != null ? idade + ' anos' : '—'}</td>
                                             <td>${escapeHtml(renderizarNomeProjeto(a))}</td>
@@ -644,20 +687,27 @@
         // ============================================================
         // ENVIO DE PERGUNTAS
         // ============================================================
+        let enviando = false;
+
         async function enviarPergunta() {
             const input = document.getElementById('inputPergunta');
             const texto = input.value.trim();
-            if (!texto || !alunosCache) return;
+            if (!texto || enviando) return;
 
+            enviando = true;
             adicionarMensagemUsuario(texto);
             input.value = '';
             autoResize(input);
 
             adicionarTypingIndicator();
 
-            const resposta = await chamarAssistenteIA(texto);
-            removerTypingIndicator();
-            adicionarRespostaBot(resposta);
+            try {
+                const resposta = await chamarAssistenteIA(texto);
+                removerTypingIndicator();
+                adicionarRespostaBot(resposta);
+            } finally {
+                enviando = false;
+            }
         }
 
         function usarSugestao(el) {
@@ -677,11 +727,17 @@
             el.style.height = Math.min(el.scrollHeight, 140) + 'px';
         }
 
+        // Limpa o chat sem recarregar a página (evita baixar a base de novo)
         function limparConversa() {
-            location.reload();
+            historicoConversa = [];
+            document.getElementById('chatInner').innerHTML = welcomeHTML;
+            const input = document.getElementById('inputPergunta');
+            input.value = '';
+            autoResize(input);
         }
 
-        function logout() {
+        async function logout() {
+            try { await supabaseClient.auth.signOut(); } catch (e) { console.warn(e); }
             window.location.href = 'index.html';
         }
 
