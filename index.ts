@@ -269,7 +269,11 @@ Deno.serve(async (req) => {
         messages: msgs,
       }),
     });
-    if (!r.ok) return json({ erro: `Falha na IA (${r.status})` }, 502);
+    if (!r.ok) {
+      const corpo = await r.text();
+      console.error("Anthropic respondeu", r.status, corpo);
+      return json({ erro: `Falha na IA (${r.status}): ${corpo.slice(0, 300)}` }, 502);
+    }
     const resp = await r.json();
     const uso = resp.content?.find((b: any) => b.type === "tool_use");
     if (!uso) return json({ modo: "mensagem", mensagem: "Não consegui interpretar a pergunta." });
