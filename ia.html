@@ -519,8 +519,8 @@
                     })
                 });
 
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const data = await resp.json();
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok) throw new Error(data.erro || `HTTP ${resp.status}`);
                 if (data.erro) throw new Error(data.erro);
 
                 // Guarda a consulta executada para perguntas de acompanhamento
@@ -560,7 +560,7 @@
             } catch (err) {
                 console.warn('Assistente IA indisponível, usando interpretador local:', err.message);
                 const local = responderPergunta(pergunta);
-                return { ...local, viaIA: false };
+                return { ...local, viaIA: false, erro: err.message };
             }
         }
 
@@ -617,7 +617,7 @@
                     <div class="msg-text">${resposta.texto}</div>`;
 
             if (resposta.viaIA === false) {
-                html += `<p class="nota-mais"><i class="fas fa-plug-circle-xmark me-1"></i>Assistente IA indisponível no momento — resposta gerada pelo interpretador local (offline).</p>`;
+                html += `<p class="nota-mais"><i class="fas fa-plug-circle-xmark me-1"></i>Assistente IA indisponível (${escapeHtml(resposta.erro || 'erro desconhecido')}) — resposta gerada pelo interpretador local (offline).</p>`;
             }
 
             if (resposta.total != null && resposta.amostra) {
