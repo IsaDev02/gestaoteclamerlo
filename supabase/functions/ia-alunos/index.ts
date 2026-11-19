@@ -50,8 +50,9 @@ const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
+const VERSAO = "2026-11-19-b";
+const json = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify({ versao: VERSAO, ...body }), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 
 // ----------------------------- datas / idade -----------------------------
 function dataHaAnos(n: number): string {
@@ -241,7 +242,8 @@ Deno.serve(async (req) => {
     const { data: { user }, error: erroAuth } = await supa.auth.getUser(token);
     if (erroAuth || !user) return json({ erro: "Sessão inválida" }, 401);
 
-    const { pergunta, historico } = await req.json();
+    const { pergunta, historico, ping } = await req.json();
+    if (ping) return json({ ok: true });
     if (!pergunta || typeof pergunta !== "string" || pergunta.length > 1000) return json({ erro: "Pergunta inválida" }, 400);
 
     const valores = await valoresDistintos(supa);
